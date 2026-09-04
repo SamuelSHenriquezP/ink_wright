@@ -16,6 +16,7 @@ class PlotMindMapScreen extends StatefulWidget {
 class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
   PlotAct? _selectedActFilter;
   late final TransformationController _transformationController;
+  String? _connectingFromNodeId;
 
   @override
   void initState() {
@@ -105,9 +106,17 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
           builder: (context, setState) {
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text(
-                'Editar Punto de Trama',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+              title: Row(
+                children: [
+                  Text(selectedEmoji, style: const TextStyle(fontSize: 22)),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Editar Contenido del Nodo',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+                    ),
+                  ),
+                ],
               ),
               content: SingleChildScrollView(
                 child: Column(
@@ -116,7 +125,23 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                   children: [
                     TextField(
                       controller: titleCtrl,
-                      decoration: const InputDecoration(labelText: 'Título'),
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Título del Nodo',
+                        hintText: 'Texto o suceso principal',
+                        prefixIcon: Icon(Icons.title_rounded, size: 20),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: descCtrl,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Texto Interior / Notas',
+                        hintText: 'Escribe lo que contiene o pasa en este nodo...',
+                        alignLabelWithHint: true,
+                        prefixIcon: Icon(Icons.notes_rounded, size: 20),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<PlotAct>(
@@ -137,7 +162,7 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<PlotNodeType>(
                       initialValue: selectedType,
-                      decoration: const InputDecoration(labelText: 'Tipo'),
+                      decoration: const InputDecoration(labelText: 'Tipo de Elemento'),
                       items: PlotNodeType.values.map((type) {
                         final dummy = MindMapNodeModel(
                           id: '', bookId: '', title: '', description: '', act: PlotAct.act1Exposition,
@@ -149,14 +174,8 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                         if (val != null) setState(() => selectedType = val);
                       },
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: descCtrl,
-                      maxLines: 3,
-                      decoration: const InputDecoration(labelText: 'Descripción / Notas'),
-                    ),
                     const SizedBox(height: 16),
-                    const Text('Icono:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                    const Text('Icono / Emoji:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -227,9 +246,16 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                       );
                       controller.updateMindMapNode(updated);
                       Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Nodo «$title» actualizado.'),
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     }
                   },
-                  child: const Text('Guardar Cambios'),
+                  child: const Text('Guardar'),
                 ),
               ],
             );
@@ -524,6 +550,35 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
 
                           // Interactive Draggable Node Widgets
                           ...filteredNodes.map((node) {
+                            final isConnectingSource = _connectingFromNodeId == node.id;
+                            final isConnectingMode = _connectingFromNodeId != null;
+                            final connectingSourceNode = isConnectingMode
+                                ? controller.mindMapNodes.firstWhere(
+                                    (n) => n.id == _connectingFromNodeId,
+                                    orElse: () => node,
+                                  )
+                                : null;
+                            final isAlreadyConnected = isConnectingMode &&
+                                !isConnectingSource &&
+                                connectingSourceNode != null &&
+                                connectingSourceNode.connectedToIds.contains(node.id);
+
+                            Color cardBorderColor;
+                            double cardBorderWidth = 1.5;
+                            if (isConnectingSource) {
+                              cardBorderColor = Colors.blueAccent;
+                              cardBorderWidth = 2.5;
+                            } else if (isConnectingMode) {
+                              cardBorderColor = isAlreadyConnected
+                                  ? Colors.redAccent.withValues(alpha: 0.8)
+                                  : Colors.blueAccent.withValues(alpha: 0.7);
+                              cardBorderWidth = 2.0;
+                            } else if (node.colorHex != 0xFF18181B && node.colorHex != 0) {
+                              cardBorderColor = Color(node.colorHex).withValues(alpha: 0.6);
+                            } else {
+                              cardBorderColor = borderColor;
+                            }
+
                             return Positioned(
                               left: node.dx,
                               top: node.dy,
@@ -539,24 +594,98 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                     ),
                                   );
                                 },
-                                onTap: () => _showNodeDetailBottomSheet(context, node, controller, isDark),
+                                onDoubleTap: () => _showEditNodeDialog(context, node, controller),
+                                onTap: () {
+                                  if (_connectingFromNodeId != null) {
+                                    if (_connectingFromNodeId == node.id) {
+                                      setState(() => _connectingFromNodeId = null);
+                                    } else {
+                                      final fromId = _connectingFromNodeId!;
+                                      final fromNode = controller.mindMapNodes.firstWhere(
+                                        (n) => n.id == fromId,
+                                        orElse: () => node,
+                                      );
+                                      if (fromNode.connectedToIds.contains(node.id)) {
+                                        controller.disconnectMindMapNodes(fromId, node.id);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Enlace eliminado entre «${fromNode.title}» y «${node.title}».'),
+                                            duration: const Duration(seconds: 2),
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
+                                      } else {
+                                        controller.connectMindMapNodes(fromId, node.id);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('¡Conectado! «${fromNode.title}» ➔ «${node.title}»'),
+                                            duration: const Duration(seconds: 2),
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
+                                      }
+                                      setState(() => _connectingFromNodeId = null);
+                                    }
+                                  } else {
+                                    _showNodeDetailBottomSheet(context, node, controller, isDark);
+                                  }
+                                },
                                 child: Container(
-                                  width: 240,
+                                  width: 245,
                                   padding: const EdgeInsets.all(14),
                                   decoration: BoxDecoration(
                                     color: cardBg,
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                      color: node.colorHex != 0xFF18181B && node.colorHex != 0
-                                          ? Color(node.colorHex).withValues(alpha: 0.6)
-                                          : borderColor,
-                                      width: 1.5,
+                                      color: cardBorderColor,
+                                      width: cardBorderWidth,
                                     ),
                                     boxShadow: AppTheme.getSoftShadow(isDark),
                                   ),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
+                                      if (isConnectingSource)
+                                        Container(
+                                          margin: const EdgeInsets.only(bottom: 8),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blueAccent,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.link_rounded, size: 12, color: Colors.white),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                'ORIGEN • TOCA OTRO NODO',
+                                                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      else if (isConnectingMode)
+                                        Container(
+                                          margin: const EdgeInsets.only(bottom: 8),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: isAlreadyConnected ? Colors.redAccent : Colors.blueAccent,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(isAlreadyConnected ? Icons.link_off_rounded : Icons.add_link_rounded, size: 12, color: Colors.white),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                isAlreadyConnected ? 'TOCA PARA DESCONECTAR' : 'TOCA PARA CONECTAR AQUÍ',
+                                                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
@@ -581,6 +710,59 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                             children: [
                                               Text(node.iconEmoji, style: const TextStyle(fontSize: 16)),
                                               const SizedBox(width: 6),
+                                              // Quick Edit text button
+                                              InkWell(
+                                                onTap: () => _showEditNodeDialog(context, node, controller),
+                                                borderRadius: BorderRadius.circular(12),
+                                                child: Tooltip(
+                                                  message: 'Editar texto / notas',
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(3),
+                                                    decoration: BoxDecoration(
+                                                      color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: Icon(
+                                                      Icons.edit_outlined,
+                                                      size: 14,
+                                                      color: textSecondary,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              // Quick Connect button
+                                              InkWell(
+                                                onTap: () {
+                                                  setState(() {
+                                                    if (_connectingFromNodeId == node.id) {
+                                                      _connectingFromNodeId = null;
+                                                    } else {
+                                                      _connectingFromNodeId = node.id;
+                                                    }
+                                                  });
+                                                },
+                                                borderRadius: BorderRadius.circular(12),
+                                                child: Tooltip(
+                                                  message: isConnectingSource ? 'Cancelar conexión' : 'Conectar con otro nodo',
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(3),
+                                                    decoration: BoxDecoration(
+                                                      color: isConnectingSource
+                                                          ? Colors.blueAccent
+                                                          : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: Icon(
+                                                      Icons.link_rounded,
+                                                      size: 14,
+                                                      color: isConnectingSource ? Colors.white : textSecondary,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              // Quick Branch button
                                               InkWell(
                                                 onTap: () => _branchFromNode(context, node, controller),
                                                 borderRadius: BorderRadius.circular(12),
@@ -673,6 +855,54 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                     ),
                   ),
                 ),
+
+                // Floating Banner for Active Connection Mode
+                if (_connectingFromNodeId != null)
+                  Positioned(
+                    top: 12,
+                    left: 16,
+                    right: 16,
+                    child: Center(
+                      child: Material(
+                        elevation: 8,
+                        borderRadius: BorderRadius.circular(30),
+                        color: isDark ? const Color(0xFF1E1E24) : Colors.black,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.link_rounded, color: Colors.lightBlueAccent, size: 20),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'Conectar: toca cualquier otro nodo para enlazarlo',
+                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              InkWell(
+                                onTap: () => setState(() => _connectingFromNodeId = null),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white24,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    'Cancelar',
+                                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
 
                 // Floating Canvas Controls Toolbar (Zoom, Fit, Arrange)
                 Positioned(
