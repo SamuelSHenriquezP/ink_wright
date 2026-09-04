@@ -74,7 +74,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
     final textPrimary = widget.isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = widget.isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = widget.isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
-    final accentMint = widget.isDark ? AppTheme.darkAccentMint : AppTheme.lightAccentMint;
+    final accentColor = widget.isDark ? Colors.white : Colors.black;
 
     final sprint = controller.activeSprint;
     final isSprintActive = sprint != null && sprint.isActive;
@@ -101,10 +101,10 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
               children: [
                 Row(
                   children: [
-                    Text('⏱️', style: const TextStyle(fontSize: 22)),
+                    const Icon(Icons.timer_outlined, size: 22),
                     const SizedBox(width: 8),
                     Text(
-                      'Writing Sprint Studio',
+                      'Sprint de Escritura',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -127,9 +127,9 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: widget.isDark ? const Color(0xFF1B2B23) : const Color(0xFFEBF9F3),
+                  color: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: accentMint.withValues(alpha: 0.4)),
+                  border: Border.all(color: borderSubtle),
                 ),
                 child: Column(
                   children: [
@@ -138,25 +138,25 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                       style: TextStyle(
                         fontSize: 42,
                         fontWeight: FontWeight.w900,
-                        color: accentMint,
+                        color: textPrimary,
                         letterSpacing: -1.0,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'TIME REMAINING IN SPRINT',
+                      'TIEMPO RESTANTE EN SPRINT',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: accentMint,
+                        color: textSecondary,
                         letterSpacing: 1.2,
                       ),
                     ),
                     const SizedBox(height: 16),
                     LinearProgressIndicator(
                       value: (wordsWrittenInSprint / sprint.targetWords).clamp(0.0, 1.0),
-                      backgroundColor: accentMint.withValues(alpha: 0.2),
-                      valueColor: AlwaysStoppedAnimation<Color>(accentMint),
+                      backgroundColor: widget.isDark ? Colors.white12 : Colors.black12,
+                      valueColor: AlwaysStoppedAnimation<Color>(accentColor),
                       borderRadius: BorderRadius.circular(10),
                       minHeight: 8,
                     ),
@@ -165,7 +165,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '$wordsWrittenInSprint / ${sprint.targetWords} words written',
+                          '$wordsWrittenInSprint / ${sprint.targetWords} palabras',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -177,7 +177,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
-                            color: accentMint,
+                            color: textPrimary,
                           ),
                         ),
                       ],
@@ -197,7 +197,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                   elevation: 0,
                 ),
                 icon: const Icon(Icons.stop_circle_rounded),
-                label: const Text('Stop Current Sprint', style: TextStyle(fontWeight: FontWeight.w700)),
+                label: const Text('Detener Sprint Actual', style: TextStyle(fontWeight: FontWeight.w700)),
                 onPressed: () {
                   _timer?.cancel();
                   controller.stopSprint();
@@ -206,7 +206,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
             ] else ...[
               // Setup New Sprint Interface
               Text(
-                'Set a time limit and word goal to trigger uninterrupted creative flow.',
+                'Establece un límite de tiempo y un objetivo para concentrar tu flujo creativo sin interrupciones.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: textSecondary, height: 1.4),
               ),
@@ -228,7 +228,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                       margin: const EdgeInsets.symmetric(horizontal: 6),
                       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                       decoration: BoxDecoration(
-                        color: isSelected ? accentMint : (widget.isDark ? const Color(0xFF252525) : const Color(0xFFF2F1EC)),
+                        color: isSelected ? accentColor : (widget.isDark ? const Color(0xFF252525) : const Color(0xFFF2F1EC)),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Column(
@@ -238,7 +238,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
-                              color: isSelected ? Colors.white : textPrimary,
+                              color: isSelected ? (widget.isDark ? Colors.black : Colors.white) : textPrimary,
                             ),
                           ),
                           Text(
@@ -246,7 +246,9 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
-                              color: isSelected ? Colors.white.withValues(alpha: 0.9) : textSecondary,
+                              color: isSelected
+                                  ? (widget.isDark ? Colors.black.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.9))
+                                  : textSecondary,
                             ),
                           ),
                         ],
@@ -263,7 +265,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
                 decoration: InputDecoration(
-                  labelText: 'Target Word Goal',
+                  labelText: 'Objetivo de Palabras',
                   labelStyle: TextStyle(color: textSecondary),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -271,7 +273,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: accentMint, width: 2),
+                    borderSide: BorderSide(color: accentColor, width: 1.5),
                   ),
                 ),
               ),
@@ -280,14 +282,14 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
 
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: accentMint,
-                  foregroundColor: Colors.white,
+                  backgroundColor: accentColor,
+                  foregroundColor: widget.isDark ? Colors.black : Colors.white,
                   minimumSize: const Size(double.infinity, 50),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                   elevation: 0,
                 ),
                 icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                label: const Text('Start Writing Sprint', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                label: const Text('Iniciar Sprint de Escritura', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 onPressed: () {
                   final target = int.tryParse(_targetWordsCtrl.text) ?? 500;
                   controller.startSprint(

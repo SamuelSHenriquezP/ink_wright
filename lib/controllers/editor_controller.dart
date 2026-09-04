@@ -383,13 +383,18 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
     notifyListeners();
   }
 
+  void switchBook(String bookId) {
+    final book = _allBooks.firstWhere((b) => b.id == bookId, orElse: () => _activeBook);
+    selectBook(book);
+  }
+
   void selectBook(BookModel book) {
     _activeBook = book;
     if (book.chapters.isNotEmpty) {
       _activeChapter = book.chapters.first;
       textEditingController.text = _activeChapter.content;
     } else {
-      addNewChapter('Chapter 1');
+      addNewChapter('Capítulo 1');
     }
     notifyListeners();
   }
@@ -406,7 +411,7 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
       id: 'ch_${DateTime.now().millisecondsSinceEpoch}',
       bookId: _activeBook.id,
       chapterNumber: newChapterNum,
-      title: title.isEmpty ? 'Chapter $newChapterNum' : title,
+      title: title.isEmpty ? 'Capítulo $newChapterNum' : title,
       content: '',
       lastEdited: DateTime.now(),
       notes: '',
@@ -422,12 +427,7 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
     notifyListeners();
   }
 
-  void createNewBook({
-    required String title,
-    required String subtitle,
-    required String genre,
-    required int targetWordCount,
-  }) {
+  void createNewBook(String title, String subtitle, int targetWordCount, {String genre = 'Ficción'}) {
     final newBook = BookModel(
       id: 'b_${DateTime.now().millisecondsSinceEpoch}',
       title: title,
@@ -438,7 +438,7 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
       chapters: [],
       lastEdited: DateTime.now(),
       coverEmoji: '📖',
-      coverColorHex: 0xFF38C793,
+      coverColorHex: 0xFF18181B,
       tags: [genre],
       synopsis: subtitle,
     );

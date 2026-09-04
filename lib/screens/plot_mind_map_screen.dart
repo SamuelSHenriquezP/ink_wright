@@ -21,7 +21,6 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     final descCtrl = TextEditingController();
     PlotAct selectedAct = PlotAct.act1Exposition;
     PlotNodeType selectedType = PlotNodeType.mainPlot;
-    String selectedEmoji = '📌';
 
     showDialog(
       context: context,
@@ -29,7 +28,11 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('New Story Plot Node'),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text(
+                'Nuevo Punto de Trama',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -37,14 +40,14 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                     TextField(
                       controller: titleCtrl,
                       decoration: const InputDecoration(
-                        labelText: 'Plot Node Title',
-                        hintText: 'e.g. Inciting Incident: The Secret Cipher',
+                        labelText: 'Título del Punto de Trama',
+                        hintText: 'Ej. Incidente Incitador: El Descubrimiento',
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     DropdownButtonFormField<PlotAct>(
                       initialValue: selectedAct,
-                      decoration: const InputDecoration(labelText: 'Story Act'),
+                      decoration: const InputDecoration(labelText: 'Acto Narrativo'),
                       items: PlotAct.values.map((act) {
                         final dummy = MindMapNodeModel(
                           id: '',
@@ -68,10 +71,10 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                         if (val != null) setState(() => selectedAct = val);
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     DropdownButtonFormField<PlotNodeType>(
                       initialValue: selectedType,
-                      decoration: const InputDecoration(labelText: 'Plot Element Type'),
+                      decoration: const InputDecoration(labelText: 'Tipo de Elemento'),
                       items: PlotNodeType.values.map((type) {
                         final dummy = MindMapNodeModel(
                           id: '',
@@ -95,12 +98,13 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                         if (val != null) setState(() => selectedType = val);
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     TextField(
                       controller: descCtrl,
-                      maxLines: 2,
+                      maxLines: 3,
                       decoration: const InputDecoration(
-                        labelText: 'Description / Event Notes',
+                        labelText: 'Descripción / Notas de la Escena',
+                        hintText: 'Detalles clave sobre la trama o personaje...',
                       ),
                     ),
                   ],
@@ -109,9 +113,14 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
+                  child: const Text('Cancelar'),
                 ),
                 ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
                   onPressed: () {
                     final title = titleCtrl.text.trim();
                     if (title.isNotEmpty) {
@@ -122,17 +131,17 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                         description: descCtrl.text.trim(),
                         act: selectedAct,
                         type: selectedType,
-                        dx: 400 + (controller.mindMapNodes.length * 30),
-                        dy: 200 + (controller.mindMapNodes.length * 20),
+                        dx: 350 + (controller.mindMapNodes.length * 40),
+                        dy: 200 + (controller.mindMapNodes.length * 30),
                         connectedToIds: [],
-                        colorHex: _getColorForType(selectedType),
-                        iconEmoji: selectedEmoji,
+                        colorHex: 0xFF18181B,
+                        iconEmoji: '📌',
                       );
                       controller.addMindMapNode(newNode);
                       Navigator.of(context).pop();
                     }
                   },
-                  child: const Text('Create Node'),
+                  child: const Text('Crear Nodo'),
                 ),
               ],
             );
@@ -142,21 +151,6 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     );
   }
 
-  int _getColorForType(PlotNodeType type) {
-    switch (type) {
-      case PlotNodeType.mainPlot:
-        return 0xFF4A90E2;
-      case PlotNodeType.subplot:
-        return 0xFFF5A623;
-      case PlotNodeType.characterArc:
-        return 0xFF38C793;
-      case PlotNodeType.worldLore:
-        return 0xFF9013FE;
-      case PlotNodeType.turningPoint:
-        return 0xFFE74C3C;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<EditorController>(context);
@@ -164,7 +158,9 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     final bgPrimary = isDark ? AppTheme.darkBgPrimary : AppTheme.lightBgPrimary;
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final accentMint = isDark ? AppTheme.darkAccentMint : AppTheme.lightAccentMint;
+    final accentColor = isDark ? Colors.white : Colors.black;
+    final cardBg = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
+    final borderColor = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
 
     final nodes = controller.mindMapNodes;
     final filteredNodes = _selectedActFilter == null
@@ -174,30 +170,30 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     return Scaffold(
       backgroundColor: bgPrimary,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: bgPrimary,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Story Arc & Plot Mind Map',
+              'Mapa Mental de Trama',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textPrimary),
             ),
             Text(
-              '${controller.activeBook.title} • Visual Narrative Canvas',
+              '${controller.activeBook.title} • Planificación Narrativa',
               style: TextStyle(fontSize: 11, color: textSecondary),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.add_location_alt_outlined, color: accentMint),
+            icon: Icon(Icons.add_circle_outline_rounded, color: textPrimary),
             onPressed: () => _showAddNodeDialog(context, controller),
-            tooltip: 'Add Plot Node',
+            tooltip: 'Añadir Nodo de Trama',
           ),
         ],
       ),
@@ -205,16 +201,17 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
         children: [
           // Filter Pills for Story Acts
           SizedBox(
-            height: 42,
+            height: 44,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _buildActFilterChip('All Acts', null, textPrimary, textSecondary, accentMint, isDark),
-                _buildActFilterChip('Act I: Setup', PlotAct.act1Exposition, textPrimary, textSecondary, accentMint, isDark),
-                _buildActFilterChip('Act II: Complications', PlotAct.act2RisingAction, textPrimary, textSecondary, accentMint, isDark),
-                _buildActFilterChip('Midpoint', PlotAct.midpoint, textPrimary, textSecondary, accentMint, isDark),
-                _buildActFilterChip('Act III: Climax', PlotAct.act3Climax, textPrimary, textSecondary, accentMint, isDark),
+                _buildActFilterChip('Todos los Actos', null, textPrimary, textSecondary, accentColor, isDark),
+                _buildActFilterChip('Acto I', PlotAct.act1Exposition, textPrimary, textSecondary, accentColor, isDark),
+                _buildActFilterChip('Acto II', PlotAct.act2RisingAction, textPrimary, textSecondary, accentColor, isDark),
+                _buildActFilterChip('Punto Medio', PlotAct.midpoint, textPrimary, textSecondary, accentColor, isDark),
+                _buildActFilterChip('Acto III', PlotAct.act3Climax, textPrimary, textSecondary, accentColor, isDark),
+                _buildActFilterChip('Resolución', PlotAct.resolution, textPrimary, textSecondary, accentColor, isDark),
               ],
             ),
           ),
@@ -224,12 +221,12 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
           Expanded(
             child: ClipRect(
               child: InteractiveViewer(
-                boundaryMargin: const EdgeInsets.all(1000),
-                minScale: 0.4,
-                maxScale: 2.5,
+                boundaryMargin: const EdgeInsets.all(1200),
+                minScale: 0.3,
+                maxScale: 2.2,
                 child: SizedBox(
-                  width: 2400,
-                  height: 1600,
+                  width: 2500,
+                  height: 1800,
                   child: Stack(
                     children: [
                       // Canvas Grid lines & Custom Painter Connections
@@ -256,14 +253,14 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                             },
                             onTap: () => _showNodeDetailBottomSheet(context, node, controller, isDark),
                             child: Container(
-                              width: 220,
-                              padding: const EdgeInsets.all(14),
+                              width: 230,
+                              padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                                color: cardBg,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: Color(node.colorHex),
-                                  width: 2,
+                                  color: borderColor,
+                                  width: 1.5,
                                 ),
                                 boxShadow: AppTheme.getSoftShadow(isDark),
                               ),
@@ -274,43 +271,57 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: Color(node.colorHex).withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(10),
+                                          color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Text(
                                           node.typeLabel.toUpperCase(),
                                           style: TextStyle(
                                             fontSize: 9,
                                             fontWeight: FontWeight.w800,
-                                            color: Color(node.colorHex),
+                                            letterSpacing: 0.5,
+                                            color: textPrimary,
                                           ),
                                         ),
                                       ),
                                       Text(node.iconEmoji, style: const TextStyle(fontSize: 16)),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 10),
                                   Text(
                                     node.title,
                                     style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
                                       color: textPrimary,
+                                      letterSpacing: -0.2,
                                     ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    node.description,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: textSecondary,
+                                  if (node.description.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      node.description,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: textSecondary,
+                                        height: 1.3,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                  ],
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    node.actLabel,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: textSecondary.withValues(alpha: 0.8),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -327,10 +338,14 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: accentMint,
-        foregroundColor: Colors.white,
+        backgroundColor: isDark ? Colors.white : Colors.black,
+        foregroundColor: isDark ? Colors.black : Colors.white,
+        elevation: 2,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Plot Point', style: TextStyle(fontWeight: FontWeight.w700)),
+        label: const Text(
+          'Punto de Trama',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        ),
         onPressed: () => _showAddNodeDialog(context, controller),
       ),
     );
@@ -341,22 +356,24 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     PlotAct? act,
     Color textPrimary,
     Color textSecondary,
-    Color accentMint,
+    Color accentColor,
     bool isDark,
   ) {
     final isSelected = _selectedActFilter == act;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
+      child: ChoiceChip(
         label: Text(label),
         selected: isSelected,
-        selectedColor: accentMint.withValues(alpha: 0.2),
-        backgroundColor: isDark ? const Color(0xFF252525) : const Color(0xFFF2F1EC),
-        side: BorderSide(color: isSelected ? accentMint : Colors.transparent),
+        selectedColor: isDark ? Colors.white : Colors.black,
+        backgroundColor: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         labelStyle: TextStyle(
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-          color: isSelected ? accentMint : textSecondary,
+          color: isSelected
+              ? (isDark ? Colors.black : Colors.white)
+              : textSecondary,
         ),
         onSelected: (selected) {
           setState(() {
@@ -373,6 +390,9 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     EditorController controller,
     bool isDark,
   ) {
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
@@ -380,93 +400,101 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(node.iconEmoji, style: const TextStyle(fontSize: 24)),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
                         children: [
-                          Text(
-                            node.title,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                            ),
-                          ),
-                          Text(
-                            node.actLabel,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(node.colorHex),
-                              fontWeight: FontWeight.w700,
-                            ),
+                          Text(node.iconEmoji, style: const TextStyle(fontSize: 24)),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                node.title,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: textPrimary,
+                                ),
+                              ),
+                              Text(
+                                '${node.actLabel} • ${node.typeLabel}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                        onPressed: () {
+                          controller.deleteMindMapNode(node.id);
+                          Navigator.of(context).pop();
+                        },
+                      ),
                     ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                    onPressed: () {
-                      controller.deleteMindMapNode(node.id);
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                node.description,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  if (node.description.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      node.description,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: textSecondary,
+                        height: 1.4,
                       ),
-                      icon: const Icon(Icons.input_rounded, size: 18),
-                      label: const Text('Insert Node to Editor'),
-                      onPressed: () {
-                        controller.insertTextToEditor(
-                          '\n\n/* Story Plot Point: ${node.title} (${node.actLabel}) */\n${node.description}\n\n',
-                        );
-                        Navigator.of(context).pop();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
-                        );
-                      },
                     ),
+                  ],
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark ? Colors.white : Colors.black,
+                            foregroundColor: isDark ? Colors.black : Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          ),
+                          icon: const Icon(Icons.edit_note_rounded, size: 18),
+                          label: const Text('Insertar en Manuscrito', style: TextStyle(fontWeight: FontWeight.w700)),
+                          onPressed: () {
+                            controller.insertTextToEditor(
+                              '\n\n/* Punto de Trama: ${node.title} (${node.actLabel}) */\n${node.description}\n\n',
+                            );
+                            Navigator.of(context).pop();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
 }
 
-// Custom Painter for Bezier connections between nodes
+// Custom Painter for Monochrome Bezier connections between nodes
 class MindMapConnectionPainter extends CustomPainter {
   final List<MindMapNodeModel> nodes;
   final bool isDark;
@@ -479,14 +507,15 @@ class MindMapConnectionPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final Map<String, MindMapNodeModel> nodeMap = {for (var n in nodes) n.id: n};
+    final lineColor = isDark ? Colors.white24 : Colors.black26;
 
     for (var sourceNode in nodes) {
-      final sourceOffset = Offset(sourceNode.dx + 110, sourceNode.dy + 50);
+      final sourceOffset = Offset(sourceNode.dx + 115, sourceNode.dy + 50);
 
       for (var targetId in sourceNode.connectedToIds) {
         final targetNode = nodeMap[targetId];
         if (targetNode != null) {
-          final targetOffset = Offset(targetNode.dx + 110, targetNode.dy + 50);
+          final targetOffset = Offset(targetNode.dx + 115, targetNode.dy + 50);
 
           final path = Path();
           path.moveTo(sourceOffset.dx, sourceOffset.dy);
@@ -504,8 +533,8 @@ class MindMapConnectionPainter extends CustomPainter {
           );
 
           final paint = Paint()
-            ..color = Color(sourceNode.colorHex).withValues(alpha: 0.6)
-            ..strokeWidth = 3.0
+            ..color = lineColor
+            ..strokeWidth = 2.0
             ..style = PaintingStyle.stroke
             ..strokeCap = ui.StrokeCap.round;
 
@@ -513,11 +542,11 @@ class MindMapConnectionPainter extends CustomPainter {
 
           // Connection Node Dots
           final dotPaint = Paint()
-            ..color = Color(sourceNode.colorHex)
+            ..color = isDark ? Colors.white : Colors.black
             ..style = PaintingStyle.fill;
 
-          canvas.drawCircle(sourceOffset, 5, dotPaint);
-          canvas.drawCircle(targetOffset, 5, dotPaint);
+          canvas.drawCircle(sourceOffset, 4, dotPaint);
+          canvas.drawCircle(targetOffset, 4, dotPaint);
         }
       }
     }

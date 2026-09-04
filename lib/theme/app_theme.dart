@@ -2,24 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Light Mode Colors
-  static const Color lightBgPrimary = Color(0xFFFBFBF9);
+  // Light Mode Colors (Monochrome B&W Minimalist)
+  static const Color lightBgPrimary = Color(0xFFFAFAFA);
   static const Color lightSurfaceCard = Color(0xFFFFFFFF);
-  static const Color lightTextPrimary = Color(0xFF242120);
-  static const Color lightTextSecondary = Color(0xFF7A7875);
-  static const Color lightAccentMint = Color(0xFF38C793);
-  static const Color lightAccentMintLight = Color(0xFFE8F8F2);
-  static const Color lightBorderSubtle = Color(0xFFECEBE8);
-  static const Color lightDivider = Color(0xFFF0EFEA);
+  static const Color lightTextPrimary = Color(0xFF111111);
+  static const Color lightTextSecondary = Color(0xFF666666);
+  static const Color lightAccentMint = Color(0xFF000000); // Main Accent is pure sleek black
+  static const Color lightAccentMintLight = Color(0xFFF4F4F5);
+  static const Color lightBorderSubtle = Color(0xFFE4E4E7);
+  static const Color lightDivider = Color(0xFFEEEEEE);
 
-  // Dark Mode Colors
-  static const Color darkBgPrimary = Color(0xFF141414);
-  static const Color darkSurfaceCard = Color(0xFF1E1E1E);
-  static const Color darkTextPrimary = Color(0xFFEDEDEC);
-  static const Color darkTextSecondary = Color(0xFF908E8B);
-  static const Color darkAccentMint = Color(0xFF4EDB9F);
-  static const Color darkAccentMintLight = Color(0xFF1B382B);
-  static const Color darkBorderSubtle = Color(0xFF2B2B2B);
+  // Dark Mode Colors (Monochrome B&W Minimalist)
+  static const Color darkBgPrimary = Color(0xFF121212);
+  static const Color darkSurfaceCard = Color(0xFF1C1C1E);
+  static const Color darkTextPrimary = Color(0xFFF4F4F5);
+  static const Color darkTextSecondary = Color(0xFFA1A1AA);
+  static const Color darkAccentMint = Color(0xFFFFFFFF); // Main Accent is crisp white
+  static const Color darkAccentMintLight = Color(0xFF27272A);
+  static const Color darkBorderSubtle = Color(0xFF27272A);
 
   // Radii
   static const double cardRadius = 18.0;

@@ -67,8 +67,8 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
     final bgPrimary = isDark ? AppTheme.darkBgPrimary : AppTheme.lightBgPrimary;
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final accentMint = isDark ? AppTheme.darkAccentMint : AppTheme.lightAccentMint;
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final accentColor = isDark ? Colors.white : Colors.black;
 
     final activeChapter = controller.activeChapter;
     final activeBook = controller.activeBook;
@@ -99,7 +99,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                 IconButton(
                                   icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
                                   onPressed: () => Navigator.of(context).pop(),
-                                  tooltip: 'Return to Dashboard',
+                                  tooltip: 'Volver al Inicio',
                                 ),
                                 const SizedBox(width: 8),
 
@@ -147,16 +147,16 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: accentMint.withValues(alpha: 0.12),
+                                      color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
                                       borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: accentMint.withValues(alpha: 0.3)),
+                                      border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
                                     ),
                                     child: Text(
-                                      '$wordCount words',
+                                      '$wordCount palabras',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
-                                        color: accentMint,
+                                        color: textPrimary,
                                       ),
                                     ),
                                   ),
@@ -169,31 +169,31 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                   icon: Icon(
                                     controller.isPlayingAmbience ? Icons.graphic_eq_rounded : Icons.headset_outlined,
                                     size: 20,
-                                    color: controller.isPlayingAmbience ? accentMint : textSecondary,
+                                    color: controller.isPlayingAmbience ? accentColor : textSecondary,
                                   ),
                                   onPressed: () {
                                     setState(() {
                                       _showSoundscapeOverlay = !_showSoundscapeOverlay;
                                     });
                                   },
-                                  tooltip: 'Ambient Soundscapes',
+                                  tooltip: 'Sonidos de Ambiente',
                                 ),
 
                                 // Export Manuscript Button
                                 IconButton(
                                   icon: Icon(Icons.ios_share_rounded, size: 20, color: textSecondary),
                                   onPressed: () => _openExportDialog(context, isDark),
-                                  tooltip: 'Export & Publish Manuscript',
+                                  tooltip: 'Exportar Manuscrito',
                                 ),
 
                                 // Zen Mode Toggle Button
                                 IconButton(
                                   icon: Icon(
                                     Icons.self_improvement_rounded,
-                                    color: isZen ? accentMint : textSecondary,
+                                    color: isZen ? accentColor : textSecondary,
                                   ),
                                   onPressed: () => controller.toggleZenMode(),
-                                  tooltip: 'Toggle Zen Mode',
+                                  tooltip: 'Modo Zen Libre de Distracciones',
                                 ),
                               ],
                             ),
@@ -222,12 +222,12 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                           maxLines: null,
                           expands: true,
                           keyboardType: TextInputType.multiline,
-                          cursorColor: accentMint,
+                          cursorColor: accentColor,
                           cursorWidth: 2.5,
                           cursorRadius: const Radius.circular(2),
                           style: _getEditorFontTextStyle(controller.selectedFontFamily, isDark),
                           decoration: InputDecoration(
-                            hintText: 'Begin writing your story here...',
+                            hintText: 'Empieza a escribir tu historia aquí...',
                             hintStyle: _getEditorFontTextStyle(controller.selectedFontFamily, isDark).copyWith(
                               color: textSecondary.withValues(alpha: 0.4),
                               fontStyle: FontStyle.italic,
@@ -243,14 +243,14 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
               ),
             ),
 
-            // Zen Mode Float Restorer (Tap anywhere top corner to restore UI)
+            // Zen Mode Float Restorer
             if (isZen)
               Positioned(
                 top: 16,
                 right: 16,
                 child: FloatingActionButton.small(
-                  backgroundColor: accentMint,
-                  foregroundColor: Colors.white,
+                  backgroundColor: accentColor,
+                  foregroundColor: isDark ? Colors.black : Colors.white,
                   child: const Icon(Icons.close_fullscreen_rounded, size: 18),
                   onPressed: () => controller.toggleZenMode(),
                 ),

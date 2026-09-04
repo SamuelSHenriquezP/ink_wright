@@ -46,30 +46,30 @@ class MindMapNodeModel {
   String get actLabel {
     switch (act) {
       case PlotAct.act1Exposition:
-        return 'Act I: Setup & Inciting Incident';
+        return 'Acto I: Planteamiento';
       case PlotAct.act2RisingAction:
-        return 'Act II: Rising Action & Complications';
+        return 'Acto II: Nudo y Complicaciones';
       case PlotAct.midpoint:
-        return 'Midpoint Turning Point';
+        return 'Punto Medio';
       case PlotAct.act3Climax:
-        return 'Act III: Climax';
+        return 'Acto III: Clímax';
       case PlotAct.resolution:
-        return 'Resolution & Aftermath';
+        return 'Resolución';
     }
   }
 
   String get typeLabel {
     switch (type) {
       case PlotNodeType.mainPlot:
-        return 'Main Plot';
+        return 'Trama Principal';
       case PlotNodeType.subplot:
-        return 'Subplot';
+        return 'Subtrama';
       case PlotNodeType.characterArc:
-        return 'Character Arc';
+        return 'Arco de Personaje';
       case PlotNodeType.worldLore:
-        return 'World Lore';
+        return 'Códice / Lore';
       case PlotNodeType.turningPoint:
-        return 'Turning Point';
+        return 'Punto de Giro';
     }
   }
 

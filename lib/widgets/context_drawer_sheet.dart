@@ -102,7 +102,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
                       ),
                     ),
                     Text(
-                      'Manuscript Navigation, Codex & Muse Studio',
+                      'Navegación del Manuscrito & Códice',
                       style: TextStyle(fontSize: 12, color: textSecondary),
                     ),
                   ],
@@ -111,8 +111,8 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
                 Row(
                   children: [
                     IconButton(
-                      icon: Text('✨', style: const TextStyle(fontSize: 20)),
-                      tooltip: 'The Muse Studio',
+                      icon: const Icon(Icons.auto_awesome_outlined, size: 20),
+                      tooltip: 'Herramientas de Escritura',
                       onPressed: () => _openMuseStudio(context),
                     ),
                     IconButton(
@@ -130,7 +130,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
             margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: widget.isDark ? const Color(0xFF252525) : const Color(0xFFF2F1EC),
+              color: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
               borderRadius: BorderRadius.circular(30),
             ),
             child: TabBar(
@@ -147,10 +147,10 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
               dividerColor: Colors.transparent,
               indicatorSize: TabBarIndicatorSize.tab,
               tabs: const [
-                Tab(text: 'Chapters'),
-                Tab(text: 'Codex'),
-                Tab(text: 'Metrics'),
-                Tab(text: 'Ideas'),
+                Tab(text: 'Capítulos'),
+                Tab(text: 'Códice'),
+                Tab(text: 'Métricas'),
+                Tab(text: 'Notas'),
               ],
             ),
           ),

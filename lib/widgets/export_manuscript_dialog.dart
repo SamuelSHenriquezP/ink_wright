@@ -16,8 +16,8 @@ class ExportManuscriptDialog extends StatefulWidget {
 }
 
 class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
-  String _selectedFormat = 'PDF Manuscript';
-  final List<String> _formats = ['PDF Manuscript', 'E-Book (EPUB)', 'Markdown (.md)', 'Plain Text (.txt)'];
+  String _selectedFormat = 'Manuscrito PDF';
+  final List<String> _formats = ['Manuscrito PDF', 'E-Book (EPUB)', 'Markdown (.md)', 'Texto Plano (.txt)'];
 
   final List<String> _fonts = ['Lora', 'Merriweather', 'Playfair Display', 'JetBrains Mono'];
 
@@ -28,7 +28,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
     final textPrimary = widget.isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = widget.isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = widget.isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
-    final accentMint = widget.isDark ? AppTheme.darkAccentMint : AppTheme.lightAccentMint;
+    final accentColor = widget.isDark ? Colors.white : Colors.black;
 
     final activeBook = controller.activeBook;
     final totalWords = activeBook.currentWordCount;
@@ -51,10 +51,10 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
               children: [
                 Row(
                   children: [
-                    Text('📚', style: const TextStyle(fontSize: 22)),
-                    const SizedBox(width: 8),
+                    const Icon(Icons.ios_share_rounded, size: 22),
+                    const SizedBox(width: 10),
                     Text(
-                      'Publish & Export Studio',
+                      'Exportar Manuscrito',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -93,7 +93,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: textPrimary),
                         ),
                         Text(
-                          '$totalChapters chapters • $totalWords total words',
+                          '$totalChapters capítulos • $totalWords palabras totales',
                           style: TextStyle(fontSize: 12, color: textSecondary),
                         ),
                       ],
@@ -106,7 +106,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
             const SizedBox(height: 18),
 
             Text(
-              'Select Export Format',
+              'Seleccionar Formato',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
             ),
 
@@ -120,12 +120,15 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                 return ChoiceChip(
                   label: Text(fmt),
                   selected: isSelected,
-                  selectedColor: accentMint.withValues(alpha: 0.2),
-                  side: BorderSide(color: isSelected ? accentMint : borderSubtle),
+                  selectedColor: widget.isDark ? Colors.white : Colors.black,
+                  backgroundColor: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   labelStyle: TextStyle(
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? accentMint : textSecondary,
+                    color: isSelected
+                        ? (widget.isDark ? Colors.black : Colors.white)
+                        : textSecondary,
                   ),
                   onSelected: (selected) {
                     if (selected) {
@@ -141,7 +144,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
             const SizedBox(height: 16),
 
             Text(
-              'Editorial Typography Font',
+              'Tipografía Editorial',
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
             ),
 
@@ -159,11 +162,13 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                     padding: const EdgeInsets.only(right: 8),
                     child: ActionChip(
                       label: Text(font),
-                      backgroundColor: isSelected ? accentMint : (widget.isDark ? const Color(0xFF252525) : const Color(0xFFF2F1EC)),
+                      backgroundColor: isSelected ? accentColor : (widget.isDark ? const Color(0xFF252525) : const Color(0xFFF2F1EC)),
                       labelStyle: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: isSelected ? Colors.white : textPrimary,
+                        color: isSelected
+                            ? (widget.isDark ? Colors.black : Colors.white)
+                            : textPrimary,
                       ),
                       onPressed: () => controller.setFontFamily(font),
                     ),
@@ -176,20 +181,20 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
 
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: accentMint,
-                foregroundColor: Colors.white,
+                backgroundColor: accentColor,
+                foregroundColor: widget.isDark ? Colors.black : Colors.white,
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 elevation: 0,
               ),
               icon: const Icon(Icons.download_done_rounded, size: 20),
-              label: Text('Export as $_selectedFormat', style: const TextStyle(fontWeight: FontWeight.w700)),
+              label: Text('Exportar como $_selectedFormat', style: const TextStyle(fontWeight: FontWeight.w700)),
               onPressed: () {
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Successfully exported "${activeBook.title}" as $_selectedFormat!'),
-                    backgroundColor: accentMint,
+                    content: Text('¡"${activeBook.title}" exportado como $_selectedFormat exitosamente!'),
+                    backgroundColor: widget.isDark ? Colors.white : Colors.black,
                   ),
                 );
               },

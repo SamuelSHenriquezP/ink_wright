@@ -35,13 +35,13 @@ class CodexEntryModel {
   String get typeLabel {
     switch (type) {
       case CodexType.character:
-        return 'Character';
+        return 'Personaje';
       case CodexType.location:
-        return 'Location';
+        return 'Lugar';
       case CodexType.artifact:
-        return 'Artifact / Relic';
+        return 'Objeto / Reliquia';
       case CodexType.lore:
-        return 'Lore & Faction';
+        return 'Códice / Lore';
     }
   }
 

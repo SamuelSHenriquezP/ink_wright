@@ -6,14 +6,14 @@ class CodexCard extends StatelessWidget {
   final CodexEntryModel entry;
   final bool isDark;
   final VoidCallback onTap;
-  final VoidCallback onPinTap;
+  final VoidCallback? onPinTap;
 
   const CodexCard({
     super.key,
     required this.entry,
     required this.isDark,
     required this.onTap,
-    required this.onPinTap,
+    this.onPinTap,
   });
 
   @override
@@ -22,18 +22,18 @@ class CodexCard extends StatelessWidget {
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
-    final accentMint = isDark ? AppTheme.darkAccentMint : AppTheme.lightAccentMint;
+    final accentColor = isDark ? Colors.white : Colors.black;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 260,
+        width: 250,
         margin: const EdgeInsets.only(right: 14),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: bgCard,
           borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-          border: Border.all(color: borderSubtle, width: 1),
+          border: Border.all(color: borderSubtle, width: 1.5),
           boxShadow: AppTheme.getSoftShadow(isDark),
         ),
         child: Column(
@@ -46,16 +46,16 @@ class CodexCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      width: 38,
-                      height: 38,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: accentMint.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
+                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         entry.defaultEmoji,
-                        style: const TextStyle(fontSize: 20),
+                        style: const TextStyle(fontSize: 18),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -67,7 +67,7 @@ class CodexCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            color: accentMint,
+                            color: textPrimary,
                             letterSpacing: 0.8,
                           ),
                         ),
@@ -84,16 +84,17 @@ class CodexCard extends StatelessWidget {
                   ],
                 ),
 
-                IconButton(
-                  icon: Icon(
-                    entry.isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
-                    size: 18,
-                    color: entry.isPinned ? accentMint : textSecondary,
+                if (onPinTap != null)
+                  IconButton(
+                    icon: Icon(
+                      entry.isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                      size: 16,
+                      color: entry.isPinned ? accentColor : textSecondary,
+                    ),
+                    onPressed: onPinTap,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
-                  onPressed: onPinTap,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
               ],
             ),
 
@@ -103,7 +104,7 @@ class CodexCard extends StatelessWidget {
             Text(
               entry.name,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
                 color: textPrimary,
                 letterSpacing: -0.2,
@@ -137,7 +138,7 @@ class CodexCard extends StatelessWidget {
                     margin: const EdgeInsets.only(right: 6),
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF282828) : const Color(0xFFF2F1EC),
+                      color: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(

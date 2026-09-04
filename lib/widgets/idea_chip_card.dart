@@ -25,7 +25,7 @@ class IdeaChipCard extends StatelessWidget {
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
-    final accentMint = isDark ? AppTheme.darkAccentMint : AppTheme.lightAccentMint;
+    final accentColor = isDark ? Colors.white : Colors.black;
 
     return Container(
       width: 240,
@@ -34,7 +34,7 @@ class IdeaChipCard extends StatelessWidget {
         color: bgCard,
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         border: Border.all(
-          color: idea.isPinned ? accentMint.withValues(alpha: 0.5) : borderSubtle,
+          color: idea.isPinned ? accentColor : borderSubtle,
           width: idea.isPinned ? 1.5 : 1.0,
         ),
         boxShadow: AppTheme.getSoftShadow(isDark),
@@ -57,10 +57,10 @@ class IdeaChipCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Color(idea.colorHex).withValues(alpha: 0.12),
+                        color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(AppTheme.pillRadius),
                         border: Border.all(
-                          color: Color(idea.colorHex).withValues(alpha: 0.3),
+                          color: borderSubtle,
                           width: 1,
                         ),
                       ),
@@ -74,7 +74,7 @@ class IdeaChipCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
-                              color: Color(idea.colorHex),
+                              color: textPrimary,
                             ),
                           ),
                         ],
@@ -84,7 +84,7 @@ class IdeaChipCard extends StatelessWidget {
                       icon: Icon(
                         idea.isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
                         size: 16,
-                        color: idea.isPinned ? accentMint : textSecondary.withValues(alpha: 0.5),
+                        color: idea.isPinned ? textPrimary : textSecondary.withValues(alpha: 0.5),
                       ),
                       onPressed: onPinTap,
                       constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
@@ -150,13 +150,13 @@ class IdeaChipCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                           child: Row(
                             children: [
-                              Icon(Icons.add_rounded, size: 14, color: accentMint),
+                              Icon(Icons.add_rounded, size: 14, color: textPrimary),
                               Text(
-                                'Insert',
+                                'Insertar',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: accentMint,
+                                  color: textPrimary,
                                 ),
                               ),
                             ],

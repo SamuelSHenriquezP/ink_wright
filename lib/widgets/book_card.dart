@@ -24,19 +24,19 @@ class BookCard extends StatelessWidget {
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
-    final accentMint = isDark ? AppTheme.darkAccentMint : AppTheme.lightAccentMint;
+    final accentColor = isDark ? Colors.white : Colors.black;
 
-    final formattedDate = DateFormat('MMM d').format(book.lastEdited);
+    final formattedDate = DateFormat('d MMM', 'es_ES').format(book.lastEdited);
     final formattedWords = NumberFormat('#,###').format(book.currentWordCount);
     final formattedTarget = NumberFormat('#,###').format(book.targetWordCount);
 
     return Container(
-      width: 280,
+      width: 270,
       margin: const EdgeInsets.only(right: 16),
       decoration: BoxDecoration(
         color: bgCard,
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        border: Border.all(color: borderSubtle, width: 1),
+        border: Border.all(color: borderSubtle, width: 1.5),
         boxShadow: AppTheme.getSoftShadow(isDark),
       ),
       child: Material(
@@ -55,27 +55,26 @@ class BookCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Mini Book Jacket Graphic
                     Container(
-                      width: 48,
-                      height: 56,
+                      width: 46,
+                      height: 52,
                       decoration: BoxDecoration(
-                        color: Color(book.coverColorHex).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
+                        color: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: Color(book.coverColorHex).withValues(alpha: 0.4),
-                          width: 1.5,
+                          color: borderSubtle,
+                          width: 1,
                         ),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         book.coverEmoji,
-                        style: const TextStyle(fontSize: 24),
+                        style: const TextStyle(fontSize: 22),
                       ),
                     ),
 
-                    // Status pill tag
-                    _buildStatusPill(book.status, accentMint, isDark),
+                    // Status pill tag in Spanish & B&W
+                    _buildStatusPill(book.status, accentColor, isDark),
                   ],
                 ),
 
@@ -85,8 +84,8 @@ class BookCard extends StatelessWidget {
                 Text(
                   book.title,
                   style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
                     color: textPrimary,
                     letterSpacing: -0.2,
                   ),
@@ -115,7 +114,7 @@ class BookCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '$formattedWords / $formattedTarget words',
+                          '$formattedWords / $formattedTarget palabras',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -127,7 +126,7 @@ class BookCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: accentMint,
+                            color: textPrimary,
                           ),
                         ),
                       ],
@@ -137,9 +136,9 @@ class BookCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                       child: LinearProgressIndicator(
                         value: book.progressPercentage,
-                        minHeight: 6,
-                        backgroundColor: accentMint.withValues(alpha: 0.12),
-                        color: accentMint,
+                        minHeight: 5,
+                        backgroundColor: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                     ),
                   ],
@@ -158,7 +157,7 @@ class BookCard extends StatelessWidget {
                         Icon(Icons.auto_stories_rounded, size: 14, color: textSecondary),
                         const SizedBox(width: 4),
                         Text(
-                          '${book.chapters.length} Chapters',
+                          '${book.chapters.length} Capítulos',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -168,7 +167,7 @@ class BookCard extends StatelessWidget {
                       ],
                     ),
                     Text(
-                      'Edited $formattedDate',
+                      'Editado $formattedDate',
                       style: TextStyle(
                         fontSize: 11,
                         color: textSecondary.withValues(alpha: 0.8),
@@ -181,45 +180,43 @@ class BookCard extends StatelessWidget {
           ),
         ),
       ),
-    ).animate().fadeIn(duration: 350.ms).slideX(begin: 0.1, end: 0);
+    ).animate().fadeIn(duration: 300.ms).slideX(begin: 0.05, end: 0);
   }
 
-  Widget _buildStatusPill(BookStatus status, Color accentMint, bool isDark) {
+  Widget _buildStatusPill(BookStatus status, Color accentColor, bool isDark) {
     String label;
-    Color color;
 
     switch (status) {
       case BookStatus.outlining:
-        label = 'Outlining';
-        color = const Color(0xFFF5A623);
+        label = 'Planificación';
         break;
       case BookStatus.drafting:
-        label = 'Drafting';
-        color = accentMint;
+        label = 'Borrador';
         break;
       case BookStatus.revising:
-        label = 'Revising';
-        color = const Color(0xFF4A90E2);
+        label = 'Revisión';
         break;
       case BookStatus.completed:
-        label = 'Completed';
-        color = const Color(0xFF9013FE);
+        label = 'Completado';
         break;
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: isDark ? Colors.white24 : Colors.black12,
+          width: 1,
+        ),
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: color,
+          color: isDark ? Colors.white : Colors.black,
         ),
       ),
     );

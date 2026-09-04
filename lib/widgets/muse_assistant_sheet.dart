@@ -23,36 +23,36 @@ class _MuseAssistantSheetState extends State<MuseAssistantSheet> with SingleTick
 
   final Random _random = Random();
   String _generatedOutput = '';
-  String _activePromptType = 'Plot Twist';
+  String _activePromptType = 'Giro de Trama';
 
-  // Sample prompt engine datasets
+  // Spanish sample prompt engine datasets
   final List<String> _plotTwists = [
-    "The ancient silver compass doesn't point to St. Jude's Abbey; it tracks the location of Silas's missing shadow.",
-    "Martha isn't keeping secrets from Silas; she was sent by the Guild to erase his memories of the valley.",
-    "The fog across Blackwood Valley only moves when someone lies within three miles of the sanctuary.",
-    "The maps Silas drew thirty years ago didn't record terrain—they prophesied the future collapse of the monastery.",
-    "The clock tower in St. Jude's doesn't ring for hours; it tolls whenever a chapter of the town's history is altered.",
+    "La brújula de plata no apunta al norte ni a la abadía; sigue la ubicación de la sombra perdida del protagonista.",
+    "El diario de viaje no fue escrito por el cartógrafo, sino enviado por la orden para borrar sus propios recuerdos.",
+    "La niebla sobre el valle solo avanza cuando alguien pronuncia una mentira a menos de tres kilómetros del santuario.",
+    "Los mapas trazados hace treinta años no registraban el terreno, sino que profetizaban el colapso del castillo.",
+    "El reloj del campanario no marca las horas; repica únicamente cuando se altera un capítulo de la historia del pueblo.",
   ];
 
   final List<String> _sensoryDetails = [
-    "Damp peat moss, stale tallow candle smoke, and the faint metallic tang of old brass after rain.",
-    "A cold draft swept through the floorboards, smelling of pine needle pitch and forgotten parchment.",
-    "The silence was heavy, broken only by the synchronized ticking of two pocket watches set 12 seconds apart.",
-    "Pale moonlight filtered through stained glass, casting cobalt and crimson geometric shadows across the cobblestone.",
+    "Olor a musgo húmedo, humo de vela de sebo rancia y el tenue toque metálico del latón viejo tras la lluvia.",
+    "Un ráfaga helada recorrió el suelo de madera, impregnada de resina de pino y pergamino olvidado.",
+    "El silencio era denso, interrumpido únicamente por el tic-tac sincronizado de dos relojes de bolsillo desfasados por 12 segundos.",
+    "La luz de la luna atravesaba los vitrales, proyectando sombras geométricas azabache y carmesí sobre el empedrado.",
   ];
 
   final List<String> _dialogueSparks = [
-    "\"If we stop writing the story now, Silas, the story will start writing us.\"",
-    "\"A secret buried in wet soil doesn't rot; it grows roots.\"",
-    "\"Do not trust a map drawn by someone who survived the night at St. Jude's.\"",
-    "\"The mountain remembers every word you whispered in the dark.\"",
+    "«Si dejamos de escribir la historia ahora, Silas, la historia comenzará a escribirnos a nosotros.»",
+    "«Un secreto enterrado en tierra húmeda no se pudre; echa raíces.»",
+    "«No confíes en un mapa dibujado por alguien que sobrevivió a la noche en la abadía.»",
+    "«La montaña recuerda cada palabra que le susurraste en la oscuridad.»",
   ];
 
   final List<String> _characterFlaws = [
-    "Uncompromising obsession with cartographic precision even when under fire.",
-    "Refuses to read letters written after dusk out of superstitious dread.",
-    "Hides an old brass key inside the binding of every book he touches.",
-    "Hears distant bell chimes whenever he makes a fateful decision.",
+    "Obsesión inflexible por la precisión cartográfica, incluso bajo peligro inminente.",
+    "Se niega rotundamente a leer cartas escritas después del atardecer por temor supersticioso.",
+    "Esconde una vieja llave de latón dentro de la encuadernación de cada libro que toca.",
+    "Escucha campanadas distantes cada vez que debe tomar una decisión decisiva.",
   ];
 
   @override
@@ -72,19 +72,19 @@ class _MuseAssistantSheetState extends State<MuseAssistantSheet> with SingleTick
     setState(() {
       switch (tabIndex) {
         case 0:
-          _activePromptType = 'Plot Twist';
+          _activePromptType = 'Giro de Trama';
           _generatedOutput = _plotTwists[_random.nextInt(_plotTwists.length)];
           break;
         case 1:
-          _activePromptType = 'Sensory Details';
+          _activePromptType = 'Detalle Sensorial';
           _generatedOutput = _sensoryDetails[_random.nextInt(_sensoryDetails.length)];
           break;
         case 2:
-          _activePromptType = 'Evocative Dialogue';
+          _activePromptType = 'Diálogo';
           _generatedOutput = _dialogueSparks[_random.nextInt(_dialogueSparks.length)];
           break;
         case 3:
-          _activePromptType = 'Character Trait';
+          _activePromptType = 'Rasgo de Personaje';
           _generatedOutput = _characterFlaws[_random.nextInt(_characterFlaws.length)];
           break;
       }
@@ -98,7 +98,7 @@ class _MuseAssistantSheetState extends State<MuseAssistantSheet> with SingleTick
     final textPrimary = widget.isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = widget.isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = widget.isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
-    final accentMint = widget.isDark ? AppTheme.darkAccentMint : AppTheme.lightAccentMint;
+    final accentColor = widget.isDark ? Colors.white : Colors.black;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -133,25 +133,25 @@ class _MuseAssistantSheetState extends State<MuseAssistantSheet> with SingleTick
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: accentMint.withValues(alpha: 0.15),
+                      color: widget.isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
                       shape: BoxShape.circle,
                     ),
-                    child: Text('✨', style: const TextStyle(fontSize: 20)),
+                    child: const Icon(Icons.auto_awesome_outlined, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'The Muse Studio',
+                        'Inspiración Editorial',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w800,
                           color: textPrimary,
                         ),
                       ),
                       Text(
-                        'Creative prompts & narrative sparks',
+                        'Generador de ideas, escenas y giros narrativos',
                         style: TextStyle(fontSize: 12, color: textSecondary),
                       ),
                     ],
@@ -171,15 +171,15 @@ class _MuseAssistantSheetState extends State<MuseAssistantSheet> with SingleTick
           TabBar(
             controller: _tabController,
             onTap: (index) => _generatePrompt(index),
-            indicatorColor: accentMint,
-            labelColor: accentMint,
+            indicatorColor: accentColor,
+            labelColor: textPrimary,
             unselectedLabelColor: textSecondary,
             labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             tabs: const [
-              Tab(text: 'Plot Twist'),
-              Tab(text: 'Sensory'),
-              Tab(text: 'Dialogue'),
-              Tab(text: 'Character'),
+              Tab(text: 'Giros'),
+              Tab(text: 'Sensorial'),
+              Tab(text: 'Diálogos'),
+              Tab(text: 'Personaje'),
             ],
           ),
 
@@ -205,21 +205,21 @@ class _MuseAssistantSheetState extends State<MuseAssistantSheet> with SingleTick
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
-                        color: accentMint,
+                        color: textPrimary,
                         letterSpacing: 1.0,
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.refresh_rounded, size: 18, color: accentMint),
+                      icon: Icon(Icons.refresh_rounded, size: 18, color: textPrimary),
                       onPressed: () => _generatePrompt(_tabController.index),
-                      tooltip: 'Generate New Spark',
+                      tooltip: 'Generar Nueva Idea',
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
                   _generatedOutput,
-                  style: AppTheme.editorStyle(isDark: widget.isDark, fontSize: 15.5),
+                  style: AppTheme.editorStyle(isDark: widget.isDark, fontSize: 15.0),
                 ),
               ],
             ),
@@ -238,20 +238,20 @@ class _MuseAssistantSheetState extends State<MuseAssistantSheet> with SingleTick
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                   ),
                   icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-                  label: const Text('Save to Ideas', style: TextStyle(fontWeight: FontWeight.w700)),
+                  label: const Text('Guardar Nota', style: TextStyle(fontWeight: FontWeight.w700)),
                   onPressed: () {
                     final newIdea = IdeaSnippetModel(
                       id: 'idea_${DateTime.now().millisecondsSinceEpoch}',
-                      title: '$_activePromptType Spark',
+                      title: 'Idea: $_activePromptType',
                       content: _generatedOutput,
-                      category: IdeaCategory.plotTwist,
-                      colorHex: 0xFF38C793,
+                      category: IdeaCategory.general,
+                      colorHex: 0xFF18181B,
                       createdAt: DateTime.now(),
-                      tags: ['Creative Spark', _activePromptType],
+                      tags: ['Inspiración', _activePromptType],
                     );
                     controller.addIdea(newIdea);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Saved spark to Ideas & Scraps!')),
+                      const SnackBar(content: Text('¡Idea guardada en tus Notas y Fragmentos!')),
                     );
                   },
                 ),
@@ -260,16 +260,16 @@ class _MuseAssistantSheetState extends State<MuseAssistantSheet> with SingleTick
               Expanded(
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: accentMint,
-                    foregroundColor: Colors.white,
+                    backgroundColor: accentColor,
+                    foregroundColor: widget.isDark ? Colors.black : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     elevation: 0,
                   ),
                   icon: const Icon(Icons.input_rounded, size: 18),
-                  label: const Text('Insert to Editor', style: TextStyle(fontWeight: FontWeight.w700)),
+                  label: const Text('Insertar en Texto', style: TextStyle(fontWeight: FontWeight.w700)),
                   onPressed: () {
-                    controller.insertTextToEditor('\n\n/* Muse Spark: */\n$_generatedOutput\n\n');
+                    controller.insertTextToEditor('\n\n/* Idea Editorial: */\n$_generatedOutput\n\n');
                     Navigator.of(context).pop();
                   },
                 ),

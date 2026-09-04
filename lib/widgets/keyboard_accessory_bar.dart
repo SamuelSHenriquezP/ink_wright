@@ -45,7 +45,6 @@ class KeyboardAccessoryBar extends StatelessWidget {
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
-    final accentMint = isDark ? AppTheme.darkAccentMint : AppTheme.lightAccentMint;
 
     return Container(
       height: 52,
@@ -65,17 +64,17 @@ class KeyboardAccessoryBar extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: accentMint.withValues(alpha: 0.12),
+                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.edit_note_rounded, size: 16, color: accentMint),
+                  Icon(Icons.edit_note_rounded, size: 16, color: textPrimary),
                   const SizedBox(width: 6),
                   Text(
-                    '$wordCount w',
+                    '$wordCount p',
                     style: TextStyle(
-                      color: accentMint,
+                      color: textPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -98,51 +97,51 @@ class KeyboardAccessoryBar extends StatelessWidget {
                   const SizedBox(width: 4),
                   _buildToolButton(
                     iconText: 'B',
-                    tooltip: 'Bold',
+                    tooltip: 'Negrita',
                     onTap: () => WriterTextFormatter.toggleFormat(textController, '**'),
                     textPrimary: textPrimary,
                     isBold: true,
                   ),
                   _buildToolButton(
                     iconText: 'I',
-                    tooltip: 'Italic',
+                    tooltip: 'Cursiva',
                     onTap: () => WriterTextFormatter.toggleFormat(textController, '*'),
                     textPrimary: textPrimary,
                     isItalic: true,
                   ),
                   _buildToolButton(
                     iconText: 'H1',
-                    tooltip: 'Heading 1',
+                    tooltip: 'Título 1',
                     onTap: () => WriterTextFormatter.insertLinePrefix(textController, '# '),
                     textPrimary: textPrimary,
                   ),
                   _buildToolButton(
                     iconText: 'H2',
-                    tooltip: 'Heading 2',
+                    tooltip: 'Título 2',
                     onTap: () => WriterTextFormatter.insertLinePrefix(textController, '## '),
                     textPrimary: textPrimary,
                   ),
                   _buildToolButton(
                     iconText: '“ ”',
-                    tooltip: 'Quote Block',
+                    tooltip: 'Cita',
                     onTap: () => WriterTextFormatter.insertLinePrefix(textController, '> '),
                     textPrimary: textPrimary,
                   ),
                   _buildToolButton(
                     iconText: '•',
-                    tooltip: 'Bullet List',
+                    tooltip: 'Lista',
                     onTap: () => WriterTextFormatter.insertLinePrefix(textController, '- '),
                     textPrimary: textPrimary,
                   ),
                   _buildToolButton(
                     iconText: '—',
-                    tooltip: 'Em Dash',
-                    onTap: () => WriterTextFormatter.insertAtCursor(textController, '—'),
+                    tooltip: 'Raya de diálogo',
+                    onTap: () => WriterTextFormatter.insertAtCursor(textController, '— '),
                     textPrimary: textPrimary,
                   ),
                   _buildToolButton(
                     iconText: '«»',
-                    tooltip: 'Guillemets',
+                    tooltip: 'Comillas españolas',
                     onTap: () => WriterTextFormatter.insertAtCursor(textController, '«  »'),
                     textPrimary: textPrimary,
                   ),
@@ -153,10 +152,10 @@ class KeyboardAccessoryBar extends StatelessWidget {
 
           Container(height: 20, width: 1, color: borderSubtle),
 
-          // Quick Action Buttons (The Muse AI Spark + Writing Sprint + Zen Focus)
+          // Quick Action Buttons (Writing Tools + Writing Sprint + Zen Focus)
           IconButton(
-            icon: const Text('✨', style: TextStyle(fontSize: 16)),
-            tooltip: 'The Muse Studio',
+            icon: const Icon(Icons.auto_awesome_outlined, size: 18),
+            tooltip: 'Herramientas de Escritura',
             onPressed: () => _openMuseSheet(context),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -164,15 +163,15 @@ class KeyboardAccessoryBar extends StatelessWidget {
 
           IconButton(
             icon: Icon(Icons.timer_outlined, size: 18, color: textSecondary),
-            tooltip: 'Start Writing Sprint',
+            tooltip: 'Sprint de Escritura',
             onPressed: () => _openSprintDialog(context),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
 
           IconButton(
-            icon: Icon(Icons.self_improvement_rounded, size: 20, color: accentMint),
-            tooltip: 'Toggle Zen Focus Mode',
+            icon: Icon(Icons.self_improvement_rounded, size: 20, color: textPrimary),
+            tooltip: 'Modo Zen Libre de Distracciones',
             onPressed: onToggleZenMode,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
