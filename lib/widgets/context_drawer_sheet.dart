@@ -198,11 +198,11 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
               final chapter = activeBook.chapters[index];
               final isSelected = chapter.id == activeChapter.id;
 
-              return Container(
-                decoration: BoxDecoration(
-                  color: isSelected ? accentMint.withValues(alpha: 0.1) : (widget.isDark ? const Color(0xFF222222) : const Color(0xFFFAFAF8)),
+              return Material(
+                color: isSelected ? accentMint.withValues(alpha: 0.1) : (widget.isDark ? const Color(0xFF222222) : const Color(0xFFFAFAF8)),
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
+                  side: BorderSide(
                     color: isSelected ? accentMint : borderSubtle,
                     width: isSelected ? 1.5 : 1.0,
                   ),

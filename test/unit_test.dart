@@ -21,7 +21,7 @@ void main() {
     test('Initial state loading', () {
       final controller = EditorController();
       expect(controller.allBooks.isNotEmpty, isTrue);
-      expect(controller.activeBook.title, equals('The Whispering Pines'));
+      expect(controller.activeBook.title, equals('The Cipher of St. Jude'));
       expect(controller.ideas.isNotEmpty, isTrue);
       expect(controller.isZenMode, isFalse);
     });

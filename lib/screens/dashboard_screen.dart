@@ -542,15 +542,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 10),
                           decoration: BoxDecoration(
-                            color: bgCard,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isSelected ? (isDark ? Colors.white : Colors.black) : borderSubtle,
-                              width: isSelected ? 1.5 : 1.0,
-                            ),
                             boxShadow: AppTheme.getSoftShadow(isDark),
                           ),
-                          child: ListTile(
+                          child: Material(
+                            color: bgCard,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(
+                                color: isSelected ? (isDark ? Colors.white : Colors.black) : borderSubtle,
+                                width: isSelected ? 1.5 : 1.0,
+                              ),
+                            ),
+                            child: ListTile(
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                             leading: Container(
                               width: 36,
@@ -589,8 +593,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               );
                             },
                           ),
-                        );
-                      }),
+                        ),
+                      );
+                    }),
                     ],
                   ),
                 ),

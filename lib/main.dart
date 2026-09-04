@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'theme/app_theme.dart';
 import 'controllers/editor_controller.dart';
 import 'screens/dashboard_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Initialize locale data for date formatting in Spanish
+  await initializeDateFormatting('es_ES', null);
+
   // Set transparent system overlay for modern edge-to-edge feel
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
