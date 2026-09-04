@@ -34,7 +34,7 @@ class InkWrightApp extends StatelessWidget {
       child: Consumer<EditorController>(
         builder: (context, controller, _) {
           return MaterialApp(
-            title: 'InkWright Sanctuary',
+            title: 'InkWright Studio',
             debugShowCheckedModeBanner: false,
             themeMode: controller.isDarkMode ? ThemeMode.dark : ThemeMode.light,
             theme: AppTheme.lightTheme,

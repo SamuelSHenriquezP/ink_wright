@@ -186,14 +186,15 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                   tooltip: 'Exportar Manuscrito',
                                 ),
 
-                                // Zen Mode Toggle Button
+                                // Botón Pantalla Completa
                                 IconButton(
                                   icon: Icon(
-                                    Icons.self_improvement_rounded,
+                                    Icons.fullscreen_rounded,
+                                    size: 22,
                                     color: isZen ? accentColor : textSecondary,
                                   ),
                                   onPressed: () => controller.toggleZenMode(),
-                                  tooltip: 'Modo Zen Libre de Distracciones',
+                                  tooltip: 'Pantalla Completa',
                                 ),
                               ],
                             ),

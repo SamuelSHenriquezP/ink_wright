@@ -536,7 +536,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           icon: const Icon(Icons.edit_note_rounded, size: 20),
                           label: const Text(
-                            'Continuar Escribiendo en Editor Zen',
+                            'Continuar Escribiendo',
                             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                           ),
                           onPressed: () {
@@ -1030,7 +1030,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
 
-      // FAB para ir directo al Editor Zen
+      // FAB para ir directo al Editor
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: isDark ? Colors.white : Colors.black,
         foregroundColor: isDark ? Colors.black : Colors.white,
@@ -1038,7 +1038,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         icon: const Icon(Icons.edit_note_rounded),
         label: const Text(
-          'Editor Zen',
+          'Escribir',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         onPressed: () {

@@ -206,8 +206,8 @@ class KeyboardAccessoryBar extends StatelessWidget {
           ),
 
           IconButton(
-            icon: Icon(Icons.self_improvement_rounded, size: 20, color: textPrimary),
-            tooltip: 'Modo Zen Libre de Distracciones',
+            icon: Icon(Icons.fullscreen_rounded, size: 22, color: textPrimary),
+            tooltip: 'Pantalla Completa',
             onPressed: onToggleZenMode,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
