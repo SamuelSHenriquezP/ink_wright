@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/book_model.dart';
 import '../models/chapter_model.dart';
 import '../models/idea_snippet_model.dart';
@@ -10,6 +11,10 @@ import '../models/mind_map_node_model.dart';
 import '../formatters/writer_text_formatter.dart';
 
 class EditorController extends ChangeNotifier {
+  static const String _prefKeyActiveBookId = 'ink_last_active_book_id';
+  static const String _prefKeyActiveChapterId = 'ink_last_active_chapter_id';
+  static const String _prefKeyCursorPos = 'ink_last_cursor_position';
+
   bool _isDarkMode = false;
   bool _isZenMode = false;
   final bool _isAutoSaveEnabled = true;
@@ -53,6 +58,7 @@ class EditorController extends ChangeNotifier {
 
   EditorController() {
     _initializeInitialState();
+    _loadLastSession();
   }
 
   void _initializeInitialState() {
@@ -342,6 +348,61 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
     );
   }
 
+  // Session Persistence (Loads last open book, chapter, content, and cursor position)
+  Future<void> _loadLastSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastBookId = prefs.getString(_prefKeyActiveBookId);
+      final lastChapterId = prefs.getString(_prefKeyActiveChapterId);
+      final lastCursor = prefs.getInt(_prefKeyCursorPos) ?? 0;
+
+      if (lastBookId != null) {
+        final foundBook = _allBooks.firstWhere((b) => b.id == lastBookId, orElse: () => _activeBook);
+        _activeBook = foundBook;
+      }
+
+      if (lastChapterId != null) {
+        final foundChapter = _activeBook.chapters.firstWhere(
+          (c) => c.id == lastChapterId,
+          orElse: () => _activeBook.chapters.isNotEmpty ? _activeBook.chapters.first : _activeChapter,
+        );
+        _activeChapter = foundChapter;
+      }
+
+      final savedContent = prefs.getString('ink_chapter_content_${_activeChapter.id}');
+      if (savedContent != null && savedContent.isNotEmpty) {
+        _activeChapter = _activeChapter.copyWith(content: savedContent);
+        final updatedChapters = _activeBook.chapters.map((ch) {
+          return ch.id == _activeChapter.id ? _activeChapter : ch;
+        }).toList();
+        _activeBook = _activeBook.copyWith(chapters: updatedChapters);
+        _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+      }
+
+      textEditingController.text = _activeChapter.content;
+      if (lastCursor >= 0 && lastCursor <= textEditingController.text.length) {
+        textEditingController.selection = TextSelection.collapsed(offset: lastCursor);
+      } else {
+        textEditingController.selection = TextSelection.collapsed(offset: textEditingController.text.length);
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Note: Session load error (safe): $e');
+    }
+  }
+
+  Future<void> saveCurrentSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefKeyActiveBookId, _activeBook.id);
+      await prefs.setString(_prefKeyActiveChapterId, _activeChapter.id);
+      await prefs.setInt(_prefKeyCursorPos, textEditingController.selection.baseOffset);
+      await prefs.setString('ink_chapter_content_${_activeChapter.id}', textEditingController.text);
+    } catch (e) {
+      debugPrint('Note: Session save error (safe): $e');
+    }
+  }
+
   // Text changes handler
   void _onTextChanged() {
     final currentText = textEditingController.text;
@@ -363,6 +424,7 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
 
     _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
 
+    saveCurrentSession();
     notifyListeners();
   }
 
@@ -396,12 +458,14 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
     } else {
       addNewChapter('Capítulo 1');
     }
+    saveCurrentSession();
     notifyListeners();
   }
 
   void selectChapter(ChapterModel chapter) {
     _activeChapter = chapter;
     textEditingController.text = chapter.content;
+    saveCurrentSession();
     notifyListeners();
   }
 
@@ -424,6 +488,7 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
     textEditingController.text = '';
 
     _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    saveCurrentSession();
     notifyListeners();
   }
 

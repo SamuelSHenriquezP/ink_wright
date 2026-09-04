@@ -9,6 +9,7 @@ import '../widgets/context_drawer_sheet.dart';
 import '../widgets/export_manuscript_dialog.dart';
 import '../widgets/soundscape_bar.dart';
 import '../formatters/writer_text_formatter.dart';
+import 'dashboard_screen.dart';
 
 class ZenEditorScreen extends StatefulWidget {
   const ZenEditorScreen({super.key});
@@ -98,7 +99,16 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                 // Back to Dashboard Button
                                 IconButton(
                                   icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                                  onPressed: () => Navigator.of(context).pop(),
+                                  onPressed: () {
+                                    controller.saveCurrentSession();
+                                    if (Navigator.of(context).canPop()) {
+                                      Navigator.of(context).pop();
+                                    } else {
+                                      Navigator.of(context).pushReplacement(
+                                        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                                      );
+                                    }
+                                  },
                                   tooltip: 'Volver al Inicio',
                                 ),
                                 const SizedBox(width: 8),

@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ink_wright/formatters/writer_text_formatter.dart';
 import 'package:ink_wright/controllers/editor_controller.dart';
 
 void main() {
+  setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('WriterTextFormatter Tests', () {
     test('Word counting logic', () {
       expect(WriterTextFormatter.countWords('Hello world'), equals(2));

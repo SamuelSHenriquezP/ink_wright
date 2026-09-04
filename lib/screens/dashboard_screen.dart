@@ -25,6 +25,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedFilterIndex = 0;
+  bool _hasAutoOpenedLastText = false;
+
   final List<String> _filters = [
     'Manuscrito Activo',
     'Tus Libros',
@@ -34,6 +36,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'Métricas',
     'Herramientas',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_hasAutoOpenedLastText && mounted) {
+        _hasAutoOpenedLastText = true;
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
+        );
+      }
+    });
+  }
 
   void _openMetricsSheet(BuildContext context, EditorController controller, bool isDark) {
     showModalBottomSheet(
