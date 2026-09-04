@@ -156,7 +156,7 @@ class KeyboardAccessoryBar extends StatelessWidget {
           // Quick Action Buttons (The Muse AI Spark + Writing Sprint + Zen Focus)
           IconButton(
             icon: const Text('✨', style: TextStyle(fontSize: 16)),
-            tooltip: 'The Muse AI Assistant',
+            tooltip: 'The Muse Studio',
             onPressed: () => _openMuseSheet(context),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),

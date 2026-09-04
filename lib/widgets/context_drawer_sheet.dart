@@ -112,7 +112,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
                   children: [
                     IconButton(
                       icon: Text('✨', style: const TextStyle(fontSize: 20)),
-                      tooltip: 'The Muse AI Studio',
+                      tooltip: 'The Muse Studio',
                       onPressed: () => _openMuseStudio(context),
                     ),
                     IconButton(

@@ -143,7 +143,7 @@ class _MuseAssistantSheetState extends State<MuseAssistantSheet> with SingleTick
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'The Muse AI Studio',
+                        'The Muse Studio',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
@@ -247,7 +247,7 @@ class _MuseAssistantSheetState extends State<MuseAssistantSheet> with SingleTick
                       category: IdeaCategory.plotTwist,
                       colorHex: 0xFF38C793,
                       createdAt: DateTime.now(),
-                      tags: ['AI Muse', _activePromptType],
+                      tags: ['Creative Spark', _activePromptType],
                     );
                     controller.addIdea(newIdea);
                     ScaffoldMessenger.of(context).showSnackBar(

@@ -14,6 +14,7 @@ import '../widgets/export_manuscript_dialog.dart';
 import '../models/idea_snippet_model.dart';
 import '../models/codex_entry_model.dart';
 import 'zen_editor_screen.dart';
+import 'plot_mind_map_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -26,6 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedFilterIndex = 0;
   final List<String> _filters = [
     'All Manuscripts',
+    'Story Plot Map',
     'World Codex',
     'Ideas & Scraps',
     'Soundscapes & Sprints',
@@ -108,7 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     // Top Action Controls (The Muse Spark, Theme Switcher & Avatar)
                     Row(
                       children: [
-                        // The Muse AI Assistant Button
+                        // The Muse Studio Button
                         Container(
                           decoration: BoxDecoration(
                             color: bgCard,
@@ -119,7 +121,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: IconButton(
                             icon: const Text('✨', style: TextStyle(fontSize: 18)),
                             onPressed: () => _openMuseStudio(context, isDark),
-                            tooltip: 'The Muse AI Studio',
+                            tooltip: 'The Muse Studio',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Story Plot Mind Map Button
+                        Container(
+                          decoration: BoxDecoration(
+                            color: bgCard,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: borderSubtle),
+                            boxShadow: AppTheme.getSoftShadow(isDark),
+                          ),
+                          child: IconButton(
+                            icon: const Text('🗺️', style: TextStyle(fontSize: 18)),
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const PlotMindMapScreen()),
+                              );
+                            },
+                            tooltip: 'Story Plot Mind Map Canvas',
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -316,7 +338,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],
 
-            if (_selectedFilterIndex == 0 || _selectedFilterIndex == 1) ...[
+            if (_selectedFilterIndex == 1) ...[
+              // SECTION: Interactive Story Plot Map Banner Card
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: bgCard,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: borderSubtle),
+                      boxShadow: AppTheme.getSoftShadow(isDark),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text('🗺️', style: const TextStyle(fontSize: 26)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Story Arc & Plot Mind Map',
+                                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: textPrimary),
+                                  ),
+                                  Text(
+                                    'Interactive canvas for plot nodes, acts & subplots',
+                                    style: TextStyle(fontSize: 12, color: textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '${controller.mindMapNodes.length} Plot Nodes configured for "${controller.activeBook.title}"',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: accentMint),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: accentMint,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(double.infinity, 48),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            elevation: 0,
+                          ),
+                          icon: const Icon(Icons.hub_rounded),
+                          label: const Text('Open Interactive Mind Map Canvas', style: TextStyle(fontWeight: FontWeight.w700)),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const PlotMindMapScreen()),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            ],
+
+            if (_selectedFilterIndex == 0 || _selectedFilterIndex == 2) ...[
               // SECTION 3: Worldbuilding Codex Bible Carousel
               SliverToBoxAdapter(
                 child: Column(
@@ -401,7 +490,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],
 
-            if (_selectedFilterIndex == 0 || _selectedFilterIndex == 2) ...[
+            if (_selectedFilterIndex == 0 || _selectedFilterIndex == 3) ...[
               // SECTION 4: Quick Ideas & Character Scraps
               SliverToBoxAdapter(
                 child: Column(
@@ -464,7 +553,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],
 
-            if (_selectedFilterIndex == 3) ...[
+            if (_selectedFilterIndex == 4) ...[
               // SECTION 5: Soundscapes & Writing Sprints Dedicated View
               SliverToBoxAdapter(
                 child: Padding(
