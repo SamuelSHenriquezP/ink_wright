@@ -15,6 +15,23 @@ class PlotMindMapScreen extends StatefulWidget {
 
 class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
   PlotAct? _selectedActFilter;
+  late final TransformationController _transformationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _transformationController = TransformationController();
+  }
+
+  @override
+  void dispose() {
+    _transformationController.dispose();
+    super.dispose();
+  }
+
+  void _resetView() {
+    _transformationController.value = Matrix4.identity();
+  }
 
   void _showAddNodeDialog(BuildContext context, EditorController controller) {
     final titleCtrl = TextEditingController();
@@ -191,6 +208,11 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
         ),
         actions: [
           IconButton(
+            icon: Icon(Icons.center_focus_strong_outlined, color: textPrimary),
+            onPressed: _resetView,
+            tooltip: 'Centrar Lienzo',
+          ),
+          IconButton(
             icon: Icon(Icons.add_circle_outline_rounded, color: textPrimary),
             onPressed: () => _showAddNodeDialog(context, controller),
             tooltip: 'Añadir Nodo de Trama',
@@ -221,13 +243,16 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
           Expanded(
             child: ClipRect(
               child: InteractiveViewer(
-                boundaryMargin: const EdgeInsets.all(1200),
-                minScale: 0.3,
+                transformationController: _transformationController,
+                constrained: false,
+                boundaryMargin: const EdgeInsets.all(1600),
+                minScale: 0.25,
                 maxScale: 2.2,
                 child: SizedBox(
                   width: 2500,
                   height: 1800,
                   child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
                       // Canvas Grid lines & Custom Painter Connections
                       Positioned.fill(
@@ -246,9 +271,14 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                           top: node.dy,
                           child: GestureDetector(
                             onPanUpdate: (details) {
+                              final scale = _transformationController.value.getMaxScaleOnAxis();
+                              final effectiveDelta = scale > 0 ? (details.delta / scale) : details.delta;
                               controller.updateMindMapNodePosition(
                                 node.id,
-                                Offset(node.dx + details.delta.dx, node.dy + details.delta.dy),
+                                Offset(
+                                  (node.dx + effectiveDelta.dx).clamp(20.0, 2250.0),
+                                  (node.dy + effectiveDelta.dy).clamp(20.0, 1600.0),
+                                ),
                               );
                             },
                             onTap: () => _showNodeDetailBottomSheet(context, node, controller, isDark),
@@ -506,6 +536,17 @@ class MindMapConnectionPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Subtle dot grid background for spatial orientation
+    final gridPaint = Paint()
+      ..color = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.035)
+      ..style = PaintingStyle.fill;
+    const double step = 48.0;
+    for (double x = 20; x < size.width; x += step) {
+      for (double y = 20; y < size.height; y += step) {
+        canvas.drawCircle(Offset(x, y), 1.2, gridPaint);
+      }
+    }
+
     final Map<String, MindMapNodeModel> nodeMap = {for (var n in nodes) n.id: n};
     final lineColor = isDark ? Colors.white24 : Colors.black26;
 
