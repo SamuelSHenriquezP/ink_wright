@@ -182,10 +182,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(width: 8),
 
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: accentMint.withValues(alpha: 0.2),
-                          child: const Text('✍️', style: TextStyle(fontSize: 16)),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: borderSubtle, width: 1.5),
+                            boxShadow: AppTheme.getSoftShadow(isDark),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.asset(
+                              'assets/images/app_icon.png',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                         ),
                       ],
                     ),
