@@ -1,0 +1,98 @@
+# ==========================================
+# InkWright - Ultimate Flutter Gitignore
+# ==========================================
+
+# Flutter / Dart Build & Package Artifacts
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+/coverage/
+**/doc/api/
+
+# Symbolication & Obfuscation
+app.*.symbols
+app.*.map.json
+
+# Android Specific
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+**/android/app/build
+**/android/.gradle/
+**/android/local.properties
+**/android/key.properties
+**/android/app/key.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# iOS / macOS Specific
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/ServiceDefinitions
+**/ios/Runner.xcodeproj/project.xcworkspace/
+**/ios/Runner.xcworkspace/
+**/ios/Pods/
+**/ios/Podfile.lock
+**/DerivedData/
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+
+# Windows Specific
+**/windows/flutter/ephemeral/
+*.vcxproj
+*.sln
+*.user
+*.aps
+*.ple
+*.ncb
+*.suo
+*.pdb
+*.ilk
+*.obj
+*.exe
+
+# Linux Specific
+**/linux/flutter/ephemeral/
+
+# IDE & Code Editor Settings
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Agent & AI Local Workspace Metadata
+.gemini/
+.antigravity/
+*.log
+*.tmp
