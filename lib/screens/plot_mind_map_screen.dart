@@ -33,6 +33,257 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     _transformationController.value = Matrix4.identity();
   }
 
+  void _zoomIn() {
+    final matrix = _transformationController.value.clone();
+    matrix.scaleByDouble(1.25, 1.25, 1.0, 1.0);
+    _transformationController.value = matrix;
+  }
+
+  void _zoomOut() {
+    final matrix = _transformationController.value.clone();
+    matrix.scaleByDouble(0.8, 0.8, 1.0, 1.0);
+    _transformationController.value = matrix;
+  }
+
+  void _autoArrange(EditorController controller) {
+    controller.autoArrangeMindMapNodes();
+    _resetView();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Nodos organizados cronológicamente por Actos Narrativos.'),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _branchFromNode(BuildContext context, MindMapNodeModel parent, EditorController controller) {
+    final newId = 'node_${DateTime.now().millisecondsSinceEpoch}';
+    final newNode = MindMapNodeModel(
+      id: newId,
+      bookId: controller.activeBook.id,
+      title: 'Subnodo de "${parent.title}"',
+      description: 'Ramificación o evento consecuente.',
+      act: parent.act,
+      type: parent.type == PlotNodeType.mainPlot ? PlotNodeType.subplot : parent.type,
+      dx: (parent.dx + 270.0).clamp(20.0, 2250.0),
+      dy: (parent.dy + (parent.connectedToIds.length * 80.0)).clamp(20.0, 1600.0),
+      connectedToIds: [],
+      colorHex: parent.colorHex,
+      iconEmoji: parent.iconEmoji,
+    );
+    controller.addMindMapNode(newNode);
+    controller.connectMindMapNodes(parent.id, newId);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Ramificación conectada desde "${parent.title}"'),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showEditNodeDialog(BuildContext context, MindMapNodeModel node, EditorController controller) {
+    final titleCtrl = TextEditingController(text: node.title);
+    final descCtrl = TextEditingController(text: node.description);
+    PlotAct selectedAct = node.act;
+    PlotNodeType selectedType = node.type;
+    String selectedEmoji = node.iconEmoji;
+    int selectedColor = node.colorHex;
+
+    const availableEmojis = [
+      '📌', '🧭', '⚔️', '📜', '⚡', '🗝️', '🏰', '👤', '💡', '🔥', '💀', '🌫️', '🏛️', '👁️', '🎭', '🛡️', '👑', '✨'
+    ];
+    const availableColors = [
+      0xFF18181B, 0xFF38C793, 0xFF4A90E2, 0xFFF5A623, 0xFF9013FE, 0xFFE74C3C
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text(
+                'Editar Punto de Trama',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: titleCtrl,
+                      decoration: const InputDecoration(labelText: 'Título'),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<PlotAct>(
+                      initialValue: selectedAct,
+                      decoration: const InputDecoration(labelText: 'Acto Narrativo'),
+                      items: PlotAct.values.map((act) {
+                        final dummy = MindMapNodeModel(
+                          id: '', bookId: '', title: '', description: '', act: act,
+                          type: PlotNodeType.mainPlot, dx: 0, dy: 0, connectedToIds: [],
+                          colorHex: 0, iconEmoji: '',
+                        );
+                        return DropdownMenuItem(value: act, child: Text(dummy.actLabel));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => selectedAct = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<PlotNodeType>(
+                      initialValue: selectedType,
+                      decoration: const InputDecoration(labelText: 'Tipo'),
+                      items: PlotNodeType.values.map((type) {
+                        final dummy = MindMapNodeModel(
+                          id: '', bookId: '', title: '', description: '', act: PlotAct.act1Exposition,
+                          type: type, dx: 0, dy: 0, connectedToIds: [], colorHex: 0, iconEmoji: '',
+                        );
+                        return DropdownMenuItem(value: type, child: Text(dummy.typeLabel));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => selectedType = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: descCtrl,
+                      maxLines: 3,
+                      decoration: const InputDecoration(labelText: 'Descripción / Notas'),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Icono:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: availableEmojis.map((e) {
+                        final isChosen = e == selectedEmoji;
+                        return InkWell(
+                          onTap: () => setState(() => selectedEmoji = e),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: isChosen ? Colors.black12 : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: isChosen ? Colors.black : Colors.transparent),
+                            ),
+                            child: Text(e, style: const TextStyle(fontSize: 20)),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Color de Acento:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: availableColors.map((c) {
+                        final isChosen = c == selectedColor;
+                        return InkWell(
+                          onTap: () => setState(() => selectedColor = c),
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: Color(c),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isChosen ? Colors.black : Colors.white,
+                                width: isChosen ? 3 : 1,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                  onPressed: () {
+                    final title = titleCtrl.text.trim();
+                    if (title.isNotEmpty) {
+                      final updated = node.copyWith(
+                        title: title,
+                        description: descCtrl.text.trim(),
+                        act: selectedAct,
+                        type: selectedType,
+                        iconEmoji: selectedEmoji,
+                        colorHex: selectedColor,
+                      );
+                      controller.updateMindMapNode(updated);
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: const Text('Guardar Cambios'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showConnectDialog(BuildContext context, MindMapNodeModel node, EditorController controller, VoidCallback onUpdate) {
+    final availableTargets = controller.mindMapNodes.where(
+      (n) => n.id != node.id && !node.connectedToIds.contains(n.id),
+    ).toList();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Conectar a Otro Nodo', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+          content: availableTargets.isEmpty
+              ? const Text('Todos los nodos existentes ya están conectados con este.')
+              : SizedBox(
+                  width: double.maxFinite,
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: availableTargets.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final target = availableTargets[index];
+                      return ListTile(
+                        leading: Text(target.iconEmoji, style: const TextStyle(fontSize: 20)),
+                        title: Text(target.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(target.actLabel, style: const TextStyle(fontSize: 11)),
+                        onTap: () {
+                          controller.connectMindMapNodes(node.id, target.id);
+                          Navigator.of(context).pop();
+                          onUpdate();
+                        },
+                      );
+                    },
+                  ),
+                ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showAddNodeDialog(BuildContext context, EditorController controller) {
     final titleCtrl = TextEditingController();
     final descCtrl = TextEditingController();
@@ -208,6 +459,11 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
         ),
         actions: [
           IconButton(
+            icon: Icon(Icons.auto_awesome_mosaic_outlined, color: textPrimary),
+            onPressed: () => _autoArrange(controller),
+            tooltip: 'Organizar Cronológicamente por Actos',
+          ),
+          IconButton(
             icon: Icon(Icons.center_focus_strong_outlined, color: textPrimary),
             onPressed: _resetView,
             tooltip: 'Centrar Lienzo',
@@ -239,130 +495,239 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
           ),
           const SizedBox(height: 8),
 
-          // Interactive Canvas Area
+          // Interactive Canvas Area with Floating Canvas Controls Overlay
           Expanded(
-            child: ClipRect(
-              child: InteractiveViewer(
-                transformationController: _transformationController,
-                constrained: false,
-                boundaryMargin: const EdgeInsets.all(1600),
-                minScale: 0.25,
-                maxScale: 2.2,
-                child: SizedBox(
-                  width: 2500,
-                  height: 1800,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      // Canvas Grid lines & Custom Painter Connections
-                      Positioned.fill(
-                        child: CustomPaint(
-                          painter: MindMapConnectionPainter(
-                            nodes: nodes,
-                            isDark: isDark,
-                          ),
-                        ),
-                      ),
-
-                      // Interactive Draggable Node Widgets
-                      ...filteredNodes.map((node) {
-                        return Positioned(
-                          left: node.dx,
-                          top: node.dy,
-                          child: GestureDetector(
-                            onPanUpdate: (details) {
-                              final scale = _transformationController.value.getMaxScaleOnAxis();
-                              final effectiveDelta = scale > 0 ? (details.delta / scale) : details.delta;
-                              controller.updateMindMapNodePosition(
-                                node.id,
-                                Offset(
-                                  (node.dx + effectiveDelta.dx).clamp(20.0, 2250.0),
-                                  (node.dy + effectiveDelta.dy).clamp(20.0, 1600.0),
-                                ),
-                              );
-                            },
-                            onTap: () => _showNodeDetailBottomSheet(context, node, controller, isDark),
-                            child: Container(
-                              width: 230,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: cardBg,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: borderColor,
-                                  width: 1.5,
-                                ),
-                                boxShadow: AppTheme.getSoftShadow(isDark),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          node.typeLabel.toUpperCase(),
-                                          style: TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: 0.5,
-                                            color: textPrimary,
-                                          ),
-                                        ),
-                                      ),
-                                      Text(node.iconEmoji, style: const TextStyle(fontSize: 16)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    node.title,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: textPrimary,
-                                      letterSpacing: -0.2,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  if (node.description.isNotEmpty) ...[
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      node.description,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: textSecondary,
-                                        height: 1.3,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    node.actLabel,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: textSecondary.withValues(alpha: 0.8),
-                                    ),
-                                  ),
-                                ],
+            child: Stack(
+              children: [
+                ClipRect(
+                  child: InteractiveViewer(
+                    transformationController: _transformationController,
+                    constrained: false,
+                    boundaryMargin: const EdgeInsets.all(1600),
+                    minScale: 0.25,
+                    maxScale: 2.2,
+                    child: SizedBox(
+                      width: 2500,
+                      height: 1800,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Canvas Grid lines & Custom Painter Connections
+                          Positioned.fill(
+                            child: CustomPaint(
+                              painter: MindMapConnectionPainter(
+                                nodes: nodes,
+                                isDark: isDark,
                               ),
                             ),
                           ),
-                        );
-                      }),
-                    ],
+
+                          // Interactive Draggable Node Widgets
+                          ...filteredNodes.map((node) {
+                            return Positioned(
+                              left: node.dx,
+                              top: node.dy,
+                              child: GestureDetector(
+                                onPanUpdate: (details) {
+                                  final scale = _transformationController.value.getMaxScaleOnAxis();
+                                  final effectiveDelta = scale > 0 ? (details.delta / scale) : details.delta;
+                                  controller.updateMindMapNodePosition(
+                                    node.id,
+                                    Offset(
+                                      (node.dx + effectiveDelta.dx).clamp(20.0, 2250.0),
+                                      (node.dy + effectiveDelta.dy).clamp(20.0, 1600.0),
+                                    ),
+                                  );
+                                },
+                                onTap: () => _showNodeDetailBottomSheet(context, node, controller, isDark),
+                                child: Container(
+                                  width: 240,
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: cardBg,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: node.colorHex != 0xFF18181B && node.colorHex != 0
+                                          ? Color(node.colorHex).withValues(alpha: 0.6)
+                                          : borderColor,
+                                      width: 1.5,
+                                    ),
+                                    boxShadow: AppTheme.getSoftShadow(isDark),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              node.typeLabel.toUpperCase(),
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.w800,
+                                                letterSpacing: 0.5,
+                                                color: textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(node.iconEmoji, style: const TextStyle(fontSize: 16)),
+                                              const SizedBox(width: 6),
+                                              InkWell(
+                                                onTap: () => _branchFromNode(context, node, controller),
+                                                borderRadius: BorderRadius.circular(12),
+                                                child: Tooltip(
+                                                  message: 'Ramificar Subnodo',
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(3),
+                                                    decoration: BoxDecoration(
+                                                      color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: Icon(
+                                                      Icons.alt_route_rounded,
+                                                      size: 14,
+                                                      color: textSecondary,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        node.title,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: textPrimary,
+                                          letterSpacing: -0.2,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (node.description.isNotEmpty) ...[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          node.description,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: textSecondary,
+                                            height: 1.3,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            node.actLabel,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: textSecondary.withValues(alpha: 0.8),
+                                            ),
+                                          ),
+                                          if (node.connectedToIds.isNotEmpty)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.hub_outlined, size: 10, color: textSecondary),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                    '${node.connectedToIds.length}',
+                                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: textSecondary),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+
+                // Floating Canvas Controls Toolbar (Zoom, Fit, Arrange)
+                Positioned(
+                  bottom: 24,
+                  left: 20,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: cardBg.withValues(alpha: 0.94),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: borderColor),
+                      boxShadow: AppTheme.getSoftShadow(isDark),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.zoom_in_rounded, size: 20),
+                          color: textPrimary,
+                          onPressed: _zoomIn,
+                          tooltip: 'Acercar lienzo',
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.zoom_out_rounded, size: 20),
+                          color: textPrimary,
+                          onPressed: _zoomOut,
+                          tooltip: 'Alejar lienzo',
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        Container(
+                          width: 1,
+                          height: 20,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          color: borderColor,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.center_focus_strong_outlined, size: 20),
+                          color: textPrimary,
+                          onPressed: _resetView,
+                          tooltip: 'Restablecer vista 1:1',
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.auto_awesome_mosaic_rounded, size: 20),
+                          color: textPrimary,
+                          onPressed: () => _autoArrange(controller),
+                          tooltip: 'Organizar por Actos',
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -422,9 +787,11 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
   ) {
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderColor = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
@@ -432,89 +799,230 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final currentNode = controller.mindMapNodes.firstWhere(
+              (n) => n.id == node.id,
+              orElse: () => node,
+            );
+            final connectedNodes = controller.mindMapNodes
+                .where((n) => currentNode.connectedToIds.contains(n.id))
+                .toList();
+
             return Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Text(node.iconEmoji, style: const TextStyle(fontSize: 24)),
-                          const SizedBox(width: 10),
-                          Column(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with title and quick actions
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                node.title,
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800,
-                                  color: textPrimary,
-                                ),
-                              ),
-                              Text(
-                                '${node.actLabel} • ${node.typeLabel}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: textSecondary,
-                                  fontWeight: FontWeight.w600,
+                              Text(currentNode.iconEmoji, style: const TextStyle(fontSize: 28)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      currentNode.title,
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w800,
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${currentNode.actLabel} • ${currentNode.typeLabel}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: textSecondary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                        onPressed: () {
-                          controller.deleteMindMapNode(node.id);
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                    ],
-                  ),
-                  if (node.description.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    Text(
-                      node.description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: textSecondary,
-                        height: 1.4,
-                      ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, size: 20),
+                              tooltip: 'Editar detalles',
+                              color: textPrimary,
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _showEditNodeDialog(context, currentNode, controller);
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.copy_rounded, size: 19),
+                              tooltip: 'Duplicar nodo',
+                              color: textPrimary,
+                              onPressed: () {
+                                controller.duplicateMindMapNode(currentNode.id);
+                                Navigator.of(context).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Nodo duplicado en el lienzo.'),
+                                    duration: Duration(seconds: 2),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                              tooltip: 'Eliminar nodo',
+                              onPressed: () {
+                                controller.deleteMindMapNode(currentNode.id);
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isDark ? Colors.white : Colors.black,
-                            foregroundColor: isDark ? Colors.black : Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+
+                    if (currentNode.description.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Text(
+                          currentNode.description,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: textSecondary,
+                            height: 1.4,
                           ),
-                          icon: const Icon(Icons.edit_note_rounded, size: 18),
-                          label: const Text('Insertar en Manuscrito', style: TextStyle(fontWeight: FontWeight.w700)),
-                          onPressed: () {
-                            controller.insertTextToEditor(
-                              '\n\n/* Punto de Trama: ${node.title} (${node.actLabel}) */\n${node.description}\n\n',
-                            );
-                            Navigator.of(context).pop();
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
-                            );
-                          },
                         ),
                       ),
                     ],
-                  ),
-                ],
+
+                    const SizedBox(height: 16),
+
+                    // Section: Connections
+                    Text(
+                      'CONEXIONES E HILOS NARRATIVOS (${connectedNodes.length})',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                        color: textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ...connectedNodes.map((target) {
+                          return Chip(
+                            backgroundColor: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                            avatar: Text(target.iconEmoji, style: const TextStyle(fontSize: 13)),
+                            label: Text(
+                              target.title,
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary),
+                            ),
+                            deleteIcon: const Icon(Icons.close_rounded, size: 14),
+                            deleteButtonTooltipMessage: 'Desconectar',
+                            onDeleted: () {
+                              controller.disconnectMindMapNodes(currentNode.id, target.id);
+                              setSheetState(() {});
+                            },
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          );
+                        }),
+                        ActionChip(
+                          avatar: const Icon(Icons.add_link_rounded, size: 16),
+                          label: const Text('Conectar a...', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          onPressed: () {
+                            _showConnectDialog(context, currentNode, controller, () {
+                              setSheetState(() {});
+                            });
+                          },
+                        ),
+                        ActionChip(
+                          avatar: const Icon(Icons.alt_route_rounded, size: 16),
+                          label: const Text('Ramificar Subnodo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _branchFromNode(context, currentNode, controller);
+                          },
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Action buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: textPrimary,
+                              side: BorderSide(color: borderColor),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            ),
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            label: const Text('Editar Datos', style: TextStyle(fontWeight: FontWeight.w700)),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _showEditNodeDialog(context, currentNode, controller);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isDark ? Colors.white : Colors.black,
+                              foregroundColor: isDark ? Colors.black : Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            ),
+                            icon: const Icon(Icons.edit_note_rounded, size: 18),
+                            label: const Text('Insertar en Texto', style: TextStyle(fontWeight: FontWeight.w700)),
+                            onPressed: () {
+                              controller.insertTextToEditor(
+                                '\n\n/* Punto de Trama: ${currentNode.title} (${currentNode.actLabel}) */\n${currentNode.description}\n\n',
+                              );
+                              Navigator.of(context).pop();
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
           },

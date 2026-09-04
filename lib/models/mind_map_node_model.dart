@@ -74,4 +74,32 @@ class MindMapNodeModel {
   }
 
   Color get nodeColor => Color(colorHex);
+
+  MindMapNodeModel copyWith({
+    String? id,
+    String? bookId,
+    String? title,
+    String? description,
+    PlotAct? act,
+    PlotNodeType? type,
+    double? dx,
+    double? dy,
+    List<String>? connectedToIds,
+    int? colorHex,
+    String? iconEmoji,
+  }) {
+    return MindMapNodeModel(
+      id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      act: act ?? this.act,
+      type: type ?? this.type,
+      dx: dx ?? this.dx,
+      dy: dy ?? this.dy,
+      connectedToIds: connectedToIds ?? List.from(this.connectedToIds),
+      colorHex: colorHex ?? this.colorHex,
+      iconEmoji: iconEmoji ?? this.iconEmoji,
+    );
+  }
 }

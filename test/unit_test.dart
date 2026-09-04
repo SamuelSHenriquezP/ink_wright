@@ -53,5 +53,31 @@ void main() {
       controller.toggleZenMode();
       expect(controller.isZenMode, isTrue);
     });
+
+    test('Mind Map editor features: add, connect, duplicate, and disconnect nodes', () {
+      final controller = EditorController();
+      final initialCount = controller.mindMapNodes.length;
+      expect(initialCount, greaterThan(0));
+
+      final firstNode = controller.mindMapNodes.first;
+      final secondNode = controller.mindMapNodes[1];
+
+      // Connect nodes
+      controller.connectMindMapNodes(firstNode.id, secondNode.id);
+      expect(controller.mindMapNodes.first.connectedToIds.contains(secondNode.id), isTrue);
+
+      // Disconnect nodes
+      controller.disconnectMindMapNodes(firstNode.id, secondNode.id);
+      expect(controller.mindMapNodes.first.connectedToIds.contains(secondNode.id), isFalse);
+
+      // Duplicate node
+      controller.duplicateMindMapNode(firstNode.id);
+      expect(controller.mindMapNodes.length, equals(initialCount + 1));
+      expect(controller.mindMapNodes.last.title.contains('(Copia)'), isTrue);
+
+      // Auto-arrange nodes by act
+      controller.autoArrangeMindMapNodes();
+      expect(controller.mindMapNodes.isNotEmpty, isTrue);
+    });
   });
 }

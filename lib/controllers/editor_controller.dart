@@ -557,6 +557,16 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
     notifyListeners();
   }
 
+  void updateMindMapNode(MindMapNodeModel updated) {
+    _mindMapNodes = _mindMapNodes.map((n) {
+      if (n.id == updated.id) {
+        return updated;
+      }
+      return n;
+    }).toList();
+    notifyListeners();
+  }
+
   void updateMindMapNodePosition(String nodeId, Offset newPos) {
     _mindMapNodes = _mindMapNodes.map((n) {
       if (n.id == nodeId) {
@@ -569,12 +579,66 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
   }
 
   void connectMindMapNodes(String fromId, String toId) {
+    if (fromId == toId) return;
     _mindMapNodes = _mindMapNodes.map((n) {
       if (n.id == fromId && !n.connectedToIds.contains(toId)) {
         n.connectedToIds.add(toId);
       }
       return n;
     }).toList();
+    notifyListeners();
+  }
+
+  void disconnectMindMapNodes(String fromId, String toId) {
+    _mindMapNodes = _mindMapNodes.map((n) {
+      if (n.id == fromId) {
+        n.connectedToIds.remove(toId);
+      }
+      return n;
+    }).toList();
+    notifyListeners();
+  }
+
+  void duplicateMindMapNode(String nodeId) {
+    final index = _mindMapNodes.indexWhere((n) => n.id == nodeId);
+    if (index != -1) {
+      final original = _mindMapNodes[index];
+      final clone = original.copyWith(
+        id: 'node_${DateTime.now().millisecondsSinceEpoch}',
+        title: '${original.title} (Copia)',
+        dx: original.dx + 40,
+        dy: original.dy + 40,
+        connectedToIds: [],
+      );
+      _mindMapNodes.add(clone);
+      notifyListeners();
+    }
+  }
+
+  void autoArrangeMindMapNodes() {
+    // Map acts to column X coordinates
+    final Map<PlotAct, double> actX = {
+      PlotAct.act1Exposition: 80.0,
+      PlotAct.act2RisingAction: 480.0,
+      PlotAct.midpoint: 880.0,
+      PlotAct.act3Climax: 1280.0,
+      PlotAct.resolution: 1680.0,
+    };
+
+    final Map<PlotAct, int> actCounters = {
+      PlotAct.act1Exposition: 0,
+      PlotAct.act2RisingAction: 0,
+      PlotAct.midpoint: 0,
+      PlotAct.act3Climax: 0,
+      PlotAct.resolution: 0,
+    };
+
+    for (var node in _mindMapNodes) {
+      final count = actCounters[node.act] ?? 0;
+      node.dx = actX[node.act] ?? 100.0;
+      node.dy = 120.0 + (count * 170.0);
+      actCounters[node.act] = count + 1;
+    }
     notifyListeners();
   }
 
