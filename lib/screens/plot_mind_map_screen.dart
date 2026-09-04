@@ -46,15 +46,57 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     _transformationController.value = matrix;
   }
 
+  void _showAestheticNotification(
+    BuildContext context,
+    String message, {
+    IconData icon = Icons.info_outline_rounded,
+    required bool isDark,
+  }) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        elevation: 6,
+        backgroundColor: isDark ? const Color(0xFF1E1E22) : const Color(0xFF18181B),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(
+            color: isDark ? const Color(0xFF2E2E34) : Colors.white12,
+            width: 1,
+          ),
+        ),
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.1,
+                ),
+              ),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   void _autoArrange(EditorController controller) {
     controller.autoArrangeMindMapNodes();
     _resetView();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Nodos organizados cronológicamente por Actos Narrativos.'),
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
+    _showAestheticNotification(
+      context,
+      'Nodos organizados cronológicamente por Actos.',
+      icon: Icons.auto_awesome_mosaic_rounded,
+      isDark: controller.isDarkMode,
     );
   }
 
@@ -75,12 +117,11 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     );
     controller.addMindMapNode(newNode);
     controller.connectMindMapNodes(parent.id, newId);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Ramificación conectada desde "${parent.title}"'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
+    _showAestheticNotification(
+      context,
+      'Ramificación conectada desde «${parent.title}».',
+      icon: Icons.alt_route_rounded,
+      isDark: controller.isDarkMode,
     );
   }
 
@@ -96,7 +137,12 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
       '📌', '🧭', '⚔️', '📜', '⚡', '🗝️', '🏰', '👤', '💡', '🔥', '💀', '🌫️', '🏛️', '👁️', '🎭', '🛡️', '👑', '✨'
     ];
     const availableColors = [
-      0xFF18181B, 0xFF38C793, 0xFF4A90E2, 0xFFF5A623, 0xFF9013FE, 0xFFE74C3C
+      0xFF18181B, // Onyx
+      0xFF27272A, // Charcoal
+      0xFF3F3F46, // Graphite
+      0xFF52525B, // Slate
+      0xFF71717A, // Steel
+      0xFFA1A1AA, // Ash
     ];
 
     showDialog(
@@ -246,12 +292,11 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                       );
                       controller.updateMindMapNode(updated);
                       Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Nodo «$title» actualizado.'),
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                        ),
+                      _showAestheticNotification(
+                        context,
+                        'Nodo «$title» actualizado.',
+                        icon: Icons.check_circle_outline_rounded,
+                        isDark: controller.isDarkMode,
                       );
                     }
                   },
@@ -566,15 +611,15 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                             Color cardBorderColor;
                             double cardBorderWidth = 1.5;
                             if (isConnectingSource) {
-                              cardBorderColor = Colors.blueAccent;
-                              cardBorderWidth = 2.5;
+                              cardBorderColor = isDark ? Colors.white : Colors.black;
+                              cardBorderWidth = 2.0;
                             } else if (isConnectingMode) {
                               cardBorderColor = isAlreadyConnected
-                                  ? Colors.redAccent.withValues(alpha: 0.8)
-                                  : Colors.blueAccent.withValues(alpha: 0.7);
-                              cardBorderWidth = 2.0;
+                                  ? (isDark ? const Color(0xFF52525B) : const Color(0xFFA1A1AA))
+                                  : (isDark ? Colors.white70 : Colors.black87);
+                              cardBorderWidth = 1.8;
                             } else if (node.colorHex != 0xFF18181B && node.colorHex != 0) {
-                              cardBorderColor = Color(node.colorHex).withValues(alpha: 0.6);
+                              cardBorderColor = Color(node.colorHex).withValues(alpha: 0.4);
                             } else {
                               cardBorderColor = borderColor;
                             }
@@ -607,21 +652,19 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                       );
                                       if (fromNode.connectedToIds.contains(node.id)) {
                                         controller.disconnectMindMapNodes(fromId, node.id);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Enlace eliminado entre «${fromNode.title}» y «${node.title}».'),
-                                            duration: const Duration(seconds: 2),
-                                            behavior: SnackBarBehavior.floating,
-                                          ),
+                                        _showAestheticNotification(
+                                          context,
+                                          'Enlace eliminado entre «${fromNode.title}» y «${node.title}».',
+                                          icon: Icons.link_off_rounded,
+                                          isDark: isDark,
                                         );
                                       } else {
                                         controller.connectMindMapNodes(fromId, node.id);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('¡Conectado! «${fromNode.title}» ➔ «${node.title}»'),
-                                            duration: const Duration(seconds: 2),
-                                            behavior: SnackBarBehavior.floating,
-                                          ),
+                                        _showAestheticNotification(
+                                          context,
+                                          '¡Conectado! «${fromNode.title}» ➔ «${node.title}»',
+                                          icon: Icons.link_rounded,
+                                          isDark: isDark,
                                         );
                                       }
                                       setState(() => _connectingFromNodeId = null);
@@ -650,17 +693,22 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                           margin: const EdgeInsets.only(bottom: 8),
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                           decoration: BoxDecoration(
-                                            color: Colors.blueAccent,
-                                            borderRadius: BorderRadius.circular(8),
+                                            color: isDark ? Colors.white : Colors.black,
+                                            borderRadius: BorderRadius.circular(6),
                                           ),
-                                          child: const Row(
+                                          child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(Icons.link_rounded, size: 12, color: Colors.white),
-                                              SizedBox(width: 4),
+                                              Icon(Icons.link_rounded, size: 12, color: isDark ? Colors.black : Colors.white),
+                                              const SizedBox(width: 4),
                                               Text(
                                                 'ORIGEN • TOCA OTRO NODO',
-                                                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
+                                                style: TextStyle(
+                                                  color: isDark ? Colors.black : Colors.white,
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: 0.5,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -670,17 +718,28 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                           margin: const EdgeInsets.only(bottom: 8),
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                           decoration: BoxDecoration(
-                                            color: isAlreadyConnected ? Colors.redAccent : Colors.blueAccent,
-                                            borderRadius: BorderRadius.circular(8),
+                                            color: isAlreadyConnected
+                                                ? (isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7))
+                                                : (isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08)),
+                                            borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(isAlreadyConnected ? Icons.link_off_rounded : Icons.add_link_rounded, size: 12, color: Colors.white),
+                                              Icon(
+                                                isAlreadyConnected ? Icons.link_off_rounded : Icons.add_link_rounded,
+                                                size: 12,
+                                                color: textPrimary,
+                                              ),
                                               const SizedBox(width: 4),
                                               Text(
                                                 isAlreadyConnected ? 'TOCA PARA DESCONECTAR' : 'TOCA PARA CONECTAR AQUÍ',
-                                                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
+                                                style: TextStyle(
+                                                  color: textPrimary,
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: 0.5,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -749,14 +808,16 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                                     padding: const EdgeInsets.all(3),
                                                     decoration: BoxDecoration(
                                                       color: isConnectingSource
-                                                          ? Colors.blueAccent
+                                                          ? (isDark ? Colors.white : Colors.black)
                                                           : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
                                                       shape: BoxShape.circle,
                                                     ),
                                                     child: Icon(
                                                       Icons.link_rounded,
                                                       size: 14,
-                                                      color: isConnectingSource ? Colors.white : textSecondary,
+                                                      color: isConnectingSource
+                                                          ? (isDark ? Colors.black : Colors.white)
+                                                          : textSecondary,
                                                     ),
                                                   ),
                                                 ),
@@ -864,20 +925,27 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                     right: 16,
                     child: Center(
                       child: Material(
-                        elevation: 8,
+                        elevation: 6,
                         borderRadius: BorderRadius.circular(30),
-                        color: isDark ? const Color(0xFF1E1E24) : Colors.black,
+                        color: isDark ? const Color(0xFF1E1E22) : const Color(0xFF18181B),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          side: BorderSide(
+                            color: isDark ? const Color(0xFF2E2E34) : Colors.white12,
+                            width: 1,
+                          ),
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.link_rounded, color: Colors.lightBlueAccent, size: 20),
+                              const Icon(Icons.hub_outlined, color: Colors.white, size: 18),
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
                                   'Conectar: toca cualquier otro nodo para enlazarlo',
-                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -888,12 +956,12 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: Colors.white24,
+                                    color: Colors.white12,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Text(
                                     'Cancelar',
-                                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                                    style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700),
                                   ),
                                 ),
                               ),
@@ -1106,21 +1174,30 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                               onPressed: () {
                                 controller.duplicateMindMapNode(currentNode.id);
                                 Navigator.of(context).pop();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Nodo duplicado en el lienzo.'),
-                                    duration: Duration(seconds: 2),
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
+                                _showAestheticNotification(
+                                  context,
+                                  'Nodo duplicado en el lienzo.',
+                                  icon: Icons.copy_rounded,
+                                  isDark: isDark,
                                 );
                               },
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                              icon: Icon(
+                                Icons.delete_outline_rounded,
+                                color: isDark ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
+                                size: 20,
+                              ),
                               tooltip: 'Eliminar nodo',
                               onPressed: () {
                                 controller.deleteMindMapNode(currentNode.id);
                                 Navigator.of(context).pop();
+                                _showAestheticNotification(
+                                  context,
+                                  'Nodo eliminado.',
+                                  icon: Icons.delete_outline_rounded,
+                                  isDark: isDark,
+                                );
                               },
                             ),
                           ],
