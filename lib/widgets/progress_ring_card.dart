@@ -43,7 +43,7 @@ class ProgressRingCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Daily Writing Goal',
+                    'Objetivo Diario de Escritura',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -53,7 +53,7 @@ class ProgressRingCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${stats.wordsToday} / ${stats.dailyGoalWords} words',
+                    '${stats.wordsToday} / ${stats.dailyGoalWords} palabras',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -77,7 +77,7 @@ class ProgressRingCard extends StatelessWidget {
                     Icon(Icons.local_fire_department_rounded, size: 16, color: accentMint),
                     const SizedBox(width: 4),
                     Text(
-                      '${stats.streakDays} Day Streak',
+                      'Racha: ${stats.streakDays} días',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -128,7 +128,7 @@ class ProgressRingCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'COMPLETED',
+                          'COMPLETADO',
                           style: TextStyle(
                             fontSize: 8,
                             fontWeight: FontWeight.w700,
@@ -150,8 +150,8 @@ class ProgressRingCard extends StatelessWidget {
                   children: [
                     _buildStatRow(
                       icon: Icons.timer_outlined,
-                      label: 'Focus Time',
-                      value: '${stats.writingTimeTodayMinutes} mins',
+                      label: 'Tiempo de Enfoque',
+                      value: '${stats.writingTimeTodayMinutes} min',
                       textPrimary: textPrimary,
                       textSecondary: textSecondary,
                       accentMint: accentMint,
@@ -162,8 +162,8 @@ class ProgressRingCard extends StatelessWidget {
                     ),
                     _buildStatRow(
                       icon: Icons.speed_rounded,
-                      label: 'Avg Speed',
-                      value: '${stats.wordsPerMinuteAvg} wpm',
+                      label: 'Velocidad Media',
+                      value: '${stats.wordsPerMinuteAvg} ppm',
                       textPrimary: textPrimary,
                       textSecondary: textSecondary,
                       accentMint: accentMint,
@@ -184,6 +184,16 @@ class ProgressRingCard extends StatelessWidget {
               final words = entry.value;
               final isToday = day == 'Wed' || day == 'Sun';
               final barRatio = (words / 2500).clamp(0.1, 1.0);
+              const dayLabels = {
+                'Mon': 'Lun',
+                'Tue': 'Mar',
+                'Wed': 'Mié',
+                'Thu': 'Jue',
+                'Fri': 'Vie',
+                'Sat': 'Sáb',
+                'Sun': 'Dom',
+              };
+              final displayDay = dayLabels[day] ?? day;
 
               return Column(
                 children: [
@@ -211,7 +221,7 @@ class ProgressRingCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    day,
+                    displayDay,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ink_wright/formatters/writer_text_formatter.dart';
 import 'package:ink_wright/controllers/editor_controller.dart';
@@ -14,6 +15,20 @@ void main() {
       expect(WriterTextFormatter.estimateReadingTime('Word ' * 400), equals(2));
       expect(WriterTextFormatter.formatReadingTime(45), equals('45 mins read'));
       expect(WriterTextFormatter.formatReadingTime(155), equals('2h 35m read'));
+    });
+
+    test('Numbered list formatting', () {
+      final ctrl = TextEditingController(text: 'First line\nSecond line');
+      ctrl.selection = const TextSelection(baseOffset: 0, extentOffset: 22);
+      WriterTextFormatter.insertNumberedList(ctrl);
+      expect(ctrl.text, equals('1. First line\n2. Second line'));
+    });
+
+    test('Checkbox list formatting', () {
+      final ctrl = TextEditingController(text: 'Complete chapter');
+      ctrl.selection = const TextSelection.collapsed(offset: 0);
+      WriterTextFormatter.insertCheckboxList(ctrl);
+      expect(ctrl.text.startsWith('- [ ] '), isTrue);
     });
   });
 

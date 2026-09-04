@@ -110,6 +110,12 @@ class KeyboardAccessoryBar extends StatelessWidget {
                     isItalic: true,
                   ),
                   _buildToolButton(
+                    iconText: 'S',
+                    tooltip: 'Tachado',
+                    onTap: () => WriterTextFormatter.toggleFormat(textController, '~~'),
+                    textPrimary: textPrimary,
+                  ),
+                  _buildToolButton(
                     iconText: 'H1',
                     tooltip: 'Título 1',
                     onTap: () => WriterTextFormatter.insertLinePrefix(textController, '# '),
@@ -122,15 +128,45 @@ class KeyboardAccessoryBar extends StatelessWidget {
                     textPrimary: textPrimary,
                   ),
                   _buildToolButton(
-                    iconText: '“ ”',
-                    tooltip: 'Cita',
-                    onTap: () => WriterTextFormatter.insertLinePrefix(textController, '> '),
+                    iconText: 'H3',
+                    tooltip: 'Título 3',
+                    onTap: () => WriterTextFormatter.insertLinePrefix(textController, '### '),
                     textPrimary: textPrimary,
                   ),
                   _buildToolButton(
                     iconText: '•',
-                    tooltip: 'Lista',
+                    tooltip: 'Lista con viñetas',
                     onTap: () => WriterTextFormatter.insertLinePrefix(textController, '- '),
+                    textPrimary: textPrimary,
+                  ),
+                  _buildToolButton(
+                    iconText: '1.',
+                    tooltip: 'Lista numerada',
+                    onTap: () => WriterTextFormatter.insertNumberedList(textController),
+                    textPrimary: textPrimary,
+                  ),
+                  _buildToolButton(
+                    iconText: '☑',
+                    tooltip: 'Lista de verificación / tareas',
+                    onTap: () => WriterTextFormatter.insertCheckboxList(textController),
+                    textPrimary: textPrimary,
+                  ),
+                  _buildToolButton(
+                    iconText: '“ ”',
+                    tooltip: 'Cita textual',
+                    onTap: () => WriterTextFormatter.insertLinePrefix(textController, '> '),
+                    textPrimary: textPrimary,
+                  ),
+                  _buildToolButton(
+                    iconText: '* * *',
+                    tooltip: 'Salto / Separador de escena',
+                    onTap: () => WriterTextFormatter.insertSceneBreak(textController),
+                    textPrimary: textPrimary,
+                  ),
+                  _buildToolButton(
+                    iconText: '</>',
+                    tooltip: 'Código / Texto fijo',
+                    onTap: () => WriterTextFormatter.toggleFormat(textController, '`'),
                     textPrimary: textPrimary,
                   ),
                   _buildToolButton(

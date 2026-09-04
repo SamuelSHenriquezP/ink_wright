@@ -12,6 +12,7 @@ import '../widgets/export_manuscript_dialog.dart';
 import '../models/idea_snippet_model.dart';
 import '../models/codex_entry_model.dart';
 import '../formatters/writer_text_formatter.dart';
+import '../widgets/progress_ring_card.dart';
 import 'zen_editor_screen.dart';
 import 'plot_mind_map_screen.dart';
 
@@ -30,8 +31,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'Mapa de Trama',
     'Códice de Mundo',
     'Notas & Ideas',
+    'Métricas',
     'Herramientas',
   ];
+
+  void _openMetricsSheet(BuildContext context, EditorController controller, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkBgPrimary : AppTheme.lightBgPrimary,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : Colors.black26,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ProgressRingCard(stats: controller.writerStats, isDark: isDark),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   void _openMuseStudio(BuildContext context, bool isDark) {
     showModalBottomSheet(
@@ -350,6 +384,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(width: 8),
 
+                        // Métricas y Estadísticas
+                        Container(
+                          decoration: BoxDecoration(
+                            color: bgCard,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: borderSubtle),
+                            boxShadow: AppTheme.getSoftShadow(isDark),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.insights_rounded, size: 18),
+                            onPressed: () => _openMetricsSheet(context, controller, isDark),
+                            tooltip: 'Métricas de Escritura',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
                         // Modo Noche / Día
                         Container(
                           decoration: BoxDecoration(
@@ -518,7 +568,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+              // Mini Tarjeta de Métrica Diaria (Opción menor y discreta)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => _openMetricsSheet(context, controller, isDark),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: bgCard,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: borderSubtle),
+                        boxShadow: AppTheme.getSoftShadow(isDark),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.insights_rounded, size: 16, color: textPrimary),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Meta diaria: ${controller.writerStats.wordsToday} / ${controller.writerStats.dailyGoalWords} pal.',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${controller.writerStats.dailyPercentage}%',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: controller.writerStats.dailyGoalRatio,
+                                    minHeight: 4,
+                                    backgroundColor: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
+                                    valueColor: AlwaysStoppedAnimation<Color>(isDark ? Colors.white : Colors.black),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.arrow_forward_ios_rounded, size: 12, color: textSecondary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 18)),
 
               // Lista de Capítulos del Manuscrito Activo
               SliverToBoxAdapter(
@@ -826,8 +951,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
 
-            // SECCIÓN 5: HERRAMIENTAS & AMBIENTE
+            // SECCIÓN 5: MÉTRICAS & ESTADÍSTICAS (Opción menor)
             if (_selectedFilterIndex == 5) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Métricas y Estadísticas de Escritura',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: textPrimary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Progreso diario, velocidad y constancia semanal',
+                        style: TextStyle(fontSize: 12, color: textSecondary),
+                      ),
+                      const SizedBox(height: 16),
+                      ProgressRingCard(
+                        stats: controller.writerStats,
+                        isDark: isDark,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
+            // SECCIÓN 6: HERRAMIENTAS & AMBIENTE
+            if (_selectedFilterIndex == 6) ...[
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),

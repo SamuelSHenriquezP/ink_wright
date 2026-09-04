@@ -144,6 +144,115 @@ class WriterTextFormatter {
     );
   }
 
+  /// Inserts or toggles numbered lists (1. , 2. etc.)
+  static void insertNumberedList(TextEditingController controller) {
+    final selection = controller.selection;
+    final text = controller.text;
+
+    if (!selection.isValid) {
+      controller.text = '$text\n1. ';
+      controller.selection = TextSelection.collapsed(offset: controller.text.length);
+      return;
+    }
+
+    // If multi-line selection, number all selected lines
+    if (selection.start != selection.end && text.substring(selection.start, selection.end).contains('\n')) {
+      final selected = text.substring(selection.start, selection.end);
+      final lines = selected.split('\n');
+      int counter = 1;
+      final numberedLines = lines.map((line) {
+        final clean = line.replaceFirst(RegExp(r'^\d+\.\s*'), '').replaceFirst(RegExp(r'^-\s*'), '');
+        return '${counter++}. $clean';
+      }).join('\n');
+
+      final newText = text.replaceRange(selection.start, selection.end, numberedLines);
+      controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection(
+          baseOffset: selection.start,
+          extentOffset: selection.start + numberedLines.length,
+        ),
+      );
+      return;
+    }
+
+    // Single line / cursor position
+    int cursor = selection.start;
+    int lineStart = text.lastIndexOf('\n', cursor > 0 ? cursor - 1 : 0);
+    lineStart = lineStart == -1 ? 0 : lineStart + 1;
+    final currentLine = text.substring(lineStart, cursor);
+
+    // If already numbered, remove the number
+    final numberMatch = RegExp(r'^\d+\.\s*').firstMatch(currentLine);
+    if (numberMatch != null) {
+      final prefixLen = numberMatch.group(0)!.length;
+      final newText = text.replaceRange(lineStart, lineStart + prefixLen, '');
+      controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: (cursor - prefixLen).clamp(0, newText.length)),
+      );
+      return;
+    }
+
+    // Determine number by checking previous line
+    int nextNumber = 1;
+    if (lineStart > 1) {
+      final prevLineStart = text.lastIndexOf('\n', lineStart - 2);
+      final prevLine = text.substring(prevLineStart == -1 ? 0 : prevLineStart + 1, lineStart - 1);
+      final prevMatch = RegExp(r'^(\d+)\.\s*').firstMatch(prevLine);
+      if (prevMatch != null) {
+        nextNumber = (int.tryParse(prevMatch.group(1)!) ?? 0) + 1;
+      }
+    }
+
+    final prefix = '$nextNumber. ';
+    final newText = text.replaceRange(lineStart, lineStart, prefix);
+    controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: cursor + prefix.length),
+    );
+  }
+
+  /// Inserts or toggles checklist / task items (- [ ] )
+  static void insertCheckboxList(TextEditingController controller) {
+    final selection = controller.selection;
+    final text = controller.text;
+    int cursor = selection.isValid ? selection.start : text.length;
+
+    int lineStart = text.lastIndexOf('\n', cursor > 0 ? cursor - 1 : 0);
+    lineStart = lineStart == -1 ? 0 : lineStart + 1;
+    final currentLine = text.substring(lineStart, cursor);
+
+    if (currentLine.startsWith('- [ ] ')) {
+      // Toggle to checked
+      final newText = text.replaceRange(lineStart, lineStart + 6, '- [x] ');
+      controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: cursor),
+      );
+    } else if (currentLine.startsWith('- [x] ')) {
+      // Remove
+      final newText = text.replaceRange(lineStart, lineStart + 6, '');
+      controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: (cursor - 6).clamp(0, newText.length)),
+      );
+    } else {
+      // Insert
+      const prefix = '- [ ] ';
+      final newText = text.replaceRange(lineStart, lineStart, prefix);
+      controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: cursor + prefix.length),
+      );
+    }
+  }
+
+  /// Inserts a scene break / separator line (* * *)
+  static void insertSceneBreak(TextEditingController controller) {
+    insertAtCursor(controller, '\n\n* * *\n\n');
+  }
+
   /// Formats date in Spanish with safe fallback
   static String formatSpanishDate(DateTime date, {String format = 'EEEE, d MMMM'}) {
     try {
