@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../controllers/editor_controller.dart';
 import '../widgets/book_card.dart';
@@ -12,6 +11,7 @@ import '../widgets/writing_sprint_dialog.dart';
 import '../widgets/export_manuscript_dialog.dart';
 import '../models/idea_snippet_model.dart';
 import '../models/codex_entry_model.dart';
+import '../formatters/writer_text_formatter.dart';
 import 'zen_editor_screen.dart';
 import 'plot_mind_map_screen.dart';
 
@@ -271,7 +271,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
     final bgPrimary = isDark ? AppTheme.darkBgPrimary : AppTheme.lightBgPrimary;
 
-    final todayFormatted = DateFormat('EEEE, d MMMM', 'es_ES').format(DateTime.now());
+    final todayFormatted = WriterTextFormatter.formatSpanishDate(DateTime.now());
 
     return Scaffold(
       backgroundColor: bgPrimary,

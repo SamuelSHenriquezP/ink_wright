@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../models/book_model.dart';
+import '../formatters/writer_text_formatter.dart';
 
 class BookCard extends StatelessWidget {
   final BookModel book;
@@ -26,7 +27,7 @@ class BookCard extends StatelessWidget {
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
     final accentColor = isDark ? Colors.white : Colors.black;
 
-    final formattedDate = DateFormat('d MMM', 'es_ES').format(book.lastEdited);
+    final formattedDate = WriterTextFormatter.formatSpanishDate(book.lastEdited, format: 'd MMM');
     final formattedWords = NumberFormat('#,###').format(book.currentWordCount);
     final formattedTarget = NumberFormat('#,###').format(book.targetWordCount);
 

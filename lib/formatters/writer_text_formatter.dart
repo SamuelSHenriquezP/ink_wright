@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class WriterTextFormatter {
   /// Counts the total number of words in a text snippet
@@ -141,5 +142,23 @@ class WriterTextFormatter {
       text: newText,
       selection: TextSelection.collapsed(offset: start + insertText.length),
     );
+  }
+
+  /// Formats date in Spanish with safe fallback
+  static String formatSpanishDate(DateTime date, {String format = 'EEEE, d MMMM'}) {
+    try {
+      return DateFormat(format, 'es_ES').format(date);
+    } catch (_) {
+      final days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+      final months = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+      ];
+      if (format == 'd MMM') {
+        final shortMonths = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        return '${date.day} ${shortMonths[date.month - 1]}';
+      }
+      return '${days[date.weekday - 1]}, ${date.day} ${months[date.month - 1]}';
+    }
   }
 }
