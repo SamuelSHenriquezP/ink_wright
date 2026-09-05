@@ -172,6 +172,56 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                   ),
                                 ),
 
+                                const SizedBox(width: 6),
+
+                                // Markdown Live Toggle Pill
+                                GestureDetector(
+                                  onTap: () => controller.toggleLiveMarkdown(),
+                                  child: Tooltip(
+                                    message: controller.isLiveMarkdownEnabled
+                                        ? 'Markdown en vivo activo (pulsa para desactivar)'
+                                        : 'Markdown en vivo desactivado (pulsa para activar)',
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: controller.isLiveMarkdownEnabled
+                                            ? (isDark ? Colors.white12 : Colors.black)
+                                            : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: controller.isLiveMarkdownEnabled
+                                              ? (isDark ? Colors.white54 : Colors.black)
+                                              : (isDark ? Colors.white24 : Colors.black12),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.auto_stories_outlined,
+                                            size: 13,
+                                            color: controller.isLiveMarkdownEnabled
+                                                ? Colors.white
+                                                : textSecondary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'MD',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 0.5,
+                                              color: controller.isLiveMarkdownEnabled
+                                                  ? Colors.white
+                                                  : textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
                                 const SizedBox(width: 4),
 
                                 // Soundscape Toggle Button

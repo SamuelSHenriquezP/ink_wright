@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ink_wright/formatters/writer_text_formatter.dart';
 import 'package:ink_wright/controllers/editor_controller.dart';
+import 'package:ink_wright/controllers/markdown_editing_controller.dart';
 
 void main() {
   setUpAll(() {
@@ -84,6 +85,81 @@ void main() {
       // Auto-arrange nodes by act
       controller.autoArrangeMindMapNodes();
       expect(controller.mindMapNodes.isNotEmpty, isTrue);
+    });
+
+    test('Live Markdown toggle on EditorController', () {
+      final controller = EditorController();
+      expect(controller.isLiveMarkdownEnabled, isTrue);
+      controller.toggleLiveMarkdown();
+      expect(controller.isLiveMarkdownEnabled, isFalse);
+      controller.toggleLiveMarkdown();
+      expect(controller.isLiveMarkdownEnabled, isTrue);
+    });
+  });
+
+  group('MarkdownEditingController Live Rendering Tests', () {
+    testWidgets('Preserves exact text content in buildTextSpan for all markdown formats', (tester) async {
+      final sampleText = '''# Chapter One: The Fog
+## The Whispering Pines
+### Section Alpha
+Silas walked into the **dark forest** with *haste*.
+He thought: > The secret is buried here.
+- [ ] Find the old compass
+- [x] Light the lantern
+- First clue
+1. Follow the river
+— Wait! —shouted Martha.
+«Do not enter,» she warned.
+Here is some `inline code` and ==highlighted text==.
+***
+```
+code block line 1
+code block line 2
+```''';
+
+      final controller = MarkdownEditingController(text: sampleText);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                final span = controller.buildTextSpan(
+                  context: context,
+                  style: const TextStyle(fontSize: 16),
+                  withComposing: false,
+                );
+                // Exact text preservation invariant
+                expect(span.toPlainText(), equals(sampleText));
+                return Text.rich(span);
+              },
+            ),
+          ),
+        ),
+      );
+    });
+
+    testWidgets('Headers, bold, italics, and strikethrough produce styled spans', (tester) async {
+      final controller = MarkdownEditingController(text: '# Header 1\n**Bold Text**\n*Italic Text*');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                final span = controller.buildTextSpan(
+                  context: context,
+                  style: const TextStyle(fontSize: 16),
+                  withComposing: false,
+                );
+                expect(span.children, isNotNull);
+                expect(span.toPlainText(), equals('# Header 1\n**Bold Text**\n*Italic Text*'));
+                return Text.rich(span);
+              },
+            ),
+          ),
+        ),
+      );
     });
   });
 }

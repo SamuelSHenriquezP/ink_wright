@@ -9,6 +9,7 @@ import '../models/soundscape_model.dart';
 import '../models/writing_sprint_model.dart';
 import '../models/mind_map_node_model.dart';
 import '../formatters/writer_text_formatter.dart';
+import 'markdown_editing_controller.dart';
 
 class EditorController extends ChangeNotifier {
   static const String _prefKeyActiveBookId = 'ink_last_active_book_id';
@@ -34,13 +35,14 @@ class EditorController extends ChangeNotifier {
   WritingSprintModel? _activeSprint;
   String _selectedFontFamily = 'Lora'; // Lora, Merriweather, Playfair Display, JetBrains Mono
 
-  final TextEditingController textEditingController = TextEditingController();
+  final MarkdownEditingController textEditingController = MarkdownEditingController();
   final FocusNode focusNode = FocusNode();
 
   // Getters
   bool get isDarkMode => _isDarkMode;
   bool get isZenMode => _isZenMode;
   bool get isAutoSaveEnabled => _isAutoSaveEnabled;
+  bool get isLiveMarkdownEnabled => textEditingController.isLiveMarkdownEnabled;
 
   BookModel get activeBook => _activeBook;
   ChapterModel get activeChapter => _activeChapter;
@@ -379,6 +381,7 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
         _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
       }
 
+      textEditingController.isDarkMode = _isDarkMode;
       textEditingController.text = _activeChapter.content;
       if (lastCursor >= 0 && lastCursor <= textEditingController.text.length) {
         textEditingController.selection = TextSelection.collapsed(offset: lastCursor);
@@ -437,6 +440,12 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
 
   void toggleThemeMode() {
     _isDarkMode = !_isDarkMode;
+    textEditingController.isDarkMode = _isDarkMode;
+    notifyListeners();
+  }
+
+  void toggleLiveMarkdown() {
+    textEditingController.isLiveMarkdownEnabled = !textEditingController.isLiveMarkdownEnabled;
     notifyListeners();
   }
 
