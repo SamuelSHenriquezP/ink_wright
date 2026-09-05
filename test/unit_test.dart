@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ink_wright/formatters/writer_text_formatter.dart';
 import 'package:ink_wright/controllers/editor_controller.dart';
 import 'package:ink_wright/controllers/markdown_editing_controller.dart';
+import 'package:ink_wright/models/character_model.dart';
 
 void main() {
   setUpAll(() {
@@ -40,11 +41,14 @@ void main() {
   });
 
   group('EditorController Tests', () {
-    test('Initial state loading', () {
+    test('Initial state loading: only tutorial book exists', () {
       final controller = EditorController();
-      expect(controller.allBooks.isNotEmpty, isTrue);
-      expect(controller.activeBook.title, equals('The Cipher of St. Jude'));
+      expect(controller.allBooks.length, equals(1));
+      expect(controller.activeBook.title, equals('Manual del Escritor — Guía de Ink & Wright'));
+      expect(controller.activeBook.chapters.length, equals(3));
       expect(controller.ideas.isNotEmpty, isTrue);
+      expect(controller.characters.isNotEmpty, isTrue);
+      expect(controller.characters.first.name, equals('Evelyn Vance'));
       expect(controller.isZenMode, isFalse);
     });
 
@@ -85,6 +89,56 @@ void main() {
       // Auto-arrange nodes by act
       controller.autoArrangeMindMapNodes();
       expect(controller.mindMapNodes.isNotEmpty, isTrue);
+    });
+
+    test('Mind Map isolation per book', () {
+      final controller = EditorController();
+      final tutorialNodesCount = controller.mindMapNodes.length;
+      expect(tutorialNodesCount, equals(3));
+
+      // Create a second novel
+      controller.createNewBook('El Laberinto de Cristal', 'Fantasía Oscura', 60000);
+      expect(controller.activeBook.title, equals('El Laberinto de Cristal'));
+
+      // New book only has its own premise node
+      expect(controller.mindMapNodes.length, equals(1));
+      expect(controller.mindMapNodes.first.title.contains('El Laberinto de Cristal'), isTrue);
+
+      // Switch back to tutorial book
+      controller.switchBook('b_tutorial');
+      expect(controller.mindMapNodes.length, equals(tutorialNodesCount));
+      expect(controller.mindMapNodes.first.title.contains('Acto I'), isTrue);
+    });
+
+    test('Character creation and book-scoped management', () {
+      final controller = EditorController();
+      expect(controller.characters.length, equals(1));
+      expect(controller.characters.first.name, equals('Evelyn Vance'));
+
+      // Add a new character
+      controller.addCharacter(CharacterModel(
+        id: 'char_test_1',
+        bookId: controller.activeBook.id,
+        name: 'Julian Blackwood',
+        role: 'Antagonista',
+        archetype: 'El Rival Ambicioso',
+        writtenBiography: 'Julian fue el rival académico de Evelyn en la Sociedad Cartográfica.',
+      ));
+      expect(controller.characters.length, equals(2));
+      expect(controller.characters.first.name, equals('Julian Blackwood'));
+
+      // Insert character to manuscript editor
+      controller.insertCharacterToEditor(controller.characters.first);
+      expect(controller.textEditingController.text.contains('Julian Blackwood'), isTrue);
+      expect(controller.textEditingController.text.contains('Antagonista'), isTrue);
+
+      // Create a new book and verify character isolation
+      controller.createNewBook('Cuentos del Mar', 'Aventuras', 40000);
+      expect(controller.characters.isEmpty, isTrue);
+
+      // Switch back to tutorial book
+      controller.switchBook('b_tutorial');
+      expect(controller.characters.length, equals(2));
     });
 
     test('Live Markdown toggle on EditorController', () {

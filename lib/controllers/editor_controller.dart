@@ -8,6 +8,7 @@ import '../models/codex_entry_model.dart';
 import '../models/soundscape_model.dart';
 import '../models/writing_sprint_model.dart';
 import '../models/mind_map_node_model.dart';
+import '../models/character_model.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'markdown_editing_controller.dart';
 
@@ -28,6 +29,7 @@ class EditorController extends ChangeNotifier {
   List<CodexEntryModel> _codexEntries = [];
   List<SoundscapeModel> _soundscapes = [];
   List<MindMapNodeModel> _mindMapNodes = [];
+  List<CharacterModel> _characters = [];
 
   SoundscapeModel? _activeSoundscape;
   bool _isPlayingAmbience = false;
@@ -51,7 +53,15 @@ class EditorController extends ChangeNotifier {
   List<IdeaSnippetModel> get ideas => List.unmodifiable(_ideas);
   List<CodexEntryModel> get codexEntries => List.unmodifiable(_codexEntries);
   List<SoundscapeModel> get soundscapes => List.unmodifiable(_soundscapes);
-  List<MindMapNodeModel> get mindMapNodes => List.unmodifiable(_mindMapNodes);
+
+  // Each mind map is strictly individual per book
+  List<MindMapNodeModel> get mindMapNodes =>
+      _mindMapNodes.where((n) => n.bookId == _activeBook.id).toList();
+
+  // Characters are strictly individual per book
+  List<CharacterModel> get characters =>
+      _characters.where((c) => c.bookId == _activeBook.id).toList();
+  List<CharacterModel> get allCharacters => List.unmodifiable(_characters);
 
   SoundscapeModel? get activeSoundscape => _activeSoundscape;
   bool get isPlayingAmbience => _isPlayingAmbience;
@@ -64,162 +74,165 @@ class EditorController extends ChangeNotifier {
   }
 
   void _initializeInitialState() {
-    // Initial sample chapters for "The Whispering Pines"
+    // 1. Starter Tutorial Manuscript (Unico libro inicial de bienvenida)
     final ch1 = ChapterModel(
-      id: 'ch_1',
-      bookId: 'b_1',
+      id: 'ch_tut_1',
+      bookId: 'b_tutorial',
       chapterNumber: 1,
-      title: 'The Fog Across Blackwood',
-      content: '''The lantern flickered violently as Silas pushed open the heavy oak door. Beyond the threshold lay the valley of Blackwood, shrouded in an ethereal mist that seemed to breathe with a rhythm of its own.
+      title: 'Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo',
+      content: '''# Bienvenido a Ink & Wright
 
-"You should not have returned, Silas," Martha murmured from the shadows of the hearth. Her fingers trembled around the antique silver compass.
+Este es tu nuevo santuario de escritura: un espacio minimalista en blanco y negro pensado para que las distracciones desaparezcan y tus palabras cobren vida.
 
-Silas didn't answer immediately. He set his leather journal on the mahogany desk and unbuttoned his damp cloak. "The map doesn't lie, Martha. What we buried thirty years ago was never meant to stay underground."''',
-      lastEdited: DateTime.now().subtract(const Duration(hours: 2)),
+## Escribir con Markdown en Vivo
+
+Mientras escribes en este lienzo, el formato se renderiza en tiempo real:
+
+- Las palabras entre asteriscos dobles se convierten en **negrita editorial**.
+- Las palabras entre asteriscos simples adquieren un *tono íntimo en cursiva*.
+- Puedes tachar ideas descartadas usando ~~texto tachado~~.
+- Escribe fragmentos técnicos o notas de estilo entre comillas invertidas: `escena_climax_01`.
+
+> "Escribir no es añadir adornos, sino retirar la niebla hasta que la historia respire por sí sola."
+
+### Diálogos y Narrativa
+
+Para los diálogos en español, utiliza la raya literaria:
+
+— La tinta guarda secretos que la memoria prefiere olvidar —susurró el archivista mientras cerraba el tomo de cuero.
+
+— Entonces no abras el candado de la biblioteca —respondió ella con calma.
+
+### Tu Lista de Tareas Creativas
+
+- [x] Conocer el editor y probar el Markdown dinámico.
+- [ ] Explorar la sección de Personajes en el menú principal.
+- [ ] Abrir el Mapa Mental para trazar el arco de tu historia.
+- [ ] Probar el modo Pantalla Completa para máxima concentración.
+
+***
+
+Pulsa el icono superior para abrir el panel lateral o vuelve al panel de inicio para comenzar a forjar tu propio manuscrito.''',
+      lastEdited: DateTime.now(),
       isCompleted: true,
-      notes: 'Introduce Silas motivation early. Establish tension with Martha.',
-      povCharacter: 'Silas Vance',
+      notes: 'Capítulo introductorio que enseña las funciones básicas del editor.',
+      povCharacter: 'Evelyn Vance',
     );
 
     final ch2 = ChapterModel(
-      id: 'ch_2',
-      bookId: 'b_1',
-      chapterNumber: 3,
-      title: 'Echoes of the Silver Compass',
-      content: '''The clock in the bell tower struck three. Every chime resonated through the stone walls, carrying the weight of forgotten promises.
+      id: 'ch_tut_2',
+      bookId: 'b_tutorial',
+      chapterNumber: 2,
+      title: 'Capítulo 2: El Arte de Crear Personajes',
+      content: '''# Diseñar Personajes con Alma
 
-Silas traced the etched runes along the compass rim. The needle spun wildly, settling not toward true north, but toward the ruins of St. Jude's Abbey.''',
-      lastEdited: DateTime.now().subtract(const Duration(minutes: 45)),
+En la sección de **Personajes**, cada criatura de tu historia tiene su propia ficha narrativa con psicología, deseos y su biografía escrita.
+
+## Los Tres Pilares de un Buen Personaje
+
+1. **El Deseo Consciente:** Lo que el personaje cree que quiere (el objetivo externo).
+2. **La Necesidad Inconsciente:** La lección o maduración que debe experimentar para sanar.
+3. **El Fantasma o Herida:** Aquello que le ocurrió en el pasado y condiciona sus miedos.
+
+> "Un personaje sin conflicto interno es solo una marioneta con buen vestuario."
+
+### Cómo Usar las Fichas
+
+Puedes consultar tus personajes en cualquier momento, editar su biografía escrita e incluso insertarlos directamente en tu capítulo pulsando "Insertar en Manuscrito".''',
+      lastEdited: DateTime.now(),
       isCompleted: false,
-      notes: 'Foreshadowing the discovery in Chapter 4.',
-      povCharacter: 'Silas Vance',
+      notes: 'Capítulo tutorial sobre la creación y gestión de personajes.',
+      povCharacter: 'Evelyn Vance',
     );
 
     final ch3 = ChapterModel(
-      id: 'ch_3',
-      bookId: 'b_1',
+      id: 'ch_tut_3',
+      bookId: 'b_tutorial',
       chapterNumber: 3,
-      title: 'Secrets in the Sanctuary',
-      content: '''Step by step, the damp leaves crunched beneath his boots. The sanctuary stood silent, wrapped in ivy and old secrets waiting to be written.''',
-      lastEdited: DateTime.now().subtract(const Duration(days: 1)),
+      title: 'Capítulo 3: Estructuración y Mapa Mental de la Trama',
+      content: '''# El Mapa Mental de la Trama
+
+Cada libro en Ink & Wright tiene su propio **Mapa Mental independiente**. Lo que traces para una novela nunca se mezclará con tus otros proyectos.
+
+## Los Actos Narrativos
+
+- **Acto I (Planteamiento):** Presenta el mundo ordinario y el incidente incitador que rompe el equilibrio.
+- **Acto II (Nudo y Complicaciones):** El punto medio donde las consecuencias se vuelven irreversibles.
+- **Acto III (Clímax y Resolución):** El enfrentamiento decisivo donde el protagonista cambia para siempre.
+
+### Modos del Lienzo
+
+- **Mover y Explorar:** Arrastra el lienzo en cualquier dirección con libertad total.
+- **Conectar Nodos:** Toca el botón de conectar en cualquier tarjeta y selecciona el nodo destino para enlazar causas y consecuencias.
+- **Auto-Organizar:** Usa el botón de organización automática para ordenar tus ideas en columnas por actos narrativos.''',
+      lastEdited: DateTime.now(),
       isCompleted: false,
-      notes: 'Key turning point in Act 1.',
-      povCharacter: 'Martha Thorne',
+      notes: 'Capítulo tutorial sobre el mapa mental.',
+      povCharacter: 'Evelyn Vance',
     );
 
-    // Initial Sample Books
-    final book1 = BookModel(
-      id: 'b_1',
-      title: 'The Cipher of St. Jude',
-      subtitle: 'A Gothic mystery of lost maps & silver compasses',
-      genre: 'Gothic Mystery',
-      targetWordCount: 65000,
+    final tutorialBook = BookModel(
+      id: 'b_tutorial',
+      title: 'Manual del Escritor — Guía de Ink & Wright',
+      subtitle: 'Tu espacio de escritura, personajes y mapas de trama',
+      genre: 'Guía / Tutorial',
+      targetWordCount: 25000,
       status: BookStatus.drafting,
       chapters: [ch1, ch2, ch3],
-      lastEdited: DateTime.now().subtract(const Duration(minutes: 45)),
-      coverEmoji: '🧭',
-      coverColorHex: 0xFF38C793,
-      tags: ['Gothic', 'Mystery', 'Cartography'],
-      synopsis: 'Silas Vance uncovers an ancient silver compass that reveals secrets of St. Jude Abbey.',
+      lastEdited: DateTime.now(),
+      coverEmoji: '🖋️',
+      coverColorHex: 0xFF18181B,
+      tags: ['Tutorial', 'Guía', 'Escritura Creativa'],
+      synopsis:
+          'Una guía viva diseñada para mostrarte cómo escribir con Markdown en tiempo real, dar vida a personajes inolvidables y estructurar tramas visuales.',
     );
 
-    final book2 = BookModel(
-      id: 'b_2',
-      title: 'Chronicles of Aethelgard',
-      subtitle: 'Epic high fantasy world-building',
-      genre: 'High Fantasy',
-      targetWordCount: 90000,
-      status: BookStatus.outlining,
-      chapters: [],
-      lastEdited: DateTime.now().subtract(const Duration(days: 3)),
-      coverEmoji: '⚔️',
-      coverColorHex: 0xFF4A90E2,
-      tags: ['High Fantasy', 'Dragons', 'Epic'],
-      synopsis: 'A kingdom divided by five elemental crests must unite before the eclipse.',
-    );
-
-    _allBooks = [book1, book2];
-    _activeBook = book1;
+    _allBooks = [tutorialBook];
+    _activeBook = tutorialBook;
     _activeChapter = ch1;
 
     // Load active chapter content into text controller
     textEditingController.text = _activeChapter.content;
     textEditingController.addListener(_onTextChanged);
 
-    // Initial Sample Ideas
+    // Initial Sample Ideas (relacionadas al tutorial y narrativa)
     _ideas = [
       IdeaSnippetModel(
         id: 'i_1',
-        title: 'The Tallow Candle Clue',
-        content: 'The tallow candle burns with a blue flame whenever someone lies near the abbey altar.',
-        category: IdeaCategory.plotTwist,
-        colorHex: 0xFFF5A623,
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-        tags: ['Abbey', 'Clue', 'Act 2'],
+        title: 'Consejo: El Gancho Inicial',
+        content: 'Empieza siempre in media res o con una imagen que revele el tono antes que la trama.',
+        category: IdeaCategory.general,
+        colorHex: 0xFF18181B,
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        tags: ['Técnica', 'Inicio'],
         isPinned: true,
       ),
       IdeaSnippetModel(
         id: 'i_2',
-        title: 'Martha’s Hidden Guild Ring',
-        content: 'Martha carries a heavy brass ring inside her velvet pouch with the seal of the Cartographer Guild.',
+        title: 'Atmósfera y Sentidos',
+        content: 'Describe al menos dos sentidos que no sean la vista en cada cambio de escena importante.',
         category: IdeaCategory.character,
-        colorHex: 0xFF38C793,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        tags: ['Martha', 'Guild', 'Backstory'],
-        isPinned: false,
-      ),
-      IdeaSnippetModel(
-        id: 'i_3',
-        title: 'Fog Atmosphere Description',
-        content: 'The fog tasted of salt and peat, sticking to wool coats like damp spiderwebs.',
-        category: IdeaCategory.general,
-        colorHex: 0xFF9013FE,
+        colorHex: 0xFF27272A,
         createdAt: DateTime.now(),
-        tags: ['Atmosphere', 'Sensory'],
+        tags: ['Inmersión', 'Estilo'],
         isPinned: true,
       ),
     ];
 
-    // Initial Sample Codex Entries (Worldbuilding)
+    // Initial Codex Entries
     _codexEntries = [
       CodexEntryModel(
-        id: 'codex_1',
-        bookId: 'b_1',
-        name: 'Silas Vance',
-        type: CodexType.character,
-        role: 'Protagonist / Cartographer',
-        description: 'Former cartographer of the Guild. Obsessed with completing the map of St. Jude Abbey.',
-        traits: ['Methodical', 'Secretive', 'Perceptive'],
-        secrets: 'Hides a missing shadow stolen in the mountain pass.',
-        avatarEmoji: '🧙‍♂️',
-        createdAt: DateTime.now().subtract(const Duration(days: 5)),
-        isPinned: true,
-      ),
-      CodexEntryModel(
-        id: 'codex_2',
-        bookId: 'b_1',
-        name: 'St. Jude Abbey Ruins',
+        id: 'codex_tut_1',
+        bookId: 'b_tutorial',
+        name: 'El Estudio de Ink & Wright',
         type: CodexType.location,
-        role: 'Central Mystery Location',
-        description: 'A 14th-century monastery built atop subterranean basalt vaults.',
-        traits: ['Ancient', 'Gothic', 'Fog-shrouded'],
-        secrets: 'Houses the silver compass vault behind the bell tower.',
-        avatarEmoji: '🏰',
-        createdAt: DateTime.now().subtract(const Duration(days: 4)),
+        role: 'Santuario Creativo',
+        description: 'Un refugio atemporal donde el autor puede concentrarse exclusivamente en su manuscrito.',
+        traits: ['Silencioso', 'Minimalista', 'Monocromático'],
+        secrets: 'Diseñado para escritores que buscan la pureza de la palabra.',
+        avatarEmoji: '🏛️',
+        createdAt: DateTime.now(),
         isPinned: true,
-      ),
-      CodexEntryModel(
-        id: 'codex_3',
-        bookId: 'b_1',
-        name: 'The Silver Compass',
-        type: CodexType.artifact,
-        role: 'Relic / Plot Catalyst',
-        description: 'An ancient brass and silver instrument that tracks echoes of historic lies.',
-        traits: ['Etched Runes', 'Magnetic Anomaly'],
-        secrets: 'Only responds when held by a member of the Guild.',
-        avatarEmoji: '🧭',
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        isPinned: false,
       ),
     ];
 
@@ -227,125 +240,121 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
     _soundscapes = [
       const SoundscapeModel(
         id: 'snd_1',
-        title: 'Rain on Monastery Glass',
-        category: 'Nature',
+        title: 'Lluvia sobre Ventanal',
+        category: 'Naturaleza',
         iconEmoji: '🌧️',
-        description: 'Gentle raindrops falling on cathedral stained glass',
-        colorHex: 0xFF38C793,
+        description: 'Suaves gotas de lluvia sobre cristales antiguos',
+        colorHex: 0xFF18181B,
       ),
       const SoundscapeModel(
         id: 'snd_2',
-        title: 'Midnight Library Fire',
-        category: 'Ambient',
+        title: 'Chimenea de Biblioteca',
+        category: 'Ambiente',
         iconEmoji: '🔥',
-        description: 'Crackling fireplace & paper rustling',
-        colorHex: 0xFFF5A623,
+        description: 'Leña crujiendo suavemente y pasar de páginas',
+        colorHex: 0xFF27272A,
       ),
       const SoundscapeModel(
         id: 'snd_3',
-        title: 'Soft Foggy Café',
-        category: 'Urban',
+        title: 'Café de Escritores',
+        category: 'Urbano',
         iconEmoji: '☕',
-        description: 'Low chatter and distant rain',
-        colorHex: 0xFF4A90E2,
+        description: 'Murmullo lejano y lluvia tenue de fondo',
+        colorHex: 0xFF3F3F46,
       ),
       const SoundscapeModel(
         id: 'snd_4',
-        title: 'Blackwood Forest Breeze',
-        category: 'Nature',
+        title: 'Brisa en el Bosque',
+        category: 'Naturaleza',
         iconEmoji: '🌲',
-        description: 'Rustling pine needles and gentle wind',
-        colorHex: 0xFF9013FE,
+        description: 'Viento susurrando entre las copas de los árboles',
+        colorHex: 0xFF52525B,
       ),
     ];
     _activeSoundscape = _soundscapes[0];
 
-    // Initial Story Mind Map Plot Nodes
+    // Initial Mind Map Nodes (Individual para el libro tutorial 'b_tutorial')
     _mindMapNodes = [
       MindMapNodeModel(
-        id: 'node_1',
-        bookId: 'b_1',
-        title: 'Inciting Incident: The Silver Compass Found',
-        description: 'Silas unearths the silver compass inside his late father cartography desk.',
+        id: 'node_tut_1',
+        bookId: 'b_tutorial',
+        title: 'Acto I: Conoce tu Espacio de Escritura',
+        description: 'Aprende a usar el editor con Markdown en vivo, las tipografías y el modo de pantalla completa.',
         act: PlotAct.act1Exposition,
         type: PlotNodeType.turningPoint,
-        dx: 60,
+        dx: 80,
         dy: 120,
-        connectedToIds: ['node_2'],
-        colorHex: 0xFF38C793,
-        iconEmoji: '🧭',
+        connectedToIds: ['node_tut_2'],
+        colorHex: 0xFF18181B,
+        iconEmoji: '🖋️',
       ),
       MindMapNodeModel(
-        id: 'node_2',
-        bookId: 'b_1',
-        title: 'Act I Climax: Arrival at Blackwood Valley',
-        description: 'Silas reaches Blackwood Valley amidst thick fog and receives Martha warning.',
-        act: PlotAct.act1Exposition,
-        type: PlotNodeType.mainPlot,
-        dx: 340,
-        dy: 120,
-        connectedToIds: ['node_3', 'node_4'],
-        colorHex: 0xFF4A90E2,
-        iconEmoji: '🌫️',
-      ),
-      MindMapNodeModel(
-        id: 'node_3',
-        bookId: 'b_1',
-        title: 'Subplot: Martha’s Guild Secrets',
-        description: 'Martha reveals her connection to the Guild of Cartographers.',
-        act: PlotAct.act2RisingAction,
-        type: PlotNodeType.subplot,
-        dx: 620,
-        dy: 40,
-        connectedToIds: ['node_5'],
-        colorHex: 0xFFF5A623,
-        iconEmoji: '📜',
-      ),
-      MindMapNodeModel(
-        id: 'node_4',
-        bookId: 'b_1',
-        title: 'Midpoint: The Mirror Vault Revealed',
-        description: 'The silver compass unlocks the hidden vault beneath St. Jude Abbey bell tower.',
+        id: 'node_tut_2',
+        bookId: 'b_tutorial',
+        title: 'Acto II: Diseña tus Personajes y Fichas',
+        description: 'Crea personajes con psicología, deseos y su biografía narrativa completa.',
         act: PlotAct.midpoint,
-        type: PlotNodeType.turningPoint,
-        dx: 620,
-        dy: 240,
-        connectedToIds: ['node_5'],
-        colorHex: 0xFF9013FE,
-        iconEmoji: '🏛️',
+        type: PlotNodeType.characterArc,
+        dx: 480,
+        dy: 120,
+        connectedToIds: ['node_tut_3'],
+        colorHex: 0xFF27272A,
+        iconEmoji: '👤',
       ),
       MindMapNodeModel(
-        id: 'node_5',
-        bookId: 'b_1',
-        title: 'Act III Climax: Confrontation in the Storm',
-        description: 'Silas confronts the Guild master as the bell tolls for the final revelation.',
+        id: 'node_tut_3',
+        bookId: 'b_tutorial',
+        title: 'Acto III: Escribe y Estructura tu Trama',
+        description: 'Traza causas y consecuencias en el lienzo infinito y exporta tu manuscrito.',
         act: PlotAct.act3Climax,
         type: PlotNodeType.mainPlot,
-        dx: 900,
-        dy: 140,
+        dx: 880,
+        dy: 120,
         connectedToIds: [],
-        colorHex: 0xFFE74C3C,
-        iconEmoji: '⚡',
+        colorHex: 0xFF18181B,
+        iconEmoji: '📖',
+      ),
+    ];
+
+    // Initial Characters (Individual para el libro tutorial 'b_tutorial')
+    _characters = [
+      CharacterModel(
+        id: 'char_tut_1',
+        bookId: 'b_tutorial',
+        name: 'Evelyn Vance',
+        role: 'Protagonista',
+        archetype: 'La Investigadora Renuente',
+        traits: ['Observadora', 'Metódica', 'Intuitiva'],
+        physicalAppearance: 'Mirada atenta de ojos grises, gabardina oscura con marcas de tinta en los puños y un reloj de bolsillo antiguo.',
+        motivation: 'Descifrar los manuscritos olvidados de la antigua biblioteca de Blackwood.',
+        flawOrGhost: 'Teme equivocarse y repetir el error que le costó el puesto a su mentor.',
+        characterArc: 'Pasa de dudar de sus instintos a liderar la investigación con determinación inquebrantable.',
+        writtenBiography: '''Evelyn nació en una familia de encuadernadores y archivistas. Creció entre olor a cuero viejo, papel secante y tinta ferrogálica. Posee una memoria prodigiosa para las palabras no dichas y los márgenes de los textos antiguos, donde los escritores solían anotar sus verdades más peligrosas.
+
+A los veintiocho años, heredó el taller de su abuelo junto con un baúl de notas que nadie había logrado descifrar. Su vida cambió el día que encontró un pliego con el sello intacto del Gremio.''',
+        quote: '«Los márgenes de los libros siempre revelan más que los textos impresos.»',
+        avatarEmoji: '🕵️‍♀️',
+        createdAt: DateTime.now(),
       ),
     ];
 
     // Initial Writer Stats
     _writerStats = WriterStatsModel(
-      wordsToday: 1420,
+      wordsToday: 850,
       dailyGoalWords: 2000,
-      streakDays: 7,
-      totalWordsWritten: 42650,
-      writingTimeTodayMinutes: 48,
-      wordsPerMinuteAvg: 32,
-      focusScore: 92,
+      streakDays: 3,
+      totalWordsWritten: 12500,
+      writingTimeTodayMinutes: 35,
+      wordsPerMinuteAvg: 30,
+      focusScore: 95,
       weeklyProgress: {
-        'Mon': 1850,
-        'Tue': 2100,
-        'Wed': 1420,
-        'Thu': 1950,
-        'Fri': 2300,
-        'Sat': 1600,
-        'Sun': 1420,
+        'Mon': 1200,
+        'Tue': 1500,
+        'Wed': 850,
+        'Thu': 1100,
+        'Fri': 1400,
+        'Sat': 900,
+        'Sun': 850,
       },
     );
   }
@@ -518,6 +527,23 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
     );
 
     _allBooks.insert(0, newBook);
+
+    // Initialize an isolated, clean starter node for this new book's mind map
+    final starterNode = MindMapNodeModel(
+      id: 'node_${DateTime.now().millisecondsSinceEpoch}',
+      bookId: newBook.id,
+      title: 'Premisa: $title',
+      description: 'Define aquí el conflicto principal, la meta del protagonista y el tono de la historia.',
+      act: PlotAct.act1Exposition,
+      type: PlotNodeType.turningPoint,
+      dx: 80,
+      dy: 120,
+      connectedToIds: [],
+      colorHex: 0xFF18181B,
+      iconEmoji: '💡',
+    );
+    _mindMapNodes.add(starterNode);
+
     selectBook(newBook);
   }
 
@@ -534,6 +560,47 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
       _activeChapter = _activeChapter.copyWith(isCompleted: !_activeChapter.isCompleted);
     }
     notifyListeners();
+  }
+
+  // --- CHARACTERS ACTIONS ---
+
+  void addCharacter(CharacterModel character) {
+    final scoped = character.bookId.isEmpty ? character.copyWith(bookId: _activeBook.id) : character;
+    _characters.insert(0, scoped);
+    notifyListeners();
+  }
+
+  void updateCharacter(CharacterModel updated) {
+    _characters = _characters.map((c) => c.id == updated.id ? updated : c).toList();
+    notifyListeners();
+  }
+
+  void deleteCharacter(String characterId) {
+    _characters.removeWhere((c) => c.id == characterId);
+    notifyListeners();
+  }
+
+  void insertCharacterToEditor(CharacterModel character) {
+    final buffer = StringBuffer();
+    buffer.writeln('\n\n## Ficha de Personaje: ${character.name}');
+    buffer.writeln('**Rol:** ${character.role} | **Arquetipo:** ${character.archetype}');
+    if (character.quote.isNotEmpty) {
+      buffer.writeln('> ${character.quote}');
+    }
+    if (character.traits.isNotEmpty) {
+      buffer.writeln('**Rasgos:** ${character.traits.join(', ')}');
+    }
+    if (character.motivation.isNotEmpty) {
+      buffer.writeln('**Motivación:** ${character.motivation}');
+    }
+    if (character.flawOrGhost.isNotEmpty) {
+      buffer.writeln('**Conflicto / Fantasma:** ${character.flawOrGhost}');
+    }
+    if (character.writtenBiography.isNotEmpty) {
+      buffer.writeln('\n### Biografía & Trasfondo\n${character.writtenBiography}');
+    }
+    buffer.writeln('\n');
+    insertTextToEditor(buffer.toString());
   }
 
   // --- IDEAS ACTIONS ---
@@ -627,7 +694,8 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
   // --- MIND MAP PLOT ACTIONS ---
 
   void addMindMapNode(MindMapNodeModel node) {
-    _mindMapNodes.add(node);
+    final scopedNode = node.bookId.isEmpty ? node.copyWith(bookId: _activeBook.id) : node;
+    _mindMapNodes.add(scopedNode);
     notifyListeners();
   }
 
@@ -679,6 +747,7 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
       final original = _mindMapNodes[index];
       final clone = original.copyWith(
         id: 'node_${DateTime.now().millisecondsSinceEpoch}',
+        bookId: original.bookId,
         title: '${original.title} (Copia)',
         dx: original.dx + 40,
         dy: original.dy + 40,
@@ -707,7 +776,8 @@ Silas traced the etched runes along the compass rim. The needle spun wildly, set
       PlotAct.resolution: 0,
     };
 
-    for (var node in _mindMapNodes) {
+    // Auto-arrange only the nodes belonging to the active book
+    for (var node in _mindMapNodes.where((n) => n.bookId == _activeBook.id)) {
       final count = actCounters[node.act] ?? 0;
       node.dx = actX[node.act] ?? 100.0;
       node.dy = 120.0 + (count * 170.0);

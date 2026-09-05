@@ -148,7 +148,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
               indicatorSize: TabBarIndicatorSize.tab,
               tabs: const [
                 Tab(text: 'Capítulos'),
-                Tab(text: 'Códice'),
+                Tab(text: 'Personajes & Códice'),
                 Tab(text: 'Métricas'),
                 Tab(text: 'Notas'),
               ],
@@ -281,61 +281,144 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
     Color accentMint,
     Color borderSubtle,
   ) {
+    final characters = controller.characters;
     final codexList = controller.codexEntries;
-    return ListView.separated(
+
+    return ListView(
       padding: const EdgeInsets.all(20),
-      itemCount: codexList.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final entry = codexList[index];
-        return Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: widget.isDark ? const Color(0xFF222222) : const Color(0xFFFAFAF8),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: borderSubtle),
-          ),
-          child: Row(
-            children: [
-              Text(entry.defaultEmoji, style: const TextStyle(fontSize: 24)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      entry.name,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textPrimary),
+      children: [
+        // Seccion Personajes
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Personajes del Libro (${characters.length})',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: textPrimary),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (characters.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'No hay personajes creados en este libro aún.',
+              style: TextStyle(fontSize: 12, color: textSecondary, fontStyle: FontStyle.italic),
+            ),
+          )
+        else
+          ...characters.map((char) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: widget.isDark ? const Color(0xFF222222) : const Color(0xFFFAFAF8),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: borderSubtle),
+              ),
+              child: Row(
+                children: [
+                  Text(char.avatarEmoji, style: const TextStyle(fontSize: 22)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          char.name,
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${char.role} ${char.archetype.isNotEmpty ? '• ${char.archetype}' : ''}',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: accentMint),
+                        ),
+                        if (char.writtenBiography.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            char.writtenBiography,
+                            style: TextStyle(fontSize: 11, color: textSecondary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${entry.typeLabel} • ${entry.role}',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: accentMint),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      entry.description,
-                      style: TextStyle(fontSize: 12, color: textSecondary),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.post_add_rounded, size: 20, color: accentMint),
+                    tooltip: 'Insertar Ficha en Manuscrito',
+                    onPressed: () {
+                      controller.insertCharacterToEditor(char);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              ),
+            );
+          }),
+
+        const SizedBox(height: 16),
+        Divider(height: 1, color: borderSubtle),
+        const SizedBox(height: 16),
+
+        // Seccion Códice y Lore
+        Text(
+          'Códice de Mundo & Lugares (${codexList.length})',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: textPrimary),
+        ),
+        const SizedBox(height: 10),
+        ...codexList.map((entry) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: widget.isDark ? const Color(0xFF222222) : const Color(0xFFFAFAF8),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: borderSubtle),
+            ),
+            child: Row(
+              children: [
+                Text(entry.defaultEmoji, style: const TextStyle(fontSize: 22)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.name,
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${entry.typeLabel} • ${entry.role}',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: accentMint),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        entry.description,
+                        style: TextStyle(fontSize: 11, color: textSecondary),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: Icon(Icons.add_comment_rounded, size: 20, color: accentMint),
-                tooltip: 'Insert Codex Note to Canvas',
-                onPressed: () {
-                  controller.insertTextToEditor(
-                    '\n\n/* Codex (${entry.typeLabel}): ${entry.name} */\nRole: ${entry.role}\nDescription: ${entry.description}\n\n',
-                  );
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          ),
-        );
-      },
+                IconButton(
+                  icon: Icon(Icons.add_comment_rounded, size: 20, color: accentMint),
+                  tooltip: 'Insertar Referencia',
+                  onPressed: () {
+                    controller.insertTextToEditor(
+                      '\n\n/* Códice (${entry.typeLabel}): ${entry.name} */\n${entry.description}\n\n',
+                    );
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 

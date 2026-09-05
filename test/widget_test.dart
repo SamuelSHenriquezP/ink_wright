@@ -22,8 +22,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Directly opens editor with the active manuscript and chapter
-    expect(find.text('The Cipher of St. Jude'), findsOneWidget);
-    expect(find.text('The Fog Across Blackwood'), findsOneWidget);
+    expect(find.text('Manual del Escritor — Guía de Ink & Wright'), findsOneWidget);
+    expect(find.text('Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo'), findsOneWidget);
 
     // Tapping back returns to Dashboard
     await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));

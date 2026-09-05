@@ -123,14 +123,16 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                       children: [
                                         Row(
                                           children: [
-                                            Text(
-                                              activeBook.title,
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: textSecondary,
+                                            Flexible(
+                                              child: Text(
+                                                activeBook.title,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: textSecondary,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                              overflow: TextOverflow.ellipsis,
                                             ),
                                             const SizedBox(width: 4),
                                             Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: textSecondary),
