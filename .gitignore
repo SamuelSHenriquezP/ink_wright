@@ -94,5 +94,8 @@ desktop.ini
 # Agent & AI Local Workspace Metadata
 .gemini/
 .antigravity/
+.agents/
+AGENTS.md
+GEMINI.md
 *.log
 *.tmp
