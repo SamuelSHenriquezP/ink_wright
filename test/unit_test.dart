@@ -9,6 +9,7 @@ import 'package:ink_wright/controllers/markdown_editing_controller.dart';
 import 'package:ink_wright/controllers/sprint_controller.dart';
 import 'package:ink_wright/models/book_model.dart';
 import 'package:ink_wright/models/chapter_model.dart';
+import 'package:ink_wright/models/chapter_snapshot_model.dart';
 import 'package:ink_wright/models/character_model.dart';
 import 'package:ink_wright/models/codex_entry_model.dart';
 import 'package:ink_wright/models/idea_snippet_model.dart';
@@ -950,6 +951,131 @@ code block line 2
 
       // Active state should have reverted
       expect(controller.activeBook.title, equals(originalBookTitle));
+    });
+  });
+
+  group('Chapter Version History and Snapshots Tests', () {
+    test('ChapterSnapshotModel serialization and deserialization', () {
+      final now = DateTime.now();
+      final snapshot = ChapterSnapshotModel(
+        id: 'snap_1',
+        chapterId: 'ch_1',
+        label: 'Borrador inicial',
+        content: 'Había una vez en un reino muy lejano...',
+        createdAt: now,
+        wordCount: 7,
+      );
+
+      final map = snapshot.toMap();
+      final restored = ChapterSnapshotModel.fromMap(map);
+
+      expect(restored.id, equals('snap_1'));
+      expect(restored.chapterId, equals('ch_1'));
+      expect(restored.label, equals('Borrador inicial'));
+      expect(restored.content, equals('Había una vez en un reino muy lejano...'));
+      expect(restored.wordCount, equals(7));
+      expect(restored.createdAt.millisecondsSinceEpoch, equals(now.millisecondsSinceEpoch));
+    });
+
+    test('ChapterModel includes snapshots in serialization', () {
+      final snapshot = ChapterSnapshotModel(
+        id: 'snap_test',
+        chapterId: 'ch_test',
+        label: 'Versión 1',
+        content: 'Texto congelado',
+        createdAt: DateTime.now(),
+        wordCount: 2,
+      );
+
+      final chapter = ChapterModel(
+        id: 'ch_test',
+        bookId: 'b_test',
+        chapterNumber: 1,
+        title: 'Capítulo con Instantáneas',
+        content: 'Texto actual en progreso',
+        lastEdited: DateTime.now(),
+        snapshots: [snapshot],
+      );
+
+      final map = chapter.toMap();
+      expect(map.containsKey('snapshots'), isTrue);
+
+      final restored = ChapterModel.fromMap(map);
+      expect(restored.snapshots.length, equals(1));
+      expect(restored.snapshots.first.id, equals('snap_test'));
+      expect(restored.snapshots.first.label, equals('Versión 1'));
+      expect(restored.snapshots.first.content, equals('Texto congelado'));
+    });
+
+    test('EditorController creates chapter snapshot', () {
+      final controller = EditorController();
+      final activeChapter = controller.activeChapter;
+      expect(activeChapter.snapshots, isEmpty);
+
+      controller.textEditingController.text = 'Este es el texto para la instantánea.';
+      controller.createChapterSnapshot(activeChapter.id, label: 'Instantánea de prueba');
+
+      expect(controller.activeChapter.snapshots.length, equals(1));
+      final created = controller.activeChapter.snapshots.first;
+      expect(created.label, equals('Instantánea de prueba'));
+      expect(created.content, equals('Este es el texto para la instantánea.'));
+      expect(created.wordCount, equals(7));
+    });
+
+    test('EditorController restores snapshot with automatic safety backup', () {
+      final controller = EditorController();
+      final activeChapter = controller.activeChapter;
+
+      // 1. Create a baseline snapshot
+      controller.textEditingController.text = 'Texto original v1 antes de cambios.';
+      controller.createChapterSnapshot(activeChapter.id, label: 'Versión 1 Original');
+      final v1Snapshot = controller.activeChapter.snapshots.first;
+
+      // 2. Modify editor text heavily
+      controller.textEditingController.text = 'Texto nuevo y modificado que no queremos perder.';
+
+      // 3. Restore snapshot v1
+      controller.restoreChapterSnapshot(activeChapter.id, v1Snapshot.id);
+
+      // Verify active editor content restored to v1
+      expect(controller.textEditingController.text, equals('Texto original v1 antes de cambios.'));
+      expect(controller.activeChapter.content, equals('Texto original v1 antes de cambios.'));
+
+      // Verify automatic safety backup was generated
+      expect(controller.activeChapter.snapshots.length, equals(2));
+      final safetyBackup = controller.activeChapter.snapshots.firstWhere(
+        (s) => s.label.startsWith('Respaldo previo a restaurar:'),
+      );
+      expect(safetyBackup.content, equals('Texto nuevo y modificado que no queremos perder.'));
+    });
+
+    test('EditorController deletes snapshot', () {
+      final controller = EditorController();
+      final activeChapter = controller.activeChapter;
+
+      controller.createChapterSnapshot(activeChapter.id, label: 'Instantánea para borrar');
+      expect(controller.activeChapter.snapshots.length, equals(1));
+      final snapId = controller.activeChapter.snapshots.first.id;
+
+      controller.deleteChapterSnapshot(activeChapter.id, snapId);
+      expect(controller.activeChapter.snapshots, isEmpty);
+    });
+
+    test('Full persistence backup preserves chapter snapshots', () {
+      final controller = EditorController();
+      final activeChapter = controller.activeChapter;
+      controller.createChapterSnapshot(activeChapter.id, label: 'Instantánea Persistente');
+
+      final exportedJson = controller.exportBackupJson();
+      expect(exportedJson.contains('Instantánea Persistente'), isTrue);
+
+      final persistence = PersistenceService();
+      final restored = persistence.parseBackupJson(exportedJson);
+      expect(restored, isNotNull);
+      final books = restored!['books'] as List<BookModel>;
+      final ch = books.first.chapters.firstWhere((c) => c.id == activeChapter.id);
+      expect(ch.snapshots.length, equals(1));
+      expect(ch.snapshots.first.label, equals('Instantánea Persistente'));
     });
   });
 }

@@ -6,6 +6,7 @@ import '../formatters/writer_text_formatter.dart';
 import '../models/chapter_model.dart';
 import '../models/book_model.dart';
 import 'muse_assistant_sheet.dart';
+import 'chapter_history_sheet.dart';
 
 class ContextDrawerSheet extends StatefulWidget {
   final bool isDark;
@@ -252,7 +253,9 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
                         icon: Icon(Icons.more_vert_rounded, size: 18, color: textSecondary),
                         tooltip: 'Opciones del capítulo',
                         onSelected: (val) {
-                          if (val == 'split') {
+                          if (val == 'history') {
+                            ChapterHistorySheet.show(context, chapter, widget.isDark);
+                          } else if (val == 'split') {
                             _showSplitChapterDialog(context, controller, chapter);
                           } else if (val == 'merge') {
                             final nextChapter = activeBook.chapters[index + 1];
@@ -262,6 +265,16 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
                           }
                         },
                         itemBuilder: (ctx) => [
+                          const PopupMenuItem(
+                            value: 'history',
+                            child: Row(
+                              children: [
+                                Icon(Icons.history_rounded, size: 16),
+                                SizedBox(width: 8),
+                                Text('Historial de versiones...', style: TextStyle(fontSize: 13)),
+                              ],
+                            ),
+                          ),
                           const PopupMenuItem(
                             value: 'split',
                             child: Row(

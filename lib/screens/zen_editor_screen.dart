@@ -8,6 +8,7 @@ import '../controllers/editor_controller.dart';
 import '../controllers/theme_controller.dart';
 import '../widgets/keyboard_accessory_bar.dart';
 import '../widgets/context_drawer_sheet.dart';
+import '../widgets/chapter_history_sheet.dart';
 import '../widgets/export_manuscript_dialog.dart';
 import '../widgets/soundscape_bar.dart';
 import '../formatters/writer_text_formatter.dart';
@@ -779,6 +780,13 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                     ),
                                     onPressed: () => _openTypographySheet(context, controller, isDark),
                                     tooltip: 'Tipografía y Máquina de escribir',
+                                  ),
+
+                                  // Chapter History & Snapshots Button
+                                  IconButton(
+                                    icon: Icon(Icons.history_rounded, size: 20, color: textSecondary),
+                                    onPressed: () => ChapterHistorySheet.show(context, controller.activeChapter, isDark),
+                                    tooltip: 'Historial de Versiones e Instantáneas',
                                   ),
 
                                   // Soundscape Toggle Button

@@ -1,4 +1,5 @@
 import '../formatters/writer_text_formatter.dart';
+import 'chapter_snapshot_model.dart';
 
 class ChapterModel {
   final String id;
@@ -10,6 +11,7 @@ class ChapterModel {
   final bool isCompleted;
   final String notes;
   final String povCharacter;
+  final List<ChapterSnapshotModel> snapshots;
 
   ChapterModel({
     required this.id,
@@ -21,6 +23,7 @@ class ChapterModel {
     this.isCompleted = false,
     this.notes = '',
     this.povCharacter = '',
+    this.snapshots = const [],
   });
 
   int get wordCount => WriterTextFormatter.countWords(content);
@@ -42,6 +45,7 @@ class ChapterModel {
     bool? isCompleted,
     String? notes,
     String? povCharacter,
+    List<ChapterSnapshotModel>? snapshots,
   }) {
     return ChapterModel(
       id: id ?? this.id,
@@ -53,6 +57,7 @@ class ChapterModel {
       isCompleted: isCompleted ?? this.isCompleted,
       notes: notes ?? this.notes,
       povCharacter: povCharacter ?? this.povCharacter,
+      snapshots: snapshots ?? this.snapshots,
     );
   }
 
@@ -67,6 +72,7 @@ class ChapterModel {
       'isCompleted': isCompleted,
       'notes': notes,
       'povCharacter': povCharacter,
+      'snapshots': snapshots.map((s) => s.toMap()).toList(),
     };
   }
 
@@ -83,6 +89,10 @@ class ChapterModel {
       isCompleted: map['isCompleted'] as bool? ?? false,
       notes: map['notes'] as String? ?? '',
       povCharacter: map['povCharacter'] as String? ?? '',
+      snapshots: (map['snapshots'] as List<dynamic>?)
+              ?.map((item) => ChapterSnapshotModel.fromMap(item as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
   }
 }

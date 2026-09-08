@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/book_model.dart';
 import '../models/chapter_model.dart';
+import '../models/chapter_snapshot_model.dart';
 import '../models/idea_snippet_model.dart';
 import '../models/writer_stats_model.dart';
 import '../models/codex_entry_model.dart';
@@ -979,6 +980,133 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       _redoStack.clear();
       textEditingController.addListener(_onTextChanged);
     }
+
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+    return true;
+  }
+
+  /// Creates an instant snapshot of the specified chapter (or active chapter) with an optional custom label
+  ChapterSnapshotModel? createChapterSnapshot(
+    String chapterId, {
+    String? label,
+    String? customContent,
+  }) {
+    final index = _activeBook.chapters.indexWhere((c) => c.id == chapterId);
+    if (index == -1) return null;
+
+    final targetChapter = _activeBook.chapters[index];
+    final snapshotContent = customContent ??
+        (targetChapter.id == _activeChapter.id
+            ? textEditingController.text
+            : targetChapter.content);
+
+    final now = DateTime.now();
+    final defaultLabel = 'Versión del ${WriterTextFormatter.formatSpanishDate(now)}';
+    final snapshot = ChapterSnapshotModel(
+      id: 'snap_${now.millisecondsSinceEpoch}',
+      chapterId: chapterId,
+      label: (label != null && label.trim().isNotEmpty) ? label.trim() : defaultLabel,
+      content: snapshotContent,
+      createdAt: now,
+      wordCount: WriterTextFormatter.countWords(snapshotContent),
+    );
+
+    final updatedSnapshots = List<ChapterSnapshotModel>.from(targetChapter.snapshots)
+      ..insert(0, snapshot);
+
+    final updatedChapter = targetChapter.copyWith(
+      snapshots: updatedSnapshots,
+      lastEdited: now,
+    );
+
+    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
+    updatedChapters[index] = updatedChapter;
+
+    _activeBook = _activeBook.copyWith(chapters: updatedChapters);
+    if (_activeChapter.id == chapterId) {
+      _activeChapter = updatedChapter;
+    }
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+    return snapshot;
+  }
+
+  /// Restores a snapshot into the chapter, creating an automatic safety snapshot of the current state before replacing
+  bool restoreChapterSnapshot(String chapterId, String snapshotId) {
+    final index = _activeBook.chapters.indexWhere((c) => c.id == chapterId);
+    if (index == -1) return false;
+
+    final targetChapter = _activeBook.chapters[index];
+    final snapshotIndex = targetChapter.snapshots.indexWhere((s) => s.id == snapshotId);
+    if (snapshotIndex == -1) return false;
+
+    final targetSnapshot = targetChapter.snapshots[snapshotIndex];
+    final currentText = targetChapter.id == _activeChapter.id
+        ? textEditingController.text
+        : targetChapter.content;
+
+    // Auto-create a safety backup of current text before restoring
+    final now = DateTime.now();
+    final safetyLabel = 'Respaldo previo a restaurar: ${targetSnapshot.label}';
+    final safetySnapshot = ChapterSnapshotModel(
+      id: 'snap_auto_${now.millisecondsSinceEpoch}',
+      chapterId: chapterId,
+      label: safetyLabel,
+      content: currentText,
+      createdAt: now,
+      wordCount: WriterTextFormatter.countWords(currentText),
+    );
+
+    final updatedSnapshots = List<ChapterSnapshotModel>.from(targetChapter.snapshots)
+      ..insert(0, safetySnapshot);
+
+    final restoredChapter = targetChapter.copyWith(
+      content: targetSnapshot.content,
+      lastEdited: now,
+      snapshots: updatedSnapshots,
+    );
+
+    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
+    updatedChapters[index] = restoredChapter;
+
+    _activeBook = _activeBook.copyWith(chapters: updatedChapters);
+    if (_activeChapter.id == chapterId) {
+      _activeChapter = restoredChapter;
+      textEditingController.removeListener(_onTextChanged);
+      _undoStack.add(textEditingController.text);
+      textEditingController.text = targetSnapshot.content;
+      _lastRecordedText = targetSnapshot.content;
+      textEditingController.addListener(_onTextChanged);
+    }
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+    return true;
+  }
+
+  /// Deletes a snapshot from a chapter
+  bool deleteChapterSnapshot(String chapterId, String snapshotId) {
+    final index = _activeBook.chapters.indexWhere((c) => c.id == chapterId);
+    if (index == -1) return false;
+
+    final targetChapter = _activeBook.chapters[index];
+    final updatedSnapshots = targetChapter.snapshots
+        .where((s) => s.id != snapshotId)
+        .toList();
+
+    final updatedChapter = targetChapter.copyWith(snapshots: updatedSnapshots);
+    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
+    updatedChapters[index] = updatedChapter;
+
+    _activeBook = _activeBook.copyWith(chapters: updatedChapters);
+    if (_activeChapter.id == chapterId) {
+      _activeChapter = updatedChapter;
+    }
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
 
     _saveCurrentData(debounced: false);
     notifyListeners();
