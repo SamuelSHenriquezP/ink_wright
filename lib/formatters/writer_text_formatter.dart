@@ -2,19 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class WriterTextFormatter {
-  /// Counts the total number of words in a text snippet
+  /// Counts the total number of words in a text snippet in a single zero-allocation pass
   static int countWords(String text) {
-    if (text.trim().isEmpty) return 0;
-    final cleanText = text.replaceAll(RegExp(r'\s+'), ' ').trim();
-    return cleanText.split(' ').length;
+    if (text.isEmpty) return 0;
+    int count = 0;
+    bool inWord = false;
+    final len = text.length;
+    for (int i = 0; i < len; i++) {
+      final code = text.codeUnitAt(i);
+      // Fast check for whitespace: space (32), tab (9), newline (10), CR (13), non-breaking space (0xA0)
+      if (code <= 32 || code == 0x00A0) {
+        inWord = false;
+      } else if (!inWord) {
+        inWord = true;
+        count++;
+      }
+    }
+    return count;
   }
 
-  /// Counts characters with or without whitespace
+  /// Counts characters with or without whitespace in a single zero-allocation pass
   static int countCharacters(String text, {bool includeSpaces = true}) {
     if (includeSpaces) {
       return text.length;
     }
-    return text.replaceAll(RegExp(r'\s+'), '').length;
+    int count = 0;
+    final len = text.length;
+    for (int i = 0; i < len; i++) {
+      final code = text.codeUnitAt(i);
+      if (code > 32 && code != 0x00A0) {
+        count++;
+      }
+    }
+    return count;
   }
 
   /// Counts non-empty paragraphs

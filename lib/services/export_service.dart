@@ -839,6 +839,304 @@ class ExportService {
     return ZipEncoder().encode(archive);
   }
 
+  /// Generates a standard, valid EPUB 3 / EPUB 2 ebook file (Open Container Format)
+  static List<int> generateEpub(
+    BookModel book, {
+    List<CharacterModel>? characters,
+    List<CodexEntryModel>? codexEntries,
+  }) {
+    final archive = Archive();
+
+    // 1. mimetype (MUST be first and uncompressed)
+    const mimetypeContent = 'application/epub+zip';
+    final mimeFile = ArchiveFile('mimetype', mimetypeContent.length, utf8.encode(mimetypeContent));
+    mimeFile.compression = CompressionType.none;
+    archive.addFile(mimeFile);
+
+    // 2. META-INF/container.xml
+    const containerXml = '''<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>''';
+    archive.addFile(ArchiveFile('META-INF/container.xml', containerXml.length, utf8.encode(containerXml)));
+
+    // 3. OEBPS/style.css
+    const cssContent = '''
+@namespace "http://www.w3.org/1999/xhtml";
+body {
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.6;
+  margin: 5%;
+  color: #1a1a1a;
+  background-color: #faf8f5;
+}
+h1, h2, h3 {
+  font-family: sans-serif;
+  text-align: center;
+  font-weight: bold;
+}
+h1 {
+  font-size: 2em;
+  margin-top: 1.8em;
+  margin-bottom: 0.5em;
+}
+h2 {
+  font-size: 1.4em;
+  margin-top: 1.4em;
+  margin-bottom: 0.4em;
+}
+p {
+  text-indent: 1.5em;
+  margin-top: 0;
+  margin-bottom: 0.5em;
+  text-align: justify;
+}
+.noindent {
+  text-indent: 0;
+}
+.subtitle {
+  text-align: center;
+  font-style: italic;
+  color: #555;
+  font-size: 1.1em;
+}
+.meta {
+  text-align: center;
+  font-size: 0.9em;
+  color: #777;
+  margin-top: 2em;
+}
+.pov {
+  text-align: center;
+  font-style: italic;
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 1.5em;
+}
+.card {
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 1em;
+  margin-bottom: 1em;
+}
+blockquote {
+  font-style: italic;
+  margin: 1em 2em;
+  color: #444;
+}
+''';
+    archive.addFile(ArchiveFile('OEBPS/style.css', cssContent.length, utf8.encode(cssContent)));
+
+    // 4. OEBPS/titlepage.xhtml
+    final titlePageBuffer = StringBuffer();
+    titlePageBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
+    titlePageBuffer.writeln('<!DOCTYPE html>');
+    titlePageBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="es">');
+    titlePageBuffer.writeln('<head><title>${_xmlEscape(book.title)}</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
+    titlePageBuffer.writeln('<body>');
+    titlePageBuffer.writeln('<div style="text-align:center; padding-top: 20%;">');
+    titlePageBuffer.writeln('<h1>${_xmlEscape(book.title)}</h1>');
+    if (book.subtitle.isNotEmpty) {
+      titlePageBuffer.writeln('<p class="subtitle">${_xmlEscape(book.subtitle)}</p>');
+    }
+    titlePageBuffer.writeln('<div style="margin: 2em auto; width: 60px; height: 1px; background-color: #999;"></div>');
+    titlePageBuffer.writeln('<p class="meta">Género: ${_xmlEscape(book.genre)}</p>');
+    titlePageBuffer.writeln('<p class="meta">${book.currentWordCount} palabras • ${book.chapters.length} capítulos</p>');
+    if (book.synopsis.isNotEmpty) {
+      titlePageBuffer.writeln('<div style="margin: 2em 10%; font-style: italic; text-align: justify;"><p class="noindent"><strong>Sinopsis:</strong> ${_xmlEscape(book.synopsis)}</p></div>');
+    }
+    titlePageBuffer.writeln('<p class="meta" style="margin-top: 3em; font-size: 0.8em;">Compilado con Ink &amp; Wright</p>');
+    titlePageBuffer.writeln('</div>');
+    titlePageBuffer.writeln('</body></html>');
+    final titlePageXml = titlePageBuffer.toString();
+    archive.addFile(ArchiveFile('OEBPS/titlepage.xhtml', titlePageXml.length, utf8.encode(titlePageXml)));
+
+    // Optional Dramatis Personae (OEBPS/characters.xhtml)
+    final bool hasChars = characters != null && characters.isNotEmpty;
+    if (hasChars) {
+      final charsBuffer = StringBuffer();
+      charsBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
+      charsBuffer.writeln('<!DOCTYPE html>');
+      charsBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" lang="es">');
+      charsBuffer.writeln('<head><title>Dramatis Personae</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
+      charsBuffer.writeln('<body>');
+      charsBuffer.writeln('<h2>Dramatis Personae (Personajes)</h2>');
+      for (final c in characters) {
+        charsBuffer.writeln('<div class="card">');
+        charsBuffer.writeln('<h3>${_xmlEscape(c.name)} <small>— ${_xmlEscape(c.role)}${c.archetype.isNotEmpty ? ' (${_xmlEscape(c.archetype)})' : ''}</small></h3>');
+        if (c.quote.isNotEmpty) {
+          charsBuffer.writeln('<blockquote>«${_xmlEscape(c.quote)}»</blockquote>');
+        }
+        if (c.traits.isNotEmpty) {
+          charsBuffer.writeln('<p class="noindent"><strong>Rasgos:</strong> ${_xmlEscape(c.traits.join(', '))}</p>');
+        }
+        if (c.motivation.isNotEmpty) {
+          charsBuffer.writeln('<p class="noindent"><strong>Motivación:</strong> ${_xmlEscape(c.motivation)}</p>');
+        }
+        if (c.writtenBiography.isNotEmpty) {
+          charsBuffer.writeln('<p>${_xmlEscape(c.writtenBiography)}</p>');
+        }
+        charsBuffer.writeln('</div>');
+      }
+      charsBuffer.writeln('</body></html>');
+      final charsXml = charsBuffer.toString();
+      archive.addFile(ArchiveFile('OEBPS/characters.xhtml', charsXml.length, utf8.encode(charsXml)));
+    }
+
+    // Optional Codex (OEBPS/codex.xhtml)
+    final bool hasCodex = codexEntries != null && codexEntries.isNotEmpty;
+    if (hasCodex) {
+      final codexBuffer = StringBuffer();
+      codexBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
+      codexBuffer.writeln('<!DOCTYPE html>');
+      codexBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" lang="es">');
+      codexBuffer.writeln('<head><title>Códice y Lore</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
+      codexBuffer.writeln('<body>');
+      codexBuffer.writeln('<h2>Apéndice del Códice</h2>');
+      for (final e in codexEntries) {
+        codexBuffer.writeln('<div class="card">');
+        codexBuffer.writeln('<h3>${_xmlEscape(e.name)} <small>(${_xmlEscape(e.typeLabel)})</small></h3>');
+        if (e.role.isNotEmpty) {
+          codexBuffer.writeln('<blockquote>${_xmlEscape(e.role)}</blockquote>');
+        }
+        if (e.description.isNotEmpty) {
+          codexBuffer.writeln('<p>${_xmlEscape(e.description)}</p>');
+        }
+        codexBuffer.writeln('</div>');
+      }
+      codexBuffer.writeln('</body></html>');
+      final codexXml = codexBuffer.toString();
+      archive.addFile(ArchiveFile('OEBPS/codex.xhtml', codexXml.length, utf8.encode(codexXml)));
+    }
+
+    // Chapters (OEBPS/chapter_1.xhtml, ...)
+    for (int i = 0; i < book.chapters.length; i++) {
+      final ch = book.chapters[i];
+      final chBuffer = StringBuffer();
+      chBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
+      chBuffer.writeln('<!DOCTYPE html>');
+      chBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" lang="es">');
+      chBuffer.writeln('<head><title>${_xmlEscape(ch.title)}</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
+      chBuffer.writeln('<body>');
+      chBuffer.writeln('<h2>Capítulo ${ch.chapterNumber}: ${_xmlEscape(ch.title)}</h2>');
+      if (ch.povCharacter.isNotEmpty) {
+        chBuffer.writeln('<p class="pov">POV: ${_xmlEscape(ch.povCharacter)}</p>');
+      }
+      final paragraphs = ch.content.split('\n\n').map((p) => p.trim()).where((p) => p.isNotEmpty);
+      for (final p in paragraphs) {
+        chBuffer.writeln('<p>${_xmlEscape(p)}</p>');
+      }
+      chBuffer.writeln('</body></html>');
+      final chXml = chBuffer.toString();
+      archive.addFile(ArchiveFile('OEBPS/chapter_${i + 1}.xhtml', chXml.length, utf8.encode(chXml)));
+    }
+
+    // 5. OEBPS/nav.xhtml (EPUB 3 Table of Contents)
+    final navBuffer = StringBuffer();
+    navBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
+    navBuffer.writeln('<!DOCTYPE html>');
+    navBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="es">');
+    navBuffer.writeln('<head><title>Índice</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
+    navBuffer.writeln('<body>');
+    navBuffer.writeln('<nav epub:type="toc" id="toc">');
+    navBuffer.writeln('<h2>Índice</h2>');
+    navBuffer.writeln('<ol>');
+    navBuffer.writeln('<li><a href="titlepage.xhtml">Portada</a></li>');
+    if (hasChars) {
+      navBuffer.writeln('<li><a href="characters.xhtml">Dramatis Personae</a></li>');
+    }
+    if (hasCodex) {
+      navBuffer.writeln('<li><a href="codex.xhtml">Apéndice del Códice</a></li>');
+    }
+    for (int i = 0; i < book.chapters.length; i++) {
+      final ch = book.chapters[i];
+      navBuffer.writeln('<li><a href="chapter_${i + 1}.xhtml">Capítulo ${ch.chapterNumber}: ${_xmlEscape(ch.title)}</a></li>');
+    }
+    navBuffer.writeln('</ol>');
+    navBuffer.writeln('</nav>');
+    navBuffer.writeln('</body></html>');
+    final navXml = navBuffer.toString();
+    archive.addFile(ArchiveFile('OEBPS/nav.xhtml', navXml.length, utf8.encode(navXml)));
+
+    // 6. OEBPS/toc.ncx (EPUB 2 / Kindle compatibility)
+    final ncxBuffer = StringBuffer();
+    ncxBuffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
+    ncxBuffer.writeln('<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">');
+    ncxBuffer.writeln('<head><meta name="dtb:uid" content="urn:uuid:${book.id}"/></head>');
+    ncxBuffer.writeln('<docTitle><text>${_xmlEscape(book.title)}</text></docTitle>');
+    ncxBuffer.writeln('<navMap>');
+    int playOrder = 1;
+    ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Portada</text></navLabel><content src="titlepage.xhtml"/></navPoint>');
+    if (hasChars) {
+      playOrder++;
+      ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Dramatis Personae</text></navLabel><content src="characters.xhtml"/></navPoint>');
+    }
+    if (hasCodex) {
+      playOrder++;
+      ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Apéndice del Códice</text></navLabel><content src="codex.xhtml"/></navPoint>');
+    }
+    for (int i = 0; i < book.chapters.length; i++) {
+      playOrder++;
+      final ch = book.chapters[i];
+      ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Capítulo ${ch.chapterNumber}: ${_xmlEscape(ch.title)}</text></navLabel><content src="chapter_${i + 1}.xhtml"/></navPoint>');
+    }
+    ncxBuffer.writeln('</navMap>');
+    ncxBuffer.writeln('</ncx>');
+    final ncxXml = ncxBuffer.toString();
+    archive.addFile(ArchiveFile('OEBPS/toc.ncx', ncxXml.length, utf8.encode(ncxXml)));
+
+    // 7. OEBPS/content.opf
+    final opfBuffer = StringBuffer();
+    opfBuffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
+    opfBuffer.writeln('<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="3.0">');
+    opfBuffer.writeln('<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">');
+    opfBuffer.writeln('<dc:identifier id="BookId">urn:uuid:${book.id}</dc:identifier>');
+    opfBuffer.writeln('<dc:title>${_xmlEscape(book.title)}</dc:title>');
+    opfBuffer.writeln('<dc:language>es</dc:language>');
+    opfBuffer.writeln('<dc:creator>Ink &amp; Wright Author</dc:creator>');
+    opfBuffer.writeln('<dc:publisher>Ink &amp; Wright Sanctuary</dc:publisher>');
+    if (book.synopsis.isNotEmpty) {
+      opfBuffer.writeln('<dc:description>${_xmlEscape(book.synopsis)}</dc:description>');
+    }
+    opfBuffer.writeln('<meta property="dcterms:modified">${DateTime.now().toUtc().toIso8601String().substring(0, 19)}Z</meta>');
+    opfBuffer.writeln('</metadata>');
+
+    opfBuffer.writeln('<manifest>');
+    opfBuffer.writeln('<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>');
+    opfBuffer.writeln('<item id="css" href="style.css" media-type="text/css"/>');
+    opfBuffer.writeln('<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>');
+    opfBuffer.writeln('<item id="titlepage" href="titlepage.xhtml" media-type="application/xhtml+xml"/>');
+    if (hasChars) {
+      opfBuffer.writeln('<item id="characters" href="characters.xhtml" media-type="application/xhtml+xml"/>');
+    }
+    if (hasCodex) {
+      opfBuffer.writeln('<item id="codex" href="codex.xhtml" media-type="application/xhtml+xml"/>');
+    }
+    for (int i = 0; i < book.chapters.length; i++) {
+      opfBuffer.writeln('<item id="chap_${i + 1}" href="chapter_${i + 1}.xhtml" media-type="application/xhtml+xml"/>');
+    }
+    opfBuffer.writeln('</manifest>');
+
+    opfBuffer.writeln('<spine toc="ncx">');
+    opfBuffer.writeln('<itemref idref="titlepage"/>');
+    if (hasChars) {
+      opfBuffer.writeln('<itemref idref="characters"/>');
+    }
+    if (hasCodex) {
+      opfBuffer.writeln('<itemref idref="codex"/>');
+    }
+    for (int i = 0; i < book.chapters.length; i++) {
+      opfBuffer.writeln('<itemref idref="chap_${i + 1}"/>');
+    }
+    opfBuffer.writeln('</spine>');
+    opfBuffer.writeln('</package>');
+    final opfXml = opfBuffer.toString();
+    archive.addFile(ArchiveFile('OEBPS/content.opf', opfXml.length, utf8.encode(opfXml)));
+
+    return ZipEncoder().encode(archive);
+  }
+
   static String _xmlEscape(String text) {
     return text
         .replaceAll('&', '&amp;')

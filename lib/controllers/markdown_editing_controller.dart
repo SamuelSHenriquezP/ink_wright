@@ -12,6 +12,16 @@ class MarkdownEditingController extends TextEditingController {
   bool isLiveMarkdownEnabled;
   bool isDarkMode;
 
+  // Performance Cache: Prevents re-running full markdown regex parsing during idle cursor blinking / non-mutating layout passes
+  String? _cachedText;
+  TextStyle? _cachedStyle;
+  bool? _cachedDarkMode;
+  bool? _cachedLiveMarkdown;
+  bool? _cachedWithComposing;
+  TextSpan? _cachedSpan;
+
+  static final String? _monoFontFamily = GoogleFonts.jetBrainsMono().fontFamily;
+
   MarkdownEditingController({
     super.text,
     this.isLiveMarkdownEnabled = true,
@@ -47,6 +57,15 @@ class MarkdownEditingController extends TextEditingController {
       );
     }
 
+    if (_cachedSpan != null &&
+        _cachedText == text &&
+        _cachedStyle == style &&
+        _cachedDarkMode == isDarkMode &&
+        _cachedLiveMarkdown == isLiveMarkdownEnabled &&
+        _cachedWithComposing == withComposing) {
+      return _cachedSpan!;
+    }
+
     final baseStyle = style ??
         TextStyle(
           color: isDarkMode ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
@@ -80,7 +99,14 @@ class MarkdownEditingController extends TextEditingController {
       }
     }
 
-    return TextSpan(children: spans, style: baseStyle);
+    final result = TextSpan(children: spans, style: baseStyle);
+    _cachedText = text;
+    _cachedStyle = style;
+    _cachedDarkMode = isDarkMode;
+    _cachedLiveMarkdown = isLiveMarkdownEnabled;
+    _cachedWithComposing = withComposing;
+    _cachedSpan = result;
+    return result;
   }
 
   void _parseLine(
@@ -377,7 +403,7 @@ class MarkdownEditingController extends TextEditingController {
     if (token.startsWith('`') && token.endsWith('`')) {
       if (token.length >= 2) {
         final codeStyle = TextStyle(
-          fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+          fontFamily: _monoFontFamily,
           fontSize: (currentStyle.fontSize ?? 16.0) * 0.88,
           backgroundColor: isDarkMode ? const Color(0xFF262628) : const Color(0xFFEBE8E3),
           color: isDarkMode ? const Color(0xFFF4F4F5) : const Color(0xFF18181B),
@@ -429,7 +455,7 @@ class MarkdownEditingController extends TextEditingController {
     return TextSpan(
       text: line,
       style: TextStyle(
-        fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+        fontFamily: _monoFontFamily,
         fontSize: (baseStyle.fontSize ?? 16.0) * 0.86,
         color: markerColor,
         backgroundColor: isDarkMode ? const Color(0xFF1F1F21) : const Color(0xFFF0EDE6),
@@ -441,7 +467,7 @@ class MarkdownEditingController extends TextEditingController {
     return TextSpan(
       text: line,
       style: TextStyle(
-        fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+        fontFamily: _monoFontFamily,
         fontSize: (baseStyle.fontSize ?? 16.0) * 0.88,
         color: isDarkMode ? const Color(0xFFE4E4E7) : const Color(0xFF27272A),
         backgroundColor: isDarkMode ? const Color(0xFF1F1F21) : const Color(0xFFF0EDE6),

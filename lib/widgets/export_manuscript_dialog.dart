@@ -26,6 +26,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
   final List<String> _formats = [
     'Documento PDF (.pdf)',
     'Microsoft Word (.docx)',
+    'Libro Electrónico EPUB (.epub)',
     'Markdown (.md)',
     'Texto Plano (.txt)',
     'Documento HTML (.html)',
@@ -67,7 +68,22 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
       return;
     }
 
-    // 3. Text-based exports (Markdown, TXT, HTML) -> Clipboard + Modal
+    // 3. EPUB Ebook Export
+    if (_selectedFormat == 'Libro Electrónico EPUB (.epub)') {
+      final epubBytes = ExportService.generateEpub(
+        book,
+        characters: characters,
+        codexEntries: codexEntries,
+      );
+      Navigator.of(context).pop();
+      await Printing.sharePdf(
+        bytes: Uint8List.fromList(epubBytes),
+        filename: '$baseFilename.epub',
+      );
+      return;
+    }
+
+    // 4. Text-based exports (Markdown, TXT, HTML) -> Clipboard + Modal
     String exportedContent = '';
     String filename = baseFilename;
 

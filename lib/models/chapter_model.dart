@@ -1,3 +1,5 @@
+import '../formatters/writer_text_formatter.dart';
+
 class ChapterModel {
   final String id;
   final String bookId;
@@ -21,11 +23,7 @@ class ChapterModel {
     this.povCharacter = '',
   });
 
-  int get wordCount {
-    if (content.trim().isEmpty) return 0;
-    final cleanText = content.replaceAll(RegExp(r'\s+'), ' ').trim();
-    return cleanText.split(' ').length;
-  }
+  int get wordCount => WriterTextFormatter.countWords(content);
 
   int get readingTimeMinutes {
     // Average reading speed: 200 words per minute

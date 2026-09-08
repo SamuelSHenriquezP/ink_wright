@@ -13,7 +13,9 @@ import 'package:ink_wright/models/character_model.dart';
 import 'package:ink_wright/models/codex_entry_model.dart';
 import 'package:ink_wright/models/idea_snippet_model.dart';
 import 'package:ink_wright/models/mind_map_node_model.dart';
+import 'package:ink_wright/models/writer_stats_model.dart';
 import 'package:ink_wright/services/export_service.dart';
+import 'package:ink_wright/services/persistence_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -606,6 +608,348 @@ code block line 2
 
       sprint.stopSprint();
       expect(sprint.isSprintActive, isFalse);
+    });
+  });
+
+  group('MindMapNodeModel Chapter Linking Tests', () {
+    test('MindMapNodeModel links to chapter and serializes correctly', () {
+      final node = MindMapNodeModel(
+        id: 'node_1',
+        bookId: 'b_1',
+        title: 'El Descubrimiento',
+        description: 'Descripción del punto de giro',
+        act: PlotAct.act1Exposition,
+        type: PlotNodeType.turningPoint,
+        dx: 100,
+        dy: 150,
+        connectedToIds: [],
+        colorHex: 0xFF18181B,
+        iconEmoji: '🗺️',
+        linkedChapterId: 'ch_101',
+      );
+
+      expect(node.linkedChapterId, equals('ch_101'));
+
+      final map = node.toMap();
+      expect(map['linkedChapterId'], equals('ch_101'));
+
+      final restored = MindMapNodeModel.fromMap(map);
+      expect(restored.linkedChapterId, equals('ch_101'));
+
+      // Test copyWith modifying chapter
+      final updated = restored.copyWith(linkedChapterId: 'ch_102');
+      expect(updated.linkedChapterId, equals('ch_102'));
+
+      // Test copyWith clearing chapter
+      final cleared = updated.copyWith(clearLinkedChapter: true);
+      expect(cleared.linkedChapterId, isNull);
+    });
+  });
+
+  group('Chapter Split and Merge Tests', () {
+    test('splitChapter divides content into two chapters preserving numbering', () {
+      final controller = EditorController();
+      final originalChapterCount = controller.activeBook.chapters.length;
+      final activeChapter = controller.activeChapter;
+      expect(activeChapter, isNotNull);
+
+      // Set content on active chapter
+      controller.textEditingController.text = 'Primera parte del texto.\n\nSegunda parte del texto.';
+      controller.saveCurrentSession();
+
+      final splitIndex = 'Primera parte del texto.\n\n'.length;
+      final originalId = activeChapter.id;
+
+      controller.splitChapter(originalId, splitIndex, newChapterTitle: 'Parte Dos');
+
+      expect(controller.activeBook.chapters.length, equals(originalChapterCount + 1));
+
+      final firstPart = controller.activeBook.chapters.firstWhere((c) => c.id == originalId);
+      expect(firstPart.content.trim(), equals('Primera parte del texto.'));
+
+      final secondPart = controller.activeBook.chapters.firstWhere((c) => c.title == 'Parte Dos');
+      expect(secondPart.content.trim(), equals('Segunda parte del texto.'));
+      expect(secondPart.chapterNumber, equals(firstPart.chapterNumber + 1));
+    });
+
+    test('mergeChapterWithNext combines contents and decrements chapter count', () {
+      final controller = EditorController();
+      if (controller.activeBook.chapters.length < 2) {
+        controller.addNewChapter('Capítulo Adicional');
+      }
+      final initialCount = controller.activeBook.chapters.length;
+      final ch1 = controller.activeBook.chapters[0];
+      final ch2 = controller.activeBook.chapters[1];
+
+      final expectedMergedContent = '${ch1.content}\n\n${ch2.content}'.trim();
+
+      controller.mergeChapterWithNext(ch1.id);
+
+      expect(controller.activeBook.chapters.length, equals(initialCount - 1));
+      final mergedChapter = controller.activeBook.chapters.firstWhere((c) => c.id == ch1.id);
+      expect(mergedChapter.content.trim(), equals(expectedMergedContent));
+      expect(controller.activeBook.chapters.any((c) => c.id == ch2.id), isFalse);
+    });
+  });
+
+  group('Typography and Typewriter Mode Tests', () {
+    test('EditorController updates and exposes typography and typewriter settings', () {
+      final controller = EditorController();
+      expect(controller.fontSize, equals(16.5));
+      expect(controller.lineHeight, equals(1.65));
+      expect(controller.maxEditorWidth, equals(720.0));
+      expect(controller.isTypewriterMode, isFalse);
+
+      controller.setFontSize(22.0);
+      expect(controller.fontSize, equals(22.0));
+
+      controller.setLineHeight(2.0);
+      expect(controller.lineHeight, equals(2.0));
+
+      controller.setMaxEditorWidth(900.0);
+      expect(controller.maxEditorWidth, equals(900.0));
+
+      controller.toggleTypewriterMode();
+      expect(controller.isTypewriterMode, isTrue);
+    });
+  });
+
+  group('EPUB Ebook Generator Tests', () {
+    test('generateEpub creates a valid EPUB archive structure conforming to standard', () {
+      final ch1 = ChapterModel(
+        id: 'ch1',
+        bookId: 'b_epub',
+        chapterNumber: 1,
+        title: 'El Comienzo',
+        content: '# El Comienzo\n\nEra una noche oscura y tempestuosa.',
+        lastEdited: DateTime.now(),
+      );
+      final ch2 = ChapterModel(
+        id: 'ch2',
+        bookId: 'b_epub',
+        chapterNumber: 2,
+        title: 'La Travesía',
+        content: 'El barco zarpó a medianoche rumbo a las islas lejanas.',
+        lastEdited: DateTime.now(),
+      );
+      final book = BookModel(
+        id: 'b_epub',
+        title: 'Crónicas del Mar',
+        subtitle: 'Una odisea literaria',
+        genre: 'Aventura',
+        coverEmoji: '⛵',
+        coverColorHex: 0,
+        targetWordCount: 40000,
+        chapters: [ch1, ch2],
+        lastEdited: DateTime.now(),
+        status: BookStatus.drafting,
+        tags: ['Aventura', 'Mar'],
+        synopsis: 'Una odisea en alta mar.',
+      );
+      final character = CharacterModel(
+        id: 'char_epub',
+        bookId: 'b_epub',
+        name: 'Capitán Morgan',
+        role: 'Protagonista',
+      );
+      final codex = CodexEntryModel(
+        id: 'cod_epub',
+        bookId: 'b_epub',
+        name: 'El Kraken',
+        type: CodexType.lore,
+        role: 'Criatura Mítica',
+        description: 'Monstruo legendario de las profundidades.',
+        traits: ['Gigantesco', 'Hostil'],
+        secrets: 'Habita en la Fosa del Abismo.',
+        avatarEmoji: '🦑',
+        createdAt: DateTime.now(),
+      );
+
+      final epubBytes = ExportService.generateEpub(
+        book,
+        characters: [character],
+        codexEntries: [codex],
+      );
+
+      expect(epubBytes, isNotEmpty);
+
+      // Verify ZIP package
+      final archive = ZipDecoder().decodeBytes(epubBytes);
+      final filenames = archive.map((f) => f.name).toList();
+
+      // 1. mimetype must be the very first file and uncompressed
+      expect(filenames.first, equals('mimetype'));
+      final mimeFile = archive.first;
+      expect(mimeFile.compression, equals(CompressionType.none));
+      expect(utf8.decode(mimeFile.content as List<int>), equals('application/epub+zip'));
+
+      // 2. META-INF/container.xml
+      expect(filenames.contains('META-INF/container.xml'), isTrue);
+
+      // 3. OEBPS content files
+      expect(filenames.contains('OEBPS/content.opf'), isTrue);
+      expect(filenames.contains('OEBPS/toc.ncx'), isTrue);
+      expect(filenames.contains('OEBPS/nav.xhtml'), isTrue);
+      expect(filenames.contains('OEBPS/style.css'), isTrue);
+      expect(filenames.contains('OEBPS/titlepage.xhtml'), isTrue);
+      expect(filenames.contains('OEBPS/chapter_1.xhtml'), isTrue);
+      expect(filenames.contains('OEBPS/chapter_2.xhtml'), isTrue);
+      expect(filenames.contains('OEBPS/characters.xhtml'), isTrue);
+      expect(filenames.contains('OEBPS/codex.xhtml'), isTrue);
+
+      // 4. Inspect content of OPF and chapter
+      final opfFile = archive.firstWhere((f) => f.name == 'OEBPS/content.opf');
+      final opfText = utf8.decode(opfFile.content as List<int>);
+      expect(opfText.contains('Crónicas del Mar'), isTrue);
+      expect(opfText.contains('chapter_1.xhtml'), isTrue);
+      expect(opfText.contains('characters.xhtml'), isTrue);
+
+      final ch1File = archive.firstWhere((f) => f.name == 'OEBPS/chapter_1.xhtml');
+      final ch1Text = utf8.decode(ch1File.content as List<int>);
+      expect(ch1Text.contains('El Comienzo'), isTrue);
+      expect(ch1Text.contains('Era una noche oscura y tempestuosa.'), isTrue);
+    });
+  });
+
+  group('Backup and Restore (.inkwright) Tests', () {
+    test('generateBackupJson and parseBackupJson round-trip successfully', () {
+      final book = BookModel(
+        id: 'b_backup_1',
+        title: 'La Ciudad Sumergida',
+        subtitle: 'Crónica arqueológica',
+        genre: 'Ciencia Ficción',
+        coverEmoji: '🏛️',
+        coverColorHex: 0,
+        targetWordCount: 80000,
+        chapters: [
+          ChapterModel(
+            id: 'ch_b1',
+            bookId: 'b_backup_1',
+            chapterNumber: 1,
+            title: 'El Abismo',
+            content: 'La sonda descendió a diez mil metros.',
+            lastEdited: DateTime.now(),
+          ),
+        ],
+        lastEdited: DateTime.now(),
+        status: BookStatus.drafting,
+        tags: ['Sci-Fi', 'Misterio'],
+        synopsis: 'Una expedición arqueológica submarina.',
+      );
+
+      final character = CharacterModel(
+        id: 'char_b1',
+        bookId: 'b_backup_1',
+        name: 'Dra. Aris',
+        role: 'Científica en jefe',
+      );
+
+      final node = MindMapNodeModel(
+        id: 'node_b1',
+        bookId: 'b_backup_1',
+        title: 'Descenso Inicial',
+        description: 'La expedición submarina comienza.',
+        act: PlotAct.act1Exposition,
+        type: PlotNodeType.turningPoint,
+        dx: 50,
+        dy: 80,
+        connectedToIds: [],
+        colorHex: 0xFF18181B,
+        iconEmoji: '🌊',
+        linkedChapterId: 'ch_b1',
+      );
+
+      final codex = CodexEntryModel(
+        id: 'cod_b1',
+        bookId: 'b_backup_1',
+        name: 'Reliquia de Cristal',
+        type: CodexType.artifact,
+        role: 'Artefacto Alienígena',
+        description: 'Estructura cristalina resonante.',
+        traits: ['Brillante', 'Resonante'],
+        secrets: 'Contiene datos milenarios.',
+        avatarEmoji: '🔮',
+        createdAt: DateTime.now(),
+      );
+
+      final idea = IdeaSnippetModel(
+        id: 'idea_b1',
+        title: 'Idea de Cristales',
+        content: 'Quizá los cristales son una red de comunicación orgánica.',
+        category: IdeaCategory.general,
+        colorHex: 0xFF18181B,
+        createdAt: DateTime.now(),
+        tags: ['Misterio'],
+      );
+
+      final stats = WriterStatsModel(
+        dailyGoalWords: 1000,
+        wordsToday: 350,
+        streakDays: 5,
+        totalWordsWritten: 12000,
+        writingTimeTodayMinutes: 45,
+        weeklyProgress: {'Lun': 350},
+        wordsPerMinuteAvg: 42,
+        focusScore: 90,
+      );
+
+      final persistence = PersistenceService();
+      final jsonString = persistence.generateBackupJson(
+        books: [book],
+        characters: [character],
+        mindMapNodes: [node],
+        codexEntries: [codex],
+        ideas: [idea],
+        writerStats: stats,
+        activeBookId: book.id,
+        activeChapterId: 'ch_b1',
+        isDarkMode: true,
+        typewriterMode: true,
+      );
+
+      expect(jsonString, isNotEmpty);
+      final parsedMap = json.decode(jsonString) as Map<String, dynamic>;
+      expect(parsedMap['format'], equals('inkwright_backup'));
+      expect(parsedMap['version'], equals('2.0.0'));
+      expect(parsedMap.containsKey('books'), isTrue);
+
+      final restoredData = persistence.parseBackupJson(jsonString);
+      expect(restoredData, isNotNull);
+      final restoredBooks = restoredData!['books'] as List<BookModel>;
+      expect(restoredBooks.length, equals(1));
+      expect(restoredBooks.first.title, equals('La Ciudad Sumergida'));
+      final restoredCharacters = restoredData['characters'] as List<CharacterModel>;
+      expect(restoredCharacters.length, equals(1));
+      expect(restoredCharacters.first.name, equals('Dra. Aris'));
+      final restoredNodes = restoredData['mindMap'] as List<MindMapNodeModel>;
+      expect(restoredNodes.length, equals(1));
+      expect(restoredNodes.first.linkedChapterId, equals('ch_b1'));
+      final restoredCodex = restoredData['codex'] as List<CodexEntryModel>;
+      expect(restoredCodex.length, equals(1));
+      final restoredIdeas = restoredData['ideas'] as List<IdeaSnippetModel>;
+      expect(restoredIdeas.length, equals(1));
+      final restoredPrefs = restoredData['preferences'] as Map<String, dynamic>;
+      expect(restoredPrefs['typewriterMode'], isTrue);
+    });
+
+    test('EditorController export and restore integration', () {
+      final controller = EditorController();
+      final originalBookTitle = controller.activeBook.title;
+
+      // Export current state
+      final exportedJson = controller.exportBackupJson();
+      expect(exportedJson.contains(originalBookTitle), isTrue);
+
+      // Mutate controller state
+      controller.createNewBook('Mundo Alterno Temporal', 'Fantasía', 50000);
+      expect(controller.activeBook.title, equals('Mundo Alterno Temporal'));
+
+      // Restore from original backup JSON
+      final restoreSuccess = controller.restoreFromBackupJson(exportedJson);
+      expect(restoreSuccess, isTrue);
+
+      // Active state should have reverted
+      expect(controller.activeBook.title, equals(originalBookTitle));
     });
   });
 }

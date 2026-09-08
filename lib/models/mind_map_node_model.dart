@@ -28,6 +28,7 @@ class MindMapNodeModel {
   final List<String> connectedToIds;
   final int colorHex;
   final String iconEmoji;
+  final String? linkedChapterId;
 
   MindMapNodeModel({
     required this.id,
@@ -41,6 +42,7 @@ class MindMapNodeModel {
     required this.connectedToIds,
     required this.colorHex,
     required this.iconEmoji,
+    this.linkedChapterId,
   });
 
   String get actLabel => act.label;
@@ -60,6 +62,8 @@ class MindMapNodeModel {
     List<String>? connectedToIds,
     int? colorHex,
     String? iconEmoji,
+    String? linkedChapterId,
+    bool clearLinkedChapter = false,
   }) {
     return MindMapNodeModel(
       id: id ?? this.id,
@@ -73,6 +77,7 @@ class MindMapNodeModel {
       connectedToIds: connectedToIds ?? List<String>.from(this.connectedToIds),
       colorHex: colorHex ?? this.colorHex,
       iconEmoji: iconEmoji ?? this.iconEmoji,
+      linkedChapterId: clearLinkedChapter ? null : (linkedChapterId ?? this.linkedChapterId),
     );
   }
 
@@ -89,6 +94,7 @@ class MindMapNodeModel {
       'connectedToIds': connectedToIds,
       'colorHex': colorHex,
       'iconEmoji': iconEmoji,
+      'linkedChapterId': linkedChapterId,
     };
   }
 
@@ -111,6 +117,7 @@ class MindMapNodeModel {
       connectedToIds: (map['connectedToIds'] as List<dynamic>?)?.map((c) => c.toString()).toList() ?? [],
       colorHex: map['colorHex'] as int? ?? 0xFF18181B,
       iconEmoji: map['iconEmoji'] as String? ?? '📌',
+      linkedChapterId: map['linkedChapterId'] as String?,
     );
   }
 }

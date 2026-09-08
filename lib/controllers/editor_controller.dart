@@ -38,6 +38,10 @@ class EditorController extends ChangeNotifier {
 
   WritingSprintModel? _activeSprint;
   String _selectedFontFamily = 'Lora';
+  double _fontSize = 16.5;
+  double _lineHeight = 1.65;
+  double _maxEditorWidth = 720.0;
+  bool _isTypewriterMode = false;
 
   final MarkdownEditingController textEditingController = MarkdownEditingController();
   final FocusNode focusNode = FocusNode();
@@ -85,6 +89,10 @@ class EditorController extends ChangeNotifier {
   bool get isPlayingAmbience => _isPlayingAmbience;
   WritingSprintModel? get activeSprint => _activeSprint;
   String get selectedFontFamily => _selectedFontFamily;
+  double get fontSize => _fontSize;
+  double get lineHeight => _lineHeight;
+  double get maxEditorWidth => _maxEditorWidth;
+  bool get isTypewriterMode => _isTypewriterMode;
 
   EditorController() {
     _initializeInitialState();
@@ -428,6 +436,10 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       _isDarkMode = prefs['darkMode'] as bool? ?? _isDarkMode;
       textEditingController.isDarkMode = _isDarkMode;
       _selectedFontFamily = prefs['fontFamily'] as String? ?? _selectedFontFamily;
+      _fontSize = (prefs['fontSize'] as num?)?.toDouble() ?? _fontSize;
+      _lineHeight = (prefs['lineHeight'] as num?)?.toDouble() ?? _lineHeight;
+      _maxEditorWidth = (prefs['maxEditorWidth'] as num?)?.toDouble() ?? _maxEditorWidth;
+      _isTypewriterMode = prefs['typewriterMode'] as bool? ?? _isTypewriterMode;
 
       notifyListeners();
     } catch (_) {}
@@ -456,6 +468,10 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
         activeChapterId: _activeChapter.id,
         isDarkMode: _isDarkMode,
         fontFamily: _selectedFontFamily,
+        fontSize: _fontSize,
+        lineHeight: _lineHeight,
+        maxEditorWidth: _maxEditorWidth,
+        typewriterMode: _isTypewriterMode,
         onSaved: () {
           _lastSavedTime = _persistenceService.lastSaved;
           _isSaving = false;
@@ -474,6 +490,10 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
         activeChapterId: _activeChapter.id,
         isDarkMode: _isDarkMode,
         fontFamily: _selectedFontFamily,
+        fontSize: _fontSize,
+        lineHeight: _lineHeight,
+        maxEditorWidth: _maxEditorWidth,
+        typewriterMode: _isTypewriterMode,
       );
       _lastSavedTime = DateTime.now();
       _isSaving = false;
@@ -569,6 +589,100 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     _selectedFontFamily = font;
     _saveCurrentData(debounced: false);
     notifyListeners();
+  }
+
+  void setFontSize(double size) {
+    _fontSize = size.clamp(12.0, 32.0);
+    _saveCurrentData(debounced: true);
+    notifyListeners();
+  }
+
+  void setLineHeight(double height) {
+    _lineHeight = height.clamp(1.2, 2.5);
+    _saveCurrentData(debounced: true);
+    notifyListeners();
+  }
+
+  void setMaxEditorWidth(double width) {
+    _maxEditorWidth = width;
+    _saveCurrentData(debounced: true);
+    notifyListeners();
+  }
+
+  void toggleTypewriterMode() {
+    _isTypewriterMode = !_isTypewriterMode;
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  /// Exports the entire library and settings as a clean .inkwright JSON payload
+  String exportBackupJson() {
+    return _persistenceService.generateBackupJson(
+      books: _allBooks,
+      ideas: _ideas,
+      codexEntries: _codexEntries,
+      mindMapNodes: _mindMapNodes,
+      characters: _characters,
+      writerStats: _writerStats,
+      activeBookId: _activeBook.id,
+      activeChapterId: _activeChapter.id,
+      isDarkMode: _isDarkMode,
+      fontFamily: _selectedFontFamily,
+      fontSize: _fontSize,
+      lineHeight: _lineHeight,
+      maxEditorWidth: _maxEditorWidth,
+      typewriterMode: _isTypewriterMode,
+    );
+  }
+
+  /// Restores library from a .inkwright backup payload
+  bool restoreFromBackupJson(String rawJson) {
+    final data = _persistenceService.parseBackupJson(rawJson);
+    if (data == null) return false;
+
+    final books = data['books'] as List<BookModel>?;
+    if (books == null || books.isEmpty) return false;
+
+    _allBooks = books;
+    _ideas = (data['ideas'] as List<IdeaSnippetModel>?) ?? _ideas;
+    _codexEntries = (data['codex'] as List<CodexEntryModel>?) ?? _codexEntries;
+    _mindMapNodes = (data['mindMap'] as List<MindMapNodeModel>?) ?? _mindMapNodes;
+    _characters = (data['characters'] as List<CharacterModel>?) ?? _characters;
+    if (data['writerStats'] != null) {
+      _writerStats = data['writerStats'] as WriterStatsModel;
+    }
+
+    final prefs = (data['preferences'] as Map<String, dynamic>?) ?? {};
+    final savedBookId = prefs['activeBookId'] as String?;
+    _activeBook = _allBooks.firstWhere(
+      (b) => b.id == savedBookId,
+      orElse: () => _allBooks.first,
+    );
+
+    if (_activeBook.chapters.isNotEmpty) {
+      final savedChId = prefs['activeChapterId'] as String?;
+      _activeChapter = _activeBook.chapters.firstWhere(
+        (c) => c.id == savedChId,
+        orElse: () => _activeBook.chapters.first,
+      );
+    }
+
+    _selectedFontFamily = prefs['fontFamily'] as String? ?? _selectedFontFamily;
+    _fontSize = (prefs['fontSize'] as num?)?.toDouble() ?? _fontSize;
+    _lineHeight = (prefs['lineHeight'] as num?)?.toDouble() ?? _lineHeight;
+    _maxEditorWidth = (prefs['maxEditorWidth'] as num?)?.toDouble() ?? _maxEditorWidth;
+    _isTypewriterMode = prefs['typewriterMode'] as bool? ?? _isTypewriterMode;
+
+    textEditingController.removeListener(_onTextChanged);
+    textEditingController.text = _activeChapter.content;
+    _lastRecordedText = _activeChapter.content;
+    _undoStack.clear();
+    _redoStack.clear();
+    textEditingController.addListener(_onTextChanged);
+
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+    return true;
   }
 
   void toggleThemeMode() {
@@ -748,6 +862,126 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       _saveCurrentData(debounced: false);
       notifyListeners();
     }
+    return true;
+  }
+
+  /// Splits the specified chapter at [splitPosition] into two chapters.
+  ChapterModel? splitChapter(String chapterId, int splitPosition, {String? newChapterTitle}) {
+    final chapterIndex = _activeBook.chapters.indexWhere((ch) => ch.id == chapterId);
+    if (chapterIndex == -1) return null;
+
+    final targetChapter = _activeBook.chapters[chapterIndex];
+    final fullText = targetChapter.id == _activeChapter.id
+        ? textEditingController.text
+        : targetChapter.content;
+
+    final clampedPos = splitPosition.clamp(0, fullText.length);
+    final part1 = fullText.substring(0, clampedPos).trimRight();
+    final part2 = fullText.substring(clampedPos).trimLeft();
+
+    final updatedOriginal = targetChapter.copyWith(
+      content: part1,
+      lastEdited: DateTime.now(),
+    );
+
+    final newChapterNum = chapterIndex + 2;
+    final fallbackTitle = '${targetChapter.title} (Parte 2)';
+    final newChapter = ChapterModel(
+      id: 'ch_${DateTime.now().millisecondsSinceEpoch}',
+      bookId: _activeBook.id,
+      chapterNumber: newChapterNum,
+      title: (newChapterTitle != null && newChapterTitle.trim().isNotEmpty)
+          ? newChapterTitle.trim()
+          : fallbackTitle,
+      content: part2,
+      lastEdited: DateTime.now(),
+      notes: '',
+      povCharacter: targetChapter.povCharacter,
+    );
+
+    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
+    updatedChapters[chapterIndex] = updatedOriginal;
+    updatedChapters.insert(chapterIndex + 1, newChapter);
+
+    final reindexed = <ChapterModel>[];
+    for (int i = 0; i < updatedChapters.length; i++) {
+      reindexed.add(updatedChapters[i].copyWith(chapterNumber: i + 1));
+    }
+
+    _activeBook = _activeBook.copyWith(chapters: reindexed);
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+    if (_activeChapter.id == chapterId) {
+      _activeChapter = reindexed[chapterIndex];
+      textEditingController.removeListener(_onTextChanged);
+      textEditingController.text = part1;
+      _lastRecordedText = part1;
+      _undoStack.clear();
+      _redoStack.clear();
+      textEditingController.addListener(_onTextChanged);
+    }
+
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+    return reindexed[chapterIndex + 1];
+  }
+
+  /// Merges the chapter with [chapterId] and the subsequent chapter in the book.
+  bool mergeChapterWithNext(String chapterId) {
+    final chapterIndex = _activeBook.chapters.indexWhere((ch) => ch.id == chapterId);
+    if (chapterIndex == -1 || chapterIndex >= _activeBook.chapters.length - 1) {
+      return false;
+    }
+
+    final current = _activeBook.chapters[chapterIndex];
+    final next = _activeBook.chapters[chapterIndex + 1];
+
+    final currentContent = current.id == _activeChapter.id
+        ? textEditingController.text
+        : current.content;
+    final nextContent = next.id == _activeChapter.id
+        ? textEditingController.text
+        : next.content;
+
+    final separator = (currentContent.isEmpty || nextContent.isEmpty) ? '' : '\n\n';
+    final mergedContent = '$currentContent$separator$nextContent';
+
+    final mergedChapter = current.copyWith(
+      content: mergedContent,
+      lastEdited: DateTime.now(),
+    );
+
+    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
+    updatedChapters[chapterIndex] = mergedChapter;
+    updatedChapters.removeAt(chapterIndex + 1);
+
+    final reindexed = <ChapterModel>[];
+    for (int i = 0; i < updatedChapters.length; i++) {
+      reindexed.add(updatedChapters[i].copyWith(chapterNumber: i + 1));
+    }
+
+    _activeBook = _activeBook.copyWith(chapters: reindexed);
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+    _mindMapNodes = _mindMapNodes.map((node) {
+      if (node.linkedChapterId == next.id) {
+        return node.copyWith(linkedChapterId: current.id);
+      }
+      return node;
+    }).toList();
+
+    if (_activeChapter.id == current.id || _activeChapter.id == next.id) {
+      _activeChapter = reindexed[chapterIndex];
+      textEditingController.removeListener(_onTextChanged);
+      textEditingController.text = mergedContent;
+      _lastRecordedText = mergedContent;
+      _undoStack.clear();
+      _redoStack.clear();
+      textEditingController.addListener(_onTextChanged);
+    }
+
+    _saveCurrentData(debounced: false);
+    notifyListeners();
     return true;
   }
 

@@ -248,12 +248,54 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
                         onPressed: () => controller.toggleChapterCompletion(chapter.id),
                         tooltip: 'Marcar como completado',
                       ),
-                      if (activeBook.chapters.length > 1)
-                        IconButton(
-                          icon: Icon(Icons.delete_outline_rounded, size: 18, color: textSecondary),
-                          tooltip: 'Eliminar capítulo',
-                          onPressed: () => _confirmDeleteChapter(context, controller, chapter),
-                        ),
+                      PopupMenuButton<String>(
+                        icon: Icon(Icons.more_vert_rounded, size: 18, color: textSecondary),
+                        tooltip: 'Opciones del capítulo',
+                        onSelected: (val) {
+                          if (val == 'split') {
+                            _showSplitChapterDialog(context, controller, chapter);
+                          } else if (val == 'merge') {
+                            final nextChapter = activeBook.chapters[index + 1];
+                            _confirmMergeChapter(context, controller, chapter, nextChapter);
+                          } else if (val == 'delete') {
+                            _confirmDeleteChapter(context, controller, chapter);
+                          }
+                        },
+                        itemBuilder: (ctx) => [
+                          const PopupMenuItem(
+                            value: 'split',
+                            child: Row(
+                              children: [
+                                Icon(Icons.call_split_rounded, size: 16),
+                                SizedBox(width: 8),
+                                Text('Dividir capítulo...', style: TextStyle(fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                          if (index < activeBook.chapters.length - 1)
+                            const PopupMenuItem(
+                              value: 'merge',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.merge_type_rounded, size: 16),
+                                  SizedBox(width: 8),
+                                  Text('Fusionar con siguiente', style: TextStyle(fontSize: 13)),
+                                ],
+                              ),
+                            ),
+                          if (activeBook.chapters.length > 1)
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                                  SizedBox(width: 8),
+                                  Text('Eliminar capítulo', style: TextStyle(fontSize: 13, color: Colors.redAccent)),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
                       const Icon(Icons.drag_handle_rounded, size: 20, color: Colors.grey),
                     ],
                   ),
@@ -621,6 +663,107 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
               Navigator.of(ctx).pop();
             },
             child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSplitChapterDialog(BuildContext context, EditorController controller, ChapterModel chapter) {
+    final bool isCurrent = chapter.id == controller.activeChapter.id;
+    final content = isCurrent ? controller.textEditingController.text : chapter.content;
+
+    if (content.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El capítulo está vacío, no se puede dividir.')),
+      );
+      return;
+    }
+
+    int cursorOffset = isCurrent ? controller.textEditingController.selection.baseOffset : (content.length ~/ 2);
+    if (cursorOffset <= 0 || cursorOffset >= content.length) {
+      cursorOffset = content.length ~/ 2;
+    }
+
+    final splitPosCtrl = TextEditingController(text: '$cursorOffset');
+    final titleCtrl = TextEditingController(text: '${chapter.title} (Parte 2)');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Dividir Capítulo'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Dividir "${chapter.title}" en dos capítulos consecutivos.',
+              style: const TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: titleCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Título del nuevo capítulo',
+                hintText: 'Ej. Capítulo N (Continuación)',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: splitPosCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Punto de corte (carácter)',
+                helperText: 'De 1 a ${content.length - 1} caracteres',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              final pos = int.tryParse(splitPosCtrl.text.trim()) ?? (content.length ~/ 2);
+              controller.splitChapter(chapter.id, pos, newChapterTitle: titleCtrl.text.trim());
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Dividir'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmMergeChapter(BuildContext context, EditorController controller, ChapterModel chapter, ChapterModel nextChapter) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Fusionar Capítulos'),
+        content: Text(
+          '¿Fusionar "${chapter.title}" con "${nextChapter.title}"?\n\nEl contenido de "${nextChapter.title}" se añadirá al final de "${chapter.title}" y el segundo capítulo desaparecerá de la lista.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              controller.mergeChapterWithNext(chapter.id);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Fusionar'),
           ),
         ],
       ),

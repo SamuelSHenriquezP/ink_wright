@@ -20,6 +20,10 @@ class PersistenceService {
   static const String _keyActiveChapterId = 'ink_wright_active_chapter_id';
   static const String _keyDarkMode = 'ink_wright_dark_mode';
   static const String _keyFontFamily = 'ink_wright_font_family';
+  static const String _keyFontSize = 'ink_wright_font_size';
+  static const String _keyLineHeight = 'ink_wright_line_height';
+  static const String _keyMaxEditorWidth = 'ink_wright_max_editor_width';
+  static const String _keyTypewriterMode = 'ink_wright_typewriter_mode';
 
   Timer? _saveDebounceTimer;
   bool _isSaving = false;
@@ -120,6 +124,10 @@ class PersistenceService {
         'activeBookId': prefs.getString(_keyActiveBookId),
         'activeChapterId': prefs.getString(_keyActiveChapterId),
         'fontFamily': prefs.getString(_keyFontFamily) ?? 'Lora',
+        'fontSize': prefs.getDouble(_keyFontSize) ?? 16.5,
+        'lineHeight': prefs.getDouble(_keyLineHeight) ?? 1.65,
+        'maxEditorWidth': prefs.getDouble(_keyMaxEditorWidth) ?? 720.0,
+        'typewriterMode': prefs.getBool(_keyTypewriterMode) ?? false,
       };
     } catch (e) {
       return {
@@ -127,6 +135,10 @@ class PersistenceService {
         'activeBookId': null,
         'activeChapterId': null,
         'fontFamily': 'Lora',
+        'fontSize': 16.5,
+        'lineHeight': 1.65,
+        'maxEditorWidth': 720.0,
+        'typewriterMode': false,
       };
     }
   }
@@ -143,6 +155,10 @@ class PersistenceService {
     String? activeChapterId,
     bool? isDarkMode,
     String? fontFamily,
+    double? fontSize,
+    double? lineHeight,
+    double? maxEditorWidth,
+    bool? typewriterMode,
   }) async {
     _isSaving = true;
     try {
@@ -166,6 +182,10 @@ class PersistenceService {
         if (activeChapterId != null) prefs.setString(_keyActiveChapterId, activeChapterId),
         if (isDarkMode != null) prefs.setBool(_keyDarkMode, isDarkMode),
         if (fontFamily != null) prefs.setString(_keyFontFamily, fontFamily),
+        if (fontSize != null) prefs.setDouble(_keyFontSize, fontSize),
+        if (lineHeight != null) prefs.setDouble(_keyLineHeight, lineHeight),
+        if (maxEditorWidth != null) prefs.setDouble(_keyMaxEditorWidth, maxEditorWidth),
+        if (typewriterMode != null) prefs.setBool(_keyTypewriterMode, typewriterMode),
       ]);
 
       _lastSaved = DateTime.now();
@@ -188,6 +208,10 @@ class PersistenceService {
     String? activeChapterId,
     bool? isDarkMode,
     String? fontFamily,
+    double? fontSize,
+    double? lineHeight,
+    double? maxEditorWidth,
+    bool? typewriterMode,
     Duration debounceDuration = const Duration(milliseconds: 800),
     VoidCallback? onSaved,
   }) {
@@ -204,9 +228,98 @@ class PersistenceService {
         activeChapterId: activeChapterId,
         isDarkMode: isDarkMode,
         fontFamily: fontFamily,
+        fontSize: fontSize,
+        lineHeight: lineHeight,
+        maxEditorWidth: maxEditorWidth,
+        typewriterMode: typewriterMode,
       );
       onSaved?.call();
     });
+  }
+
+  String generateBackupJson({
+    required List<BookModel> books,
+    required List<IdeaSnippetModel> ideas,
+    required List<CodexEntryModel> codexEntries,
+    required List<MindMapNodeModel> mindMapNodes,
+    required List<CharacterModel> characters,
+    required WriterStatsModel writerStats,
+    String? activeBookId,
+    String? activeChapterId,
+    bool? isDarkMode,
+    String? fontFamily,
+    double? fontSize,
+    double? lineHeight,
+    double? maxEditorWidth,
+    bool? typewriterMode,
+  }) {
+    final payload = {
+      'format': 'inkwright_backup',
+      'version': '2.0.0',
+      'exportedAt': DateTime.now().toIso8601String(),
+      'books': books.map((b) => b.toMap()).toList(),
+      'ideas': ideas.map((i) => i.toMap()).toList(),
+      'codex': codexEntries.map((c) => c.toMap()).toList(),
+      'mindMap': mindMapNodes.map((n) => n.toMap()).toList(),
+      'characters': characters.map((c) => c.toJson()).toList(),
+      'writerStats': writerStats.toMap(),
+      'preferences': {
+        'activeBookId': activeBookId,
+        'activeChapterId': activeChapterId,
+        'isDarkMode': isDarkMode ?? false,
+        'fontFamily': fontFamily ?? 'Lora',
+        'fontSize': fontSize ?? 16.5,
+        'lineHeight': lineHeight ?? 1.65,
+        'maxEditorWidth': maxEditorWidth ?? 720.0,
+        'typewriterMode': typewriterMode ?? false,
+      },
+    };
+    return const JsonEncoder.withIndent('  ').convert(payload);
+  }
+
+  Map<String, dynamic>? parseBackupJson(String rawJson) {
+    try {
+      final map = jsonDecode(rawJson) as Map<String, dynamic>;
+      if (!map.containsKey('books')) return null;
+
+      final booksList = (map['books'] as List<dynamic>?)
+              ?.map((item) => BookModel.fromMap(item as Map<String, dynamic>))
+              .toList() ??
+          [];
+      final ideasList = (map['ideas'] as List<dynamic>?)
+              ?.map((item) => IdeaSnippetModel.fromMap(item as Map<String, dynamic>))
+              .toList() ??
+          [];
+      final codexList = (map['codex'] as List<dynamic>?)
+              ?.map((item) => CodexEntryModel.fromMap(item as Map<String, dynamic>))
+              .toList() ??
+          [];
+      final mindMapList = (map['mindMap'] as List<dynamic>?)
+              ?.map((item) => MindMapNodeModel.fromMap(item as Map<String, dynamic>))
+              .toList() ??
+          [];
+      final charactersList = (map['characters'] as List<dynamic>?)
+              ?.map((item) => CharacterModel.fromJson(item as Map<String, dynamic>))
+              .toList() ??
+          [];
+      final stats = map.containsKey('writerStats') && map['writerStats'] != null
+          ? WriterStatsModel.fromMap(map['writerStats'] as Map<String, dynamic>)
+          : null;
+
+      final prefs = map['preferences'] as Map<String, dynamic>? ?? {};
+
+      return {
+        'books': booksList,
+        'ideas': ideasList,
+        'codex': codexList,
+        'mindMap': mindMapList,
+        'characters': charactersList,
+        'writerStats': stats,
+        'preferences': prefs,
+      };
+    } catch (e) {
+      return null;
+    }
   }
 
   void dispose() {

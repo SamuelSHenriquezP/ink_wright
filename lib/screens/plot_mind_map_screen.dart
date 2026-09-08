@@ -132,6 +132,7 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     PlotNodeType selectedType = node.type;
     String selectedEmoji = node.iconEmoji;
     int selectedColor = node.colorHex;
+    String? selectedChapterId = node.linkedChapterId;
 
     const availableEmojis = [
       '📌', '🧭', '⚔️', '📜', '⚡', '🗝️', '🏰', '👤', '💡', '🔥', '💀', '🌫️', '🏛️', '👁️', '🎭', '🛡️', '👑', '✨'
@@ -220,6 +221,32 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                         if (val != null) setState(() => selectedType = val);
                       },
                     ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String?>(
+                      initialValue: selectedChapterId,
+                      decoration: const InputDecoration(
+                        labelText: 'Capítulo Vinculado (Opcional)',
+                        prefixIcon: Icon(Icons.menu_book_rounded, size: 20),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Ninguno (No vinculado)'),
+                        ),
+                        ...controller.activeBook.chapters.map((ch) {
+                          return DropdownMenuItem<String?>(
+                            value: ch.id,
+                            child: Text(
+                              'Capítulo ${ch.chapterNumber}: ${ch.title}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }),
+                      ],
+                      onChanged: (val) {
+                        setState(() => selectedChapterId = val);
+                      },
+                    ),
                     const SizedBox(height: 16),
                     const Text('Icono / Emoji:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
@@ -289,6 +316,8 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                         type: selectedType,
                         iconEmoji: selectedEmoji,
                         colorHex: selectedColor,
+                        linkedChapterId: selectedChapterId,
+                        clearLinkedChapter: selectedChapterId == null,
                       );
                       controller.updateMindMapNode(updated);
                       Navigator.of(context).pop();
@@ -360,6 +389,7 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     final descCtrl = TextEditingController();
     PlotAct selectedAct = PlotAct.act1Exposition;
     PlotNodeType selectedType = PlotNodeType.mainPlot;
+    String? selectedChapterId;
 
     showDialog(
       context: context,
@@ -412,6 +442,32 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                       },
                     ),
                     const SizedBox(height: 14),
+                    DropdownButtonFormField<String?>(
+                      initialValue: selectedChapterId,
+                      decoration: const InputDecoration(
+                        labelText: 'Capítulo Vinculado (Opcional)',
+                        prefixIcon: Icon(Icons.menu_book_rounded, size: 20),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Ninguno (No vinculado)'),
+                        ),
+                        ...controller.activeBook.chapters.map((ch) {
+                          return DropdownMenuItem<String?>(
+                            value: ch.id,
+                            child: Text(
+                              'Capítulo ${ch.chapterNumber}: ${ch.title}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }),
+                      ],
+                      onChanged: (val) {
+                        setState(() => selectedChapterId = val);
+                      },
+                    ),
+                    const SizedBox(height: 14),
                     TextField(
                       controller: descCtrl,
                       maxLines: 3,
@@ -449,6 +505,7 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                         connectedToIds: [],
                         colorHex: 0xFF18181B,
                         iconEmoji: '📌',
+                        linkedChapterId: selectedChapterId,
                       );
                       controller.addMindMapNode(newNode);
                       Navigator.of(context).pop();
@@ -559,10 +616,12 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                         children: [
                           // Canvas Grid lines & Custom Painter Connections
                           Positioned.fill(
-                            child: CustomPaint(
-                              painter: MindMapConnectionPainter(
-                                nodes: nodes,
-                                isDark: isDark,
+                            child: RepaintBoundary(
+                              child: CustomPaint(
+                                painter: MindMapConnectionPainter(
+                                  nodes: nodes,
+                                  isDark: isDark,
+                                ),
                               ),
                             ),
                           ),
@@ -601,7 +660,8 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                             return Positioned(
                               left: node.dx,
                               top: node.dy,
-                              child: GestureDetector(
+                              child: RepaintBoundary(
+                                child: GestureDetector(
                                 onPanUpdate: (details) {
                                   final scale = _transformationController.value.getMaxScaleOnAxis();
                                   final effectiveDelta = scale > 0 ? (details.delta / scale) : details.delta;
@@ -846,6 +906,52 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ],
+                                      if (node.linkedChapterId != null) ...[
+                                        () {
+                                          final linkedCh = controller.activeBook.chapters
+                                              .where((c) => c.id == node.linkedChapterId)
+                                              .firstOrNull;
+                                          if (linkedCh == null) return const SizedBox.shrink();
+                                          return InkWell(
+                                            onTap: () {
+                                              controller.selectChapter(linkedCh);
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
+                                              );
+                                            },
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: Container(
+                                              margin: const EdgeInsets.only(top: 6),
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.menu_book_rounded, size: 11, color: textPrimary),
+                                                  const SizedBox(width: 4),
+                                                  Flexible(
+                                                    child: Text(
+                                                      'Cap. ${linkedCh.chapterNumber}: ${linkedCh.title}',
+                                                      style: TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: textPrimary,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 2),
+                                                  Icon(Icons.arrow_forward_ios_rounded, size: 8, color: textSecondary),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        }(),
+                                      ],
                                       const SizedBox(height: 8),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -883,7 +989,8 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                   ),
                                 ),
                               ),
-                            );
+                            ),
+                          );
                           }),
                         ],
                       ),
@@ -1198,6 +1305,77 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                           ),
                         ),
                       ),
+                    ],
+
+                    if (currentNode.linkedChapterId != null) ...[
+                      () {
+                        final linkedCh = controller.activeBook.chapters
+                            .where((c) => c.id == currentNode.linkedChapterId)
+                            .firstOrNull;
+                        if (linkedCh == null) return const SizedBox.shrink();
+                        return Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(top: 14),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.menu_book_rounded, size: 20, color: textPrimary),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'CAPÍTULO VINCULADO',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.8,
+                                        color: textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Capítulo ${linkedCh.chapterNumber}: ${linkedCh.title}',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: textPrimary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isDark ? Colors.white : Colors.black,
+                                  foregroundColor: isDark ? Colors.black : Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  elevation: 0,
+                                ),
+                                icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                                label: const Text('Ir al Capítulo', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                                onPressed: () {
+                                  controller.selectChapter(linkedCh);
+                                  Navigator.of(context).pop();
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      }(),
                     ],
 
                     const SizedBox(height: 16),

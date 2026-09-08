@@ -69,24 +69,26 @@ class SoundscapeBar extends StatelessWidget {
               Row(
                 children: [
                   if (isPlaying)
-                    Row(
-                      children: List.generate(4, (index) {
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 2),
-                          width: 3,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: accentMint,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        )
-                            .animate(onPlay: (c) => c.repeat(reverse: true))
-                            .scaleY(
-                              begin: 0.3,
-                              end: 1.0,
-                              duration: Duration(milliseconds: 300 + index * 120),
-                            );
-                      }),
+                    RepaintBoundary(
+                      child: Row(
+                        children: List.generate(4, (index) {
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            width: 3,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              color: accentMint,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          )
+                              .animate(onPlay: (c) => c.repeat(reverse: true))
+                              .scaleY(
+                                begin: 0.3,
+                                end: 1.0,
+                                duration: Duration(milliseconds: 300 + index * 120),
+                              );
+                        }),
+                      ),
                     ),
                   const SizedBox(width: 12),
                   IconButton(
