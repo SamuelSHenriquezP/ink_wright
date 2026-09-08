@@ -49,4 +49,33 @@ class WriterStatsModel {
       focusScore: focusScore ?? this.focusScore,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'dailyGoalWords': dailyGoalWords,
+      'wordsToday': wordsToday,
+      'streakDays': streakDays,
+      'totalWordsWritten': totalWordsWritten,
+      'writingTimeTodayMinutes': writingTimeTodayMinutes,
+      'weeklyProgress': weeklyProgress,
+      'wordsPerMinuteAvg': wordsPerMinuteAvg,
+      'focusScore': focusScore,
+    };
+  }
+
+  factory WriterStatsModel.fromMap(Map<String, dynamic> map) {
+    return WriterStatsModel(
+      dailyGoalWords: map['dailyGoalWords'] as int? ?? 2000,
+      wordsToday: map['wordsToday'] as int? ?? 0,
+      streakDays: map['streakDays'] as int? ?? 1,
+      totalWordsWritten: map['totalWordsWritten'] as int? ?? 0,
+      writingTimeTodayMinutes: map['writingTimeTodayMinutes'] as int? ?? 0,
+      weeklyProgress: (map['weeklyProgress'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, (v as num).toInt()),
+          ) ??
+          {},
+      wordsPerMinuteAvg: map['wordsPerMinuteAvg'] as int? ?? 30,
+      focusScore: map['focusScore'] as int? ?? 90,
+    );
+  }
 }

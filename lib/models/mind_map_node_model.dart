@@ -23,8 +23,8 @@ class MindMapNodeModel {
   final String description;
   final PlotAct act;
   final PlotNodeType type;
-  double dx;
-  double dy;
+  final double dx;
+  final double dy;
   final List<String> connectedToIds;
   final int colorHex;
   final String iconEmoji;
@@ -43,35 +43,8 @@ class MindMapNodeModel {
     required this.iconEmoji,
   });
 
-  String get actLabel {
-    switch (act) {
-      case PlotAct.act1Exposition:
-        return 'Acto I: Planteamiento';
-      case PlotAct.act2RisingAction:
-        return 'Acto II: Nudo y Complicaciones';
-      case PlotAct.midpoint:
-        return 'Punto Medio';
-      case PlotAct.act3Climax:
-        return 'Acto III: Clímax';
-      case PlotAct.resolution:
-        return 'Resolución';
-    }
-  }
-
-  String get typeLabel {
-    switch (type) {
-      case PlotNodeType.mainPlot:
-        return 'Trama Principal';
-      case PlotNodeType.subplot:
-        return 'Subtrama';
-      case PlotNodeType.characterArc:
-        return 'Arco de Personaje';
-      case PlotNodeType.worldLore:
-        return 'Códice / Lore';
-      case PlotNodeType.turningPoint:
-        return 'Punto de Giro';
-    }
-  }
+  String get actLabel => act.label;
+  String get typeLabel => type.label;
 
   Color get nodeColor => Color(colorHex);
 
@@ -97,9 +70,81 @@ class MindMapNodeModel {
       type: type ?? this.type,
       dx: dx ?? this.dx,
       dy: dy ?? this.dy,
-      connectedToIds: connectedToIds ?? List.from(this.connectedToIds),
+      connectedToIds: connectedToIds ?? List<String>.from(this.connectedToIds),
       colorHex: colorHex ?? this.colorHex,
       iconEmoji: iconEmoji ?? this.iconEmoji,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'bookId': bookId,
+      'title': title,
+      'description': description,
+      'act': act.name,
+      'type': type.name,
+      'dx': dx,
+      'dy': dy,
+      'connectedToIds': connectedToIds,
+      'colorHex': colorHex,
+      'iconEmoji': iconEmoji,
+    };
+  }
+
+  factory MindMapNodeModel.fromMap(Map<String, dynamic> map) {
+    return MindMapNodeModel(
+      id: map['id'] as String? ?? '',
+      bookId: map['bookId'] as String? ?? '',
+      title: map['title'] as String? ?? '',
+      description: map['description'] as String? ?? '',
+      act: PlotAct.values.firstWhere(
+        (a) => a.name == (map['act'] as String? ?? ''),
+        orElse: () => PlotAct.act1Exposition,
+      ),
+      type: PlotNodeType.values.firstWhere(
+        (t) => t.name == (map['type'] as String? ?? ''),
+        orElse: () => PlotNodeType.mainPlot,
+      ),
+      dx: (map['dx'] as num?)?.toDouble() ?? 0.0,
+      dy: (map['dy'] as num?)?.toDouble() ?? 0.0,
+      connectedToIds: (map['connectedToIds'] as List<dynamic>?)?.map((c) => c.toString()).toList() ?? [],
+      colorHex: map['colorHex'] as int? ?? 0xFF18181B,
+      iconEmoji: map['iconEmoji'] as String? ?? '📌',
+    );
+  }
+}
+
+extension PlotActExtension on PlotAct {
+  String get label {
+    switch (this) {
+      case PlotAct.act1Exposition:
+        return 'Acto I: Planteamiento';
+      case PlotAct.act2RisingAction:
+        return 'Acto II: Nudo y Complicaciones';
+      case PlotAct.midpoint:
+        return 'Punto Medio';
+      case PlotAct.act3Climax:
+        return 'Acto III: Clímax';
+      case PlotAct.resolution:
+        return 'Resolución';
+    }
+  }
+}
+
+extension PlotNodeTypeExtension on PlotNodeType {
+  String get label {
+    switch (this) {
+      case PlotNodeType.mainPlot:
+        return 'Trama Principal';
+      case PlotNodeType.subplot:
+        return 'Subtrama';
+      case PlotNodeType.characterArc:
+        return 'Arco de Personaje';
+      case PlotNodeType.worldLore:
+        return 'Códice / Lore';
+      case PlotNodeType.turningPoint:
+        return 'Punto de Giro';
+    }
   }
 }

@@ -30,15 +30,15 @@ class IdeaSnippetModel {
   String get categoryLabel {
     switch (category) {
       case IdeaCategory.character:
-        return 'Character';
+        return 'Personaje';
       case IdeaCategory.worldbuilding:
-        return 'Worldbuilding';
+        return 'Mundo / Entorno';
       case IdeaCategory.plotTwist:
-        return 'Plot Twist';
+        return 'Giro de Trama';
       case IdeaCategory.dialogue:
-        return 'Dialogue';
+        return 'Diálogo';
       case IdeaCategory.general:
-        return 'General Note';
+        return 'Nota General';
     }
   }
 
@@ -76,6 +76,37 @@ class IdeaSnippetModel {
       createdAt: createdAt ?? this.createdAt,
       isPinned: isPinned ?? this.isPinned,
       tags: tags ?? this.tags,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'content': content,
+      'category': category.name,
+      'colorHex': colorHex,
+      'createdAt': createdAt.toIso8601String(),
+      'isPinned': isPinned,
+      'tags': tags,
+    };
+  }
+
+  factory IdeaSnippetModel.fromMap(Map<String, dynamic> map) {
+    return IdeaSnippetModel(
+      id: map['id'] as String? ?? '',
+      title: map['title'] as String? ?? '',
+      content: map['content'] as String? ?? '',
+      category: IdeaCategory.values.firstWhere(
+        (c) => c.name == (map['category'] as String? ?? ''),
+        orElse: () => IdeaCategory.general,
+      ),
+      colorHex: map['colorHex'] as int? ?? 0xFF18181B,
+      createdAt: map['createdAt'] != null
+          ? DateTime.tryParse(map['createdAt'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      isPinned: map['isPinned'] as bool? ?? false,
+      tags: (map['tags'] as List<dynamic>?)?.map((t) => t.toString()).toList() ?? [],
     );
   }
 }

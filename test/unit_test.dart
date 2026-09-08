@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:archive/archive.dart';
 import 'package:ink_wright/formatters/writer_text_formatter.dart';
 import 'package:ink_wright/controllers/editor_controller.dart';
 import 'package:ink_wright/controllers/markdown_editing_controller.dart';
+import 'package:ink_wright/controllers/sprint_controller.dart';
+import 'package:ink_wright/models/book_model.dart';
+import 'package:ink_wright/models/chapter_model.dart';
 import 'package:ink_wright/models/character_model.dart';
+import 'package:ink_wright/models/codex_entry_model.dart';
+import 'package:ink_wright/models/idea_snippet_model.dart';
+import 'package:ink_wright/models/mind_map_node_model.dart';
+import 'package:ink_wright/services/export_service.dart';
 
 void main() {
-  setUpAll(() {
-    TestWidgetsFlutterBinding.ensureInitialized();
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
 
@@ -40,12 +50,126 @@ void main() {
     });
   });
 
+  group('ChapterModel Tests', () {
+    test('Reading time for 0 words is 0 minutes', () {
+      final emptyChapter = ChapterModel(
+        id: 'c0',
+        bookId: 'b0',
+        chapterNumber: 1,
+        title: 'Empty',
+        content: '',
+        lastEdited: DateTime.now(),
+      );
+      expect(emptyChapter.readingTimeMinutes, equals(0));
+    });
+
+    test('Serialization and deserialization', () {
+      final chapter = ChapterModel(
+        id: 'c1',
+        bookId: 'b1',
+        chapterNumber: 2,
+        title: 'El Valle',
+        content: 'El viento silbaba en la noche.',
+        lastEdited: DateTime(2026, 9, 7),
+        isCompleted: true,
+        notes: 'Nota clave',
+        povCharacter: 'Silas',
+      );
+
+      final map = chapter.toMap();
+      final restored = ChapterModel.fromMap(map);
+
+      expect(restored.id, equals(chapter.id));
+      expect(restored.title, equals(chapter.title));
+      expect(restored.chapterNumber, equals(chapter.chapterNumber));
+      expect(restored.isCompleted, isTrue);
+      expect(restored.povCharacter, equals('Silas'));
+    });
+  });
+
+  group('BookModel & Codex Serialization', () {
+    test('Book serialization preserves chapters', () {
+      final ch = ChapterModel(
+        id: 'c1',
+        bookId: 'b1',
+        chapterNumber: 1,
+        title: 'Inicio',
+        content: 'Había una vez...',
+        lastEdited: DateTime.now(),
+      );
+      final book = BookModel(
+        id: 'b1',
+        title: 'El Faro',
+        subtitle: 'Novela corta',
+        genre: 'Misterio',
+        coverEmoji: '🕯️',
+        coverColorHex: 0xFF123456,
+        targetWordCount: 40000,
+        chapters: [ch],
+        lastEdited: DateTime.now(),
+        status: BookStatus.drafting,
+        tags: ['Gótico'],
+        synopsis: 'Un faro misterioso.',
+      );
+
+      final map = book.toMap();
+      final restored = BookModel.fromMap(map);
+
+      expect(restored.title, equals('El Faro'));
+      expect(restored.chapters.length, equals(1));
+      expect(restored.chapters.first.title, equals('Inicio'));
+    });
+
+    test('CodexEntry preserves type properly', () {
+      final entry = CodexEntryModel(
+        id: 'codex_test',
+        bookId: 'b1',
+        name: 'Castillo de Niebla',
+        type: CodexType.location,
+        role: 'Fortaleza',
+        description: 'Antigua fortaleza en las cumbres.',
+        traits: ['Antiguo'],
+        secrets: 'Puerta secreta',
+        avatarEmoji: '🏰',
+        createdAt: DateTime.now(),
+      );
+
+      final map = entry.toMap();
+      final restored = CodexEntryModel.fromMap(map);
+
+      expect(restored.type, equals(CodexType.location));
+      expect(restored.typeLabel, equals('Lugar'));
+      expect(restored.name, equals('Castillo de Niebla'));
+    });
+
+    test('IdeaSnippetModel Spanish labels', () {
+      final idea = IdeaSnippetModel(
+        id: 'i1',
+        title: 'Giro',
+        content: 'El mayordomo no existía.',
+        category: IdeaCategory.plotTwist,
+        colorHex: 0,
+        createdAt: DateTime.now(),
+        tags: ['Pista'],
+      );
+
+      expect(idea.categoryLabel, equals('Giro de Trama'));
+    });
+
+    test('MindMapNodeModel extensions', () {
+      expect(PlotAct.act1Exposition.label, equals('Acto I: Planteamiento'));
+      expect(PlotNodeType.turningPoint.label, equals('Punto de Giro'));
+    });
+  });
+
   group('EditorController Tests', () {
     test('Initial state loading: only tutorial book exists', () {
       final controller = EditorController();
       expect(controller.allBooks.length, equals(1));
       expect(controller.activeBook.title, equals('Manual del Escritor — Guía de Ink & Wright'));
       expect(controller.activeBook.chapters.length, equals(3));
+      // Verify chapter 2 is numbered 2
+      expect(controller.activeBook.chapters[1].chapterNumber, equals(2));
       expect(controller.ideas.isNotEmpty, isTrue);
       expect(controller.characters.isNotEmpty, isTrue);
       expect(controller.characters.first.name, equals('Evelyn Vance'));
@@ -149,6 +273,63 @@ void main() {
       controller.toggleLiveMarkdown();
       expect(controller.isLiveMarkdownEnabled, isTrue);
     });
+
+    test('Undo and Redo history', () {
+      final controller = EditorController();
+      final initialText = controller.textEditingController.text;
+      expect(controller.canUndo, isFalse);
+
+      // Edit text with space to trigger undo snapshot
+      controller.textEditingController.text = '$initialText Nuevo párrafo añadido ';
+
+      expect(controller.canUndo, isTrue);
+      controller.undo();
+      expect(controller.textEditingController.text, equals(initialText));
+      expect(controller.canRedo, isTrue);
+
+      controller.redo();
+      expect(controller.textEditingController.text, equals('$initialText Nuevo párrafo añadido '));
+    });
+
+    test('Chapter reordering', () {
+      final controller = EditorController();
+      final title0 = controller.activeBook.chapters[0].title;
+      final title1 = controller.activeBook.chapters[1].title;
+
+      // Move chapter 0 to position 1
+      controller.reorderChapters(0, 2);
+
+      expect(controller.activeBook.chapters[0].title, equals(title1));
+      expect(controller.activeBook.chapters[0].chapterNumber, equals(1));
+      expect(controller.activeBook.chapters[1].title, equals(title0));
+      expect(controller.activeBook.chapters[1].chapterNumber, equals(2));
+    });
+
+    test('deleteChapter removes chapter and maintains sequential numbers', () {
+      final controller = EditorController();
+      final initialCount = controller.activeBook.chapters.length;
+      expect(initialCount, greaterThan(1));
+
+      final targetChapterId = controller.activeBook.chapters[1].id;
+      final success = controller.deleteChapter(targetChapterId);
+
+      expect(success, isTrue);
+      expect(controller.activeBook.chapters.length, equals(initialCount - 1));
+      expect(controller.activeBook.chapters[0].chapterNumber, equals(1));
+    });
+
+    test('deleteBook removes book, its nodes and characters', () {
+      final controller = EditorController();
+      final initialBooks = controller.allBooks.length;
+
+      controller.createNewBook('Libro Temporal', 'Subtítulo', 50000);
+      expect(controller.allBooks.length, equals(initialBooks + 1));
+      final createdBookId = controller.activeBook.id;
+
+      final success = controller.deleteBook(createdBookId);
+      expect(success, isTrue);
+      expect(controller.allBooks.any((b) => b.id == createdBookId), isFalse);
+    });
   });
 
   group('MarkdownEditingController Live Rendering Tests', () {
@@ -214,6 +395,217 @@ code block line 2
           ),
         ),
       );
+    });
+  });
+
+  group('ExportService Tests', () {
+    test('Export to Markdown generates valid frontmatter and chapters', () {
+      final ch = ChapterModel(
+        id: 'c1',
+        bookId: 'b1',
+        chapterNumber: 1,
+        title: 'El Amanecer',
+        content: 'El sol iluminaba las montañas.',
+        lastEdited: DateTime.now(),
+      );
+      final book = BookModel(
+        id: 'b1',
+        title: 'Misterio en el Valle',
+        subtitle: 'Novela gótica',
+        genre: 'Misterio',
+        coverEmoji: '🧭',
+        coverColorHex: 0,
+        targetWordCount: 50000,
+        chapters: [ch],
+        lastEdited: DateTime.now(),
+        status: BookStatus.drafting,
+        tags: ['Gótico'],
+        synopsis: 'Una historia de misterio.',
+      );
+
+      final md = ExportService.exportToMarkdown(book);
+      expect(md.contains('---'), isTrue);
+      expect(md.contains('title: "Misterio en el Valle"'), isTrue);
+      expect(md.contains('## Capítulo 1: El Amanecer'), isTrue);
+      expect(md.contains('El sol iluminaba las montañas.'), isTrue);
+
+      final txt = ExportService.exportToPlainText(book);
+      expect(txt.contains('MISTERIO EN EL VALLE'), isTrue);
+      expect(txt.contains('CAPÍTULO 1 — EL AMANECER'), isTrue);
+
+      final html = ExportService.exportToHtml(book);
+      expect(html.contains('<!DOCTYPE html>'), isTrue);
+      expect(html.contains('<h1>Misterio en el Valle</h1>'), isTrue);
+    });
+
+    test('Export to PDF generates valid PDF bytes with header', () async {
+      final ch = ChapterModel(
+        id: 'c1',
+        bookId: 'b1',
+        chapterNumber: 1,
+        title: 'El Amanecer',
+        content: 'El sol iluminaba las montañas.',
+        lastEdited: DateTime.now(),
+      );
+      final book = BookModel(
+        id: 'b1',
+        title: 'Misterio en el Valle',
+        subtitle: 'Novela gótica',
+        genre: 'Misterio',
+        coverEmoji: '🧭',
+        coverColorHex: 0,
+        targetWordCount: 50000,
+        chapters: [ch],
+        lastEdited: DateTime.now(),
+        status: BookStatus.drafting,
+        tags: ['Gótico'],
+        synopsis: 'Una historia de misterio.',
+      );
+
+      final pdfBytes = await ExportService.generatePdf(book);
+      expect(pdfBytes, isNotEmpty);
+      // Verify PDF magic header: %PDF- (0x25, 0x50, 0x44, 0x46, 0x2D)
+      expect(pdfBytes.sublist(0, 5), equals([0x25, 0x50, 0x44, 0x46, 0x2D]));
+    });
+
+    test('Export to Word DOCX generates valid OpenXML ZIP archive with document.xml', () {
+      final ch = ChapterModel(
+        id: 'c1',
+        bookId: 'b1',
+        chapterNumber: 1,
+        title: 'El Amanecer',
+        content: 'El sol iluminaba las montañas con destellos dorados.',
+        lastEdited: DateTime.now(),
+      );
+      final book = BookModel(
+        id: 'b1',
+        title: 'Misterio en el Valle',
+        subtitle: 'Novela gótica',
+        genre: 'Misterio',
+        coverEmoji: '🧭',
+        coverColorHex: 0,
+        targetWordCount: 50000,
+        chapters: [ch],
+        lastEdited: DateTime.now(),
+        status: BookStatus.drafting,
+        tags: ['Gótico'],
+        synopsis: 'Una historia de misterio.',
+      );
+
+      final docxBytes = ExportService.generateDocx(book);
+      expect(docxBytes, isNotEmpty);
+      // Verify ZIP magic header: PK (0x50, 0x4B)
+      expect(docxBytes.sublist(0, 2), equals([0x50, 0x4B]));
+
+      // Decode OpenXML zip package
+      final decodedArchive = ZipDecoder().decodeBytes(docxBytes);
+      final fileNames = decodedArchive.map((f) => f.name).toList();
+
+      expect(fileNames.contains('[Content_Types].xml'), isTrue);
+      expect(fileNames.contains('_rels/.rels'), isTrue);
+      expect(fileNames.contains('word/_rels/document.xml.rels'), isTrue);
+      expect(fileNames.contains('word/styles.xml'), isTrue);
+      expect(fileNames.contains('word/document.xml'), isTrue);
+
+      final docFile = decodedArchive.firstWhere((f) => f.name == 'word/document.xml');
+      final docXmlContent = utf8.decode(docFile.content as List<int>);
+      expect(docXmlContent.contains('Misterio en el Valle'), isTrue);
+      expect(docXmlContent.contains('Capítulo 1: El Amanecer'), isTrue);
+      expect(docXmlContent.contains('El sol iluminaba las montañas'), isTrue);
+    });
+
+    test('Export with characters and codex entries creates complete editorial manuscript', () async {
+      final ch = ChapterModel(
+        id: 'c1',
+        bookId: 'b1',
+        chapterNumber: 1,
+        title: 'El Amanecer',
+        content: 'Silas esperó en el muelle… «Todo ha terminado», murmuró.',
+        lastEdited: DateTime.now(),
+      );
+      final book = BookModel(
+        id: 'b1',
+        title: 'Misterio en el Valle',
+        subtitle: 'Novela gótica',
+        genre: 'Misterio',
+        coverEmoji: '🧭',
+        coverColorHex: 0,
+        targetWordCount: 50000,
+        chapters: [ch],
+        lastEdited: DateTime.now(),
+        status: BookStatus.drafting,
+        tags: ['Gótico'],
+        synopsis: 'Una historia de misterio.',
+      );
+      final character = CharacterModel(
+        id: 'char1',
+        bookId: 'b1',
+        name: 'Silas Thorne',
+        role: 'Protagonista',
+        archetype: 'El Detective Renuente',
+        traits: ['Astuto', 'Solitario'],
+        motivation: 'Descubrir la verdad.',
+        writtenBiography: 'Silas nació en un pequeño pueblo costero.',
+        avatarEmoji: '🕵️‍♂️',
+      );
+      final codex = CodexEntryModel(
+        id: 'cod1',
+        bookId: 'b1',
+        name: 'El Faro Olvidado',
+        type: CodexType.location,
+        role: 'Lugar antiguo',
+        description: 'Un faro abandonado en los acantilados del norte.',
+        traits: ['Peligroso'],
+        secrets: 'Oculta una cripta.',
+        avatarEmoji: '🏰',
+        createdAt: DateTime.now(),
+      );
+
+      // Markdown test with characters & codex
+      final md = ExportService.exportToMarkdown(book, characters: [character], codexEntries: [codex]);
+      expect(md.contains('Dramatis Personae (Personajes)'), isTrue);
+      expect(md.contains('Silas Thorne'), isTrue);
+      expect(md.contains('Apéndice del Códice'), isTrue);
+      expect(md.contains('El Faro Olvidado'), isTrue);
+
+      // PDF export test with ellipsis '…' and emojis (safely sanitized)
+      final pdfBytes = await ExportService.generatePdf(book, characters: [character], codexEntries: [codex]);
+      expect(pdfBytes, isNotEmpty);
+      expect(pdfBytes.sublist(0, 5), equals([0x25, 0x50, 0x44, 0x46, 0x2D]));
+
+      // DOCX export test with characters & codex
+      final docxBytes = ExportService.generateDocx(book, characters: [character], codexEntries: [codex]);
+      expect(docxBytes, isNotEmpty);
+      final decodedArchive = ZipDecoder().decodeBytes(docxBytes);
+      final docFile = decodedArchive.firstWhere((f) => f.name == 'word/document.xml');
+      final docXmlContent = utf8.decode(docFile.content as List<int>);
+      expect(docXmlContent.contains('Dramatis Personae (Personajes)'), isTrue);
+      expect(docXmlContent.contains('Silas Thorne'), isTrue);
+      expect(docXmlContent.contains('Apéndice del Códice'), isTrue);
+      expect(docXmlContent.contains('El Faro Olvidado'), isTrue);
+    });
+  });
+
+  group('SprintController Tests', () {
+    test('Sprint lifecycle and word tracking', () {
+      final sprint = SprintController();
+      expect(sprint.isSprintActive, isFalse);
+
+      sprint.startSprint(
+        durationMinutes: 15,
+        targetWords: 100,
+        currentContent: 'Cinco palabras para empezar ahora',
+      );
+
+      expect(sprint.isSprintActive, isTrue);
+      expect(sprint.secondsRemaining, equals(15 * 60));
+
+      // User writes 10 more words
+      sprint.onTextUpdated('Cinco palabras para empezar ahora y diez palabras adicionales añadidas por el autor hoy');
+      expect(sprint.activeSprint?.wordsWritten, greaterThan(0));
+
+      sprint.stopSprint();
+      expect(sprint.isSprintActive, isFalse);
     });
   });
 }

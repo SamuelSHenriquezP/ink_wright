@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/book_model.dart';
@@ -11,10 +12,11 @@ import '../models/mind_map_node_model.dart';
 import '../models/character_model.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'markdown_editing_controller.dart';
+import '../services/persistence_service.dart';
 
 class EditorController extends ChangeNotifier {
-  static const String _prefKeyActiveBookId = 'ink_last_active_book_id';
-  static const String _prefKeyActiveChapterId = 'ink_last_active_chapter_id';
+  final PersistenceService _persistenceService = PersistenceService();
+
   static const String _prefKeyCursorPos = 'ink_last_cursor_position';
 
   bool _isDarkMode = false;
@@ -35,16 +37,32 @@ class EditorController extends ChangeNotifier {
   bool _isPlayingAmbience = false;
 
   WritingSprintModel? _activeSprint;
-  String _selectedFontFamily = 'Lora'; // Lora, Merriweather, Playfair Display, JetBrains Mono
+  String _selectedFontFamily = 'Lora';
 
   final MarkdownEditingController textEditingController = MarkdownEditingController();
   final FocusNode focusNode = FocusNode();
+
+  // Undo / Redo history
+  final List<String> _undoStack = [];
+  final List<String> _redoStack = [];
+  bool _isPerformingUndoRedo = false;
+  String _lastRecordedText = '';
+
+  // Debounce for text change auto-save
+  Timer? _textChangeDebounceTimer;
+  DateTime? _lastSavedTime;
+  bool _isSaving = false;
 
   // Getters
   bool get isDarkMode => _isDarkMode;
   bool get isZenMode => _isZenMode;
   bool get isAutoSaveEnabled => _isAutoSaveEnabled;
   bool get isLiveMarkdownEnabled => textEditingController.isLiveMarkdownEnabled;
+  bool get isSaving => _isSaving;
+  DateTime? get lastSavedTime => _lastSavedTime;
+
+  bool get canUndo => _undoStack.isNotEmpty;
+  bool get canRedo => _redoStack.isNotEmpty;
 
   BookModel get activeBook => _activeBook;
   ChapterModel get activeChapter => _activeChapter;
@@ -70,7 +88,7 @@ class EditorController extends ChangeNotifier {
 
   EditorController() {
     _initializeInitialState();
-    _loadLastSession();
+    _loadPersistedData();
   }
 
   void _initializeInitialState() {
@@ -191,8 +209,8 @@ Cada libro en Ink & Wright tiene su propio **Mapa Mental independiente**. Lo que
     _activeBook = tutorialBook;
     _activeChapter = ch1;
 
-    // Load active chapter content into text controller
     textEditingController.text = _activeChapter.content;
+    _lastRecordedText = _activeChapter.content;
     textEditingController.addListener(_onTextChanged);
 
     // Initial Sample Ideas (relacionadas al tutorial y narrativa)
@@ -236,7 +254,6 @@ Cada libro en Ink & Wright tiene su propio **Mapa Mental independiente**. Lo que
       ),
     ];
 
-    // Initial Soundscapes
     _soundscapes = [
       const SoundscapeModel(
         id: 'snd_1',
@@ -338,7 +355,6 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       ),
     ];
 
-    // Initial Writer Stats
     _writerStats = WriterStatsModel(
       wordsToday: 850,
       dailyGoalWords: 2000,
@@ -348,95 +364,202 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       wordsPerMinuteAvg: 30,
       focusScore: 95,
       weeklyProgress: {
-        'Mon': 1200,
-        'Tue': 1500,
-        'Wed': 850,
-        'Thu': 1100,
-        'Fri': 1400,
-        'Sat': 900,
-        'Sun': 850,
+        'Lun': 1200,
+        'Mar': 1500,
+        'Mié': 850,
+        'Jue': 1100,
+        'Vie': 1400,
+        'Sáb': 900,
+        'Dom': 850,
       },
     );
   }
 
-  // Session Persistence (Loads last open book, chapter, content, and cursor position)
-  Future<void> _loadLastSession() async {
+  // Session & Data Persistence
+  Future<void> _loadPersistedData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final lastBookId = prefs.getString(_prefKeyActiveBookId);
-      final lastChapterId = prefs.getString(_prefKeyActiveChapterId);
-      final lastCursor = prefs.getInt(_prefKeyCursorPos) ?? 0;
+      final savedBooks = await _persistenceService.loadBooks();
+      final savedIdeas = await _persistenceService.loadIdeas();
+      final savedCodex = await _persistenceService.loadCodexEntries();
+      final savedNodes = await _persistenceService.loadMindMapNodes();
+      final savedCharacters = await _persistenceService.loadCharacters();
+      final savedStats = await _persistenceService.loadWriterStats();
+      final prefs = await _persistenceService.loadPreferences();
 
-      if (lastBookId != null) {
-        final foundBook = _allBooks.firstWhere((b) => b.id == lastBookId, orElse: () => _activeBook);
-        _activeBook = foundBook;
-      }
+      final sharedPrefs = await SharedPreferences.getInstance();
+      final lastCursor = sharedPrefs.getInt(_prefKeyCursorPos) ?? 0;
 
-      if (lastChapterId != null) {
-        final foundChapter = _activeBook.chapters.firstWhere(
-          (c) => c.id == lastChapterId,
-          orElse: () => _activeBook.chapters.isNotEmpty ? _activeBook.chapters.first : _activeChapter,
+      if (savedBooks != null && savedBooks.isNotEmpty) {
+        _allBooks = savedBooks;
+        final savedBookId = prefs['activeBookId'] as String?;
+        _activeBook = _allBooks.firstWhere(
+          (b) => b.id == savedBookId,
+          orElse: () => _allBooks.first,
         );
-        _activeChapter = foundChapter;
+
+        if (_activeBook.chapters.isNotEmpty) {
+          final savedChapterId = prefs['activeChapterId'] as String?;
+          _activeChapter = _activeBook.chapters.firstWhere(
+            (c) => c.id == savedChapterId,
+            orElse: () => _activeBook.chapters.first,
+          );
+        } else {
+          addNewChapter('Capítulo 1');
+        }
+
+        textEditingController.removeListener(_onTextChanged);
+        textEditingController.isDarkMode = _isDarkMode;
+        textEditingController.text = _activeChapter.content;
+        _lastRecordedText = _activeChapter.content;
+        if (lastCursor >= 0 && lastCursor <= textEditingController.text.length) {
+          textEditingController.selection = TextSelection.collapsed(offset: lastCursor);
+        } else {
+          textEditingController.selection = TextSelection.collapsed(offset: textEditingController.text.length);
+        }
+        textEditingController.addListener(_onTextChanged);
       }
 
-      final savedContent = prefs.getString('ink_chapter_content_${_activeChapter.id}');
-      if (savedContent != null && savedContent.isNotEmpty) {
-        _activeChapter = _activeChapter.copyWith(content: savedContent);
-        final updatedChapters = _activeBook.chapters.map((ch) {
-          return ch.id == _activeChapter.id ? _activeChapter : ch;
-        }).toList();
-        _activeBook = _activeBook.copyWith(chapters: updatedChapters);
-        _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
-      }
+      if (savedIdeas != null) _ideas = savedIdeas;
+      if (savedCodex != null) _codexEntries = savedCodex;
+      if (savedNodes != null) _mindMapNodes = savedNodes;
+      if (savedCharacters != null) _characters = savedCharacters;
+      if (savedStats != null) _writerStats = savedStats;
 
+      _isDarkMode = prefs['darkMode'] as bool? ?? _isDarkMode;
       textEditingController.isDarkMode = _isDarkMode;
-      textEditingController.text = _activeChapter.content;
-      if (lastCursor >= 0 && lastCursor <= textEditingController.text.length) {
-        textEditingController.selection = TextSelection.collapsed(offset: lastCursor);
-      } else {
-        textEditingController.selection = TextSelection.collapsed(offset: textEditingController.text.length);
-      }
+      _selectedFontFamily = prefs['fontFamily'] as String? ?? _selectedFontFamily;
+
       notifyListeners();
-    } catch (e) {
-      debugPrint('Note: Session load error (safe): $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> saveCurrentSession() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_prefKeyActiveBookId, _activeBook.id);
-      await prefs.setString(_prefKeyActiveChapterId, _activeChapter.id);
-      await prefs.setInt(_prefKeyCursorPos, textEditingController.selection.baseOffset);
-      await prefs.setString('ink_chapter_content_${_activeChapter.id}', textEditingController.text);
-    } catch (e) {
-      debugPrint('Note: Session save error (safe): $e');
+    _saveCurrentData(debounced: false);
+  }
+
+  void _saveCurrentData({bool debounced = true}) {
+    // Save cursor position safely to shared preferences
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setInt(_prefKeyCursorPos, textEditingController.selection.baseOffset);
+    }).catchError((_) {});
+
+    if (debounced) {
+      _isSaving = true;
+      _persistenceService.scheduleDebouncedSave(
+        books: _allBooks,
+        ideas: _ideas,
+        codexEntries: _codexEntries,
+        mindMapNodes: _mindMapNodes,
+        characters: _characters,
+        writerStats: _writerStats,
+        activeBookId: _activeBook.id,
+        activeChapterId: _activeChapter.id,
+        isDarkMode: _isDarkMode,
+        fontFamily: _selectedFontFamily,
+        onSaved: () {
+          _lastSavedTime = _persistenceService.lastSaved;
+          _isSaving = false;
+          notifyListeners();
+        },
+      );
+    } else {
+      _persistenceService.saveAllData(
+        books: _allBooks,
+        ideas: _ideas,
+        codexEntries: _codexEntries,
+        mindMapNodes: _mindMapNodes,
+        characters: _characters,
+        writerStats: _writerStats,
+        activeBookId: _activeBook.id,
+        activeChapterId: _activeChapter.id,
+        isDarkMode: _isDarkMode,
+        fontFamily: _selectedFontFamily,
+      );
+      _lastSavedTime = DateTime.now();
+      _isSaving = false;
     }
   }
 
-  // Text changes handler
+  // Text changes handler with Debounce & Undo Stack
   void _onTextChanged() {
+    if (_isPerformingUndoRedo) return;
+
     final currentText = textEditingController.text;
 
-    // Update chapter word count & active book stats
-    _activeChapter = _activeChapter.copyWith(
-      content: currentText,
-      lastEdited: DateTime.now(),
-    );
+    // Record undo history if significant change
+    if ((currentText.length - _lastRecordedText.length).abs() > 4 ||
+        currentText.endsWith(' ') ||
+        currentText.endsWith('\n')) {
+      _undoStack.add(_lastRecordedText);
+      if (_undoStack.length > 50) _undoStack.removeAt(0);
+      _redoStack.clear();
+      _lastRecordedText = currentText;
+    }
 
-    final updatedChapters = _activeBook.chapters.map((ch) {
-      return ch.id == _activeChapter.id ? _activeChapter : ch;
-    }).toList();
+    _textChangeDebounceTimer?.cancel();
+    _textChangeDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      final oldWordCount = _activeChapter.wordCount;
 
-    _activeBook = _activeBook.copyWith(
-      chapters: updatedChapters,
-      lastEdited: DateTime.now(),
-    );
+      _activeChapter = _activeChapter.copyWith(
+        content: currentText,
+        lastEdited: DateTime.now(),
+      );
 
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+      final updatedChapters = _activeBook.chapters.map((ch) {
+        return ch.id == _activeChapter.id ? _activeChapter : ch;
+      }).toList();
 
-    saveCurrentSession();
+      _activeBook = _activeBook.copyWith(
+        chapters: updatedChapters,
+        lastEdited: DateTime.now(),
+      );
+
+      _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+      // Update writer stats words today
+      final newWordCount = _activeChapter.wordCount;
+      final delta = newWordCount - oldWordCount;
+      if (delta > 0) {
+        _writerStats = _writerStats.copyWith(
+          wordsToday: _writerStats.wordsToday + delta,
+          totalWordsWritten: _writerStats.totalWordsWritten + delta,
+        );
+      }
+
+      _saveCurrentData(debounced: true);
+      notifyListeners();
+    });
+  }
+
+  // --- UNDO / REDO ---
+
+  void undo() {
+    if (!canUndo) return;
+    _isPerformingUndoRedo = true;
+    _redoStack.add(textEditingController.text);
+    final previousText = _undoStack.removeLast();
+    _lastRecordedText = previousText;
+    textEditingController.text = previousText;
+    textEditingController.selection = TextSelection.collapsed(offset: previousText.length);
+
+    _activeChapter = _activeChapter.copyWith(content: previousText, lastEdited: DateTime.now());
+    _isPerformingUndoRedo = false;
+    _saveCurrentData(debounced: true);
+    notifyListeners();
+  }
+
+  void redo() {
+    if (!canRedo) return;
+    _isPerformingUndoRedo = true;
+    _undoStack.add(textEditingController.text);
+    final nextText = _redoStack.removeLast();
+    _lastRecordedText = nextText;
+    textEditingController.text = nextText;
+    textEditingController.selection = TextSelection.collapsed(offset: nextText.length);
+
+    _activeChapter = _activeChapter.copyWith(content: nextText, lastEdited: DateTime.now());
+    _isPerformingUndoRedo = false;
+    _saveCurrentData(debounced: true);
     notifyListeners();
   }
 
@@ -444,12 +567,14 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
 
   void setFontFamily(String font) {
     _selectedFontFamily = font;
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void toggleThemeMode() {
     _isDarkMode = !_isDarkMode;
     textEditingController.isDarkMode = _isDarkMode;
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
@@ -472,18 +597,28 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     _activeBook = book;
     if (book.chapters.isNotEmpty) {
       _activeChapter = book.chapters.first;
+      textEditingController.removeListener(_onTextChanged);
       textEditingController.text = _activeChapter.content;
+      _lastRecordedText = _activeChapter.content;
+      _undoStack.clear();
+      _redoStack.clear();
+      textEditingController.addListener(_onTextChanged);
     } else {
       addNewChapter('Capítulo 1');
     }
-    saveCurrentSession();
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void selectChapter(ChapterModel chapter) {
     _activeChapter = chapter;
+    textEditingController.removeListener(_onTextChanged);
     textEditingController.text = chapter.content;
-    saveCurrentSession();
+    _lastRecordedText = chapter.content;
+    _undoStack.clear();
+    _redoStack.clear();
+    textEditingController.addListener(_onTextChanged);
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
@@ -493,7 +628,7 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       id: 'ch_${DateTime.now().millisecondsSinceEpoch}',
       bookId: _activeBook.id,
       chapterNumber: newChapterNum,
-      title: title.isEmpty ? 'Capítulo $newChapterNum' : title,
+      title: title.trim().isEmpty ? 'Capítulo $newChapterNum' : title.trim(),
       content: '',
       lastEdited: DateTime.now(),
       notes: '',
@@ -503,10 +638,36 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     final updatedChapters = List<ChapterModel>.from(_activeBook.chapters)..add(newChapter);
     _activeBook = _activeBook.copyWith(chapters: updatedChapters);
     _activeChapter = newChapter;
+
+    textEditingController.removeListener(_onTextChanged);
     textEditingController.text = '';
+    _lastRecordedText = '';
+    _undoStack.clear();
+    _redoStack.clear();
+    textEditingController.addListener(_onTextChanged);
 
     _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
-    saveCurrentSession();
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  void reorderChapters(int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final List<ChapterModel> reordered = List.from(_activeBook.chapters);
+    final ChapterModel moved = reordered.removeAt(oldIndex);
+    reordered.insert(newIndex, moved);
+
+    // Re-assign chapter numbers sequentially
+    final updatedList = <ChapterModel>[];
+    for (int i = 0; i < reordered.length; i++) {
+      updatedList.add(reordered[i].copyWith(chapterNumber: i + 1));
+    }
+
+    _activeBook = _activeBook.copyWith(chapters: updatedList);
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
@@ -559,7 +720,53 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     if (_activeChapter.id == chapterId) {
       _activeChapter = _activeChapter.copyWith(isCompleted: !_activeChapter.isCompleted);
     }
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _saveCurrentData(debounced: false);
     notifyListeners();
+  }
+
+  bool deleteChapter(String chapterId) {
+    if (_activeBook.chapters.length <= 1) {
+      return false;
+    }
+
+    final updatedChapters = _activeBook.chapters
+        .where((ch) => ch.id != chapterId)
+        .toList();
+
+    final reindexed = <ChapterModel>[];
+    for (int i = 0; i < updatedChapters.length; i++) {
+      reindexed.add(updatedChapters[i].copyWith(chapterNumber: i + 1));
+    }
+
+    _activeBook = _activeBook.copyWith(chapters: reindexed);
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+    if (_activeChapter.id == chapterId) {
+      selectChapter(reindexed.first);
+    } else {
+      _saveCurrentData(debounced: false);
+      notifyListeners();
+    }
+    return true;
+  }
+
+  bool deleteBook(String bookId) {
+    if (_allBooks.length <= 1) {
+      return false;
+    }
+
+    _allBooks = _allBooks.where((b) => b.id != bookId).toList();
+    _mindMapNodes.removeWhere((n) => n.bookId == bookId);
+    _characters.removeWhere((c) => c.bookId == bookId);
+
+    if (_activeBook.id == bookId) {
+      selectBook(_allBooks.first);
+    } else {
+      _saveCurrentData(debounced: false);
+      notifyListeners();
+    }
+    return true;
   }
 
   // --- CHARACTERS ACTIONS ---
@@ -567,16 +774,19 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
   void addCharacter(CharacterModel character) {
     final scoped = character.bookId.isEmpty ? character.copyWith(bookId: _activeBook.id) : character;
     _characters.insert(0, scoped);
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void updateCharacter(CharacterModel updated) {
     _characters = _characters.map((c) => c.id == updated.id ? updated : c).toList();
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void deleteCharacter(String characterId) {
     _characters.removeWhere((c) => c.id == characterId);
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
@@ -607,6 +817,7 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
 
   void addIdea(IdeaSnippetModel idea) {
     _ideas.insert(0, idea);
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
@@ -617,11 +828,12 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       }
       return item;
     }).toList();
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void insertIdeaToEditor(IdeaSnippetModel idea) {
-    insertTextToEditor('\n\n/* Idea Snippet: ${idea.title} */\n${idea.content}\n\n');
+    insertTextToEditor('\n\n/* Fragmento de Idea: ${idea.title} */\n${idea.content}\n\n');
   }
 
   void insertTextToEditor(String snippetText) {
@@ -630,14 +842,15 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
 
     if (selection.isValid && selection.start >= 0) {
       final newText = text.replaceRange(selection.start, selection.end, snippetText);
-      textEditingController.text = newText;
-      textEditingController.selection = TextSelection.collapsed(
-        offset: selection.start + snippetText.length,
+      textEditingController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: selection.start + snippetText.length),
       );
     } else {
-      textEditingController.text = text + snippetText;
-      textEditingController.selection = TextSelection.collapsed(
-        offset: textEditingController.text.length,
+      final newText = text + snippetText;
+      textEditingController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newText.length),
       );
     }
   }
@@ -646,6 +859,7 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
 
   void addCodexEntry(CodexEntryModel entry) {
     _codexEntries.insert(0, entry);
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
@@ -656,6 +870,7 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       }
       return item;
     }).toList();
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
@@ -696,6 +911,7 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
   void addMindMapNode(MindMapNodeModel node) {
     final scopedNode = node.bookId.isEmpty ? node.copyWith(bookId: _activeBook.id) : node;
     _mindMapNodes.add(scopedNode);
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
@@ -706,17 +922,18 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       }
       return n;
     }).toList();
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void updateMindMapNodePosition(String nodeId, Offset newPos) {
     _mindMapNodes = _mindMapNodes.map((n) {
       if (n.id == nodeId) {
-        n.dx = newPos.dx;
-        n.dy = newPos.dy;
+        return n.copyWith(dx: newPos.dx, dy: newPos.dy);
       }
       return n;
     }).toList();
+    _saveCurrentData(debounced: true);
     notifyListeners();
   }
 
@@ -724,10 +941,12 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     if (fromId == toId) return;
     _mindMapNodes = _mindMapNodes.map((n) {
       if (n.id == fromId && !n.connectedToIds.contains(toId)) {
-        n.connectedToIds.add(toId);
+        final updated = List<String>.from(n.connectedToIds)..add(toId);
+        return n.copyWith(connectedToIds: updated);
       }
       return n;
     }).toList();
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
@@ -777,25 +996,37 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     };
 
     // Auto-arrange only the nodes belonging to the active book
-    for (var node in _mindMapNodes.where((n) => n.bookId == _activeBook.id)) {
-      final count = actCounters[node.act] ?? 0;
-      node.dx = actX[node.act] ?? 100.0;
-      node.dy = 120.0 + (count * 170.0);
-      actCounters[node.act] = count + 1;
-    }
+    _mindMapNodes = _mindMapNodes.map((node) {
+      if (node.bookId == _activeBook.id) {
+        final count = actCounters[node.act] ?? 0;
+        actCounters[node.act] = count + 1;
+        final newX = actX[node.act] ?? 100.0;
+        final newY = 120.0 + (count * 170.0);
+        return node.copyWith(dx: newX, dy: newY);
+      }
+      return node;
+    }).toList();
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void deleteMindMapNode(String nodeId) {
     _mindMapNodes.removeWhere((n) => n.id == nodeId);
-    for (var n in _mindMapNodes) {
-      n.connectedToIds.remove(nodeId);
-    }
+    _mindMapNodes = _mindMapNodes.map((n) {
+      if (n.connectedToIds.contains(nodeId)) {
+        final updated = List<String>.from(n.connectedToIds)..remove(nodeId);
+        return n.copyWith(connectedToIds: updated);
+      }
+      return n;
+    }).toList();
+    _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   @override
   void dispose() {
+    _textChangeDebounceTimer?.cancel();
+    _persistenceService.dispose();
     textEditingController.dispose();
     focusNode.dispose();
     super.dispose();

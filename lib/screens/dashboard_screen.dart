@@ -11,6 +11,8 @@ import '../widgets/writing_sprint_dialog.dart';
 import '../widgets/export_manuscript_dialog.dart';
 import '../models/idea_snippet_model.dart';
 import '../models/codex_entry_model.dart';
+import '../models/book_model.dart';
+import '../controllers/theme_controller.dart';
 import '../formatters/writer_text_formatter.dart';
 import '../widgets/progress_ring_card.dart';
 import 'zen_editor_screen.dart';
@@ -375,6 +377,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showBookOptions(BuildContext context, EditorController controller, BookModel book, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.ios_share_rounded),
+              title: const Text('Exportar Manuscrito', style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Text(book.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                controller.switchBook(book.id);
+                _openExportDialog(context, isDark);
+              },
+            ),
+            if (controller.allBooks.length > 1)
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                title: const Text('Eliminar Libro', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700)),
+                subtitle: const Text('Se borrarán sus capítulos, personajes y trama'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _confirmDeleteBook(context, controller, book);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteBook(BuildContext context, EditorController controller, BookModel book) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Eliminar libro?'),
+        content: Text('Se eliminará permanentemente "${book.title}" con todos sus capítulos, mapa de trama y personajes asociados.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () {
+              controller.deleteBook(book.id);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddIdeaDialog(BuildContext context, EditorController controller) {
     final titleCtrl = TextEditingController();
     final contentCtrl = TextEditingController();
@@ -493,16 +557,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onPressed: () {
                     final title = titleCtrl.text.trim();
                     if (title.isNotEmpty) {
+                      final defaultEmoji = category == CodexType.character
+                          ? '🧙‍♂️'
+                          : category == CodexType.location
+                              ? '🏰'
+                              : category == CodexType.artifact
+                                  ? '🗝️'
+                                  : '📜';
+
                       final newEntry = CodexEntryModel(
                         id: 'codex_${DateTime.now().millisecondsSinceEpoch}',
                         bookId: controller.activeBook.id,
                         name: title,
-                        type: CodexType.character,
-                        role: 'Personaje / Elemento',
+                        type: category,
+                        role: 'Elemento de ${category.name}',
                         description: descCtrl.text.trim(),
                         traits: ['Manuscrito'],
                         secrets: '',
-                        avatarEmoji: '👤',
+                        avatarEmoji: defaultEmoji,
                         createdAt: DateTime.now(),
                       );
                       controller.addCodexEntry(newEntry);
@@ -522,7 +594,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<EditorController>(context);
-    final isDark = controller.isDarkMode;
+    final themeController = Provider.of<ThemeController>(context);
+    final isDark = themeController.isDarkMode;
 
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
@@ -655,7 +728,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               size: 18,
                               color: textPrimary,
                             ),
-                            onPressed: () => controller.toggleThemeMode(),
+                            onPressed: () {
+                              themeController.toggleThemeMode();
+                              controller.toggleThemeMode();
+                            },
                             tooltip: 'Cambiar Tema',
                           ),
                         ),
@@ -1058,6 +1134,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
                               );
                             },
+                            onMoreTap: controller.allBooks.length > 1
+                                ? () => _showBookOptions(context, controller, book, isDark)
+                                : null,
                           );
                         },
                       ),
@@ -1283,6 +1362,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     children: [
+                      ProgressRingCard(stats: controller.writerStats, isDark: isDark),
+                      const SizedBox(height: 16),
                       SoundscapeBar(isDark: isDark),
                       const SizedBox(height: 16),
                       Row(

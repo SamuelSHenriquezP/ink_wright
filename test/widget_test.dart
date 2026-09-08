@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ink_wright/controllers/editor_controller.dart';
+import 'package:ink_wright/controllers/theme_controller.dart';
+import 'package:ink_wright/controllers/sprint_controller.dart';
 import 'package:ink_wright/main.dart';
 
 void main() {
@@ -15,6 +17,15 @@ void main() {
   test('Smoke test controller initialization', () {
     final controller = EditorController();
     expect(controller.activeBook.chapters.length, equals(3));
+  });
+
+  test('Smoke test ThemeController and SprintController', () {
+    final theme = ThemeController();
+    expect(theme.isDarkMode, isFalse);
+    expect(theme.isZenMode, isFalse);
+
+    final sprint = SprintController();
+    expect(sprint.isSprintActive, isFalse);
   });
 
   testWidgets('App opens last written text directly on launch and navigates back to Dashboard', (WidgetTester tester) async {

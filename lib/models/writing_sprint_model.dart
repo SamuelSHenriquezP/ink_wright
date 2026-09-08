@@ -46,4 +46,30 @@ class WritingSprintModel {
       isCompleted: isCompleted ?? this.isCompleted,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'durationMinutes': durationMinutes,
+      'targetWords': targetWords,
+      'startingWordCount': startingWordCount,
+      'wordsWritten': wordsWritten,
+      'startTime': startTime.toIso8601String(),
+      'isActive': isActive,
+      'isCompleted': isCompleted,
+    };
+  }
+
+  factory WritingSprintModel.fromMap(Map<String, dynamic> map) {
+    return WritingSprintModel(
+      durationMinutes: map['durationMinutes'] as int? ?? 25,
+      targetWords: map['targetWords'] as int? ?? 500,
+      startingWordCount: map['startingWordCount'] as int? ?? 0,
+      wordsWritten: map['wordsWritten'] as int? ?? 0,
+      startTime: map['startTime'] != null
+          ? DateTime.tryParse(map['startTime'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      isActive: map['isActive'] as bool? ?? false,
+      isCompleted: map['isCompleted'] as bool? ?? false,
+    );
+  }
 }

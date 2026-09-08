@@ -79,4 +79,46 @@ class BookModel {
       synopsis: synopsis ?? this.synopsis,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'subtitle': subtitle,
+      'genre': genre,
+      'coverEmoji': coverEmoji,
+      'coverColorHex': coverColorHex,
+      'targetWordCount': targetWordCount,
+      'chapters': chapters.map((c) => c.toMap()).toList(),
+      'lastEdited': lastEdited.toIso8601String(),
+      'status': status.name,
+      'tags': tags,
+      'synopsis': synopsis,
+    };
+  }
+
+  factory BookModel.fromMap(Map<String, dynamic> map) {
+    return BookModel(
+      id: map['id'] as String? ?? '',
+      title: map['title'] as String? ?? '',
+      subtitle: map['subtitle'] as String? ?? '',
+      genre: map['genre'] as String? ?? '',
+      coverEmoji: map['coverEmoji'] as String? ?? '📖',
+      coverColorHex: map['coverColorHex'] as int? ?? 0xFF18181B,
+      targetWordCount: map['targetWordCount'] as int? ?? 50000,
+      chapters: (map['chapters'] as List<dynamic>?)
+              ?.map((c) => ChapterModel.fromMap(c as Map<String, dynamic>))
+              .toList() ??
+          [],
+      lastEdited: map['lastEdited'] != null
+          ? DateTime.tryParse(map['lastEdited'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      status: BookStatus.values.firstWhere(
+        (s) => s.name == (map['status'] as String? ?? ''),
+        orElse: () => BookStatus.drafting,
+      ),
+      tags: (map['tags'] as List<dynamic>?)?.map((t) => t.toString()).toList() ?? [],
+      synopsis: map['synopsis'] as String? ?? '',
+    );
+  }
 }

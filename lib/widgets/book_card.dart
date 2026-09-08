@@ -74,8 +74,21 @@ class BookCard extends StatelessWidget {
                       ),
                     ),
 
-                    // Status pill tag in Spanish & B&W
-                    _buildStatusPill(book.status, accentColor, isDark),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildStatusPill(book.status, accentColor, isDark),
+                        if (onMoreTap != null) ...[
+                          const SizedBox(width: 4),
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            icon: Icon(Icons.more_vert_rounded, size: 18, color: textSecondary),
+                            onPressed: onMoreTap,
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
 

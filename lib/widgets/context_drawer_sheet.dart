@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../controllers/editor_controller.dart';
 import '../formatters/writer_text_formatter.dart';
 import '../models/chapter_model.dart';
+import '../models/book_model.dart';
 import 'muse_assistant_sheet.dart';
 
 class ContextDrawerSheet extends StatefulWidget {
@@ -36,7 +37,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
   }
 
   void _openMuseStudio(BuildContext context) {
-    Navigator.of(context).pop(); // pop context drawer
+    Navigator.of(context).pop();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -159,7 +160,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
             child: TabBarView(
               controller: _tabController,
               children: [
-                // TAB 1: Chapters Outline
+                // TAB 1: Chapters Outline with Reordering
                 _buildChaptersTab(controller, activeBook, activeChapter, textPrimary, textSecondary, accentMint, borderSubtle),
 
                 // TAB 2: World Codex Bible
@@ -180,7 +181,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
 
   Widget _buildChaptersTab(
     EditorController controller,
-    dynamic activeBook,
+    BookModel activeBook,
     ChapterModel activeChapter,
     Color textPrimary,
     Color textSecondary,
@@ -190,15 +191,18 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
     return Column(
       children: [
         Expanded(
-          child: ListView.separated(
+          child: ReorderableListView.builder(
             padding: const EdgeInsets.all(20),
             itemCount: activeBook.chapters.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            onReorderItem: (oldIndex, newIndex) {
+              controller.reorderChapters(oldIndex, newIndex);
+            },
             itemBuilder: (context, index) {
               final chapter = activeBook.chapters[index];
               final isSelected = chapter.id == activeChapter.id;
 
               return Material(
+                key: ValueKey(chapter.id),
                 color: isSelected ? accentMint.withValues(alpha: 0.1) : (widget.isDark ? const Color(0xFF222222) : const Color(0xFFFAFAF8)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -217,7 +221,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: isSelected ? Colors.white : textPrimary,
+                        color: isSelected ? (widget.isDark ? Colors.black : Colors.white) : textPrimary,
                       ),
                     ),
                   ),
@@ -230,15 +234,28 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
                     ),
                   ),
                   subtitle: Text(
-                    '${chapter.wordCount} words • ${chapter.readingTimeMinutes} min read',
+                    '${chapter.wordCount} palabras • ${chapter.readingTimeMinutes} min lectura',
                     style: TextStyle(fontSize: 11, color: textSecondary),
                   ),
-                  trailing: IconButton(
-                    icon: Icon(
-                      chapter.isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                      color: chapter.isCompleted ? accentMint : textSecondary,
-                    ),
-                    onPressed: () => controller.toggleChapterCompletion(chapter.id),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          chapter.isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                          color: chapter.isCompleted ? accentMint : textSecondary,
+                        ),
+                        onPressed: () => controller.toggleChapterCompletion(chapter.id),
+                        tooltip: 'Marcar como completado',
+                      ),
+                      if (activeBook.chapters.length > 1)
+                        IconButton(
+                          icon: Icon(Icons.delete_outline_rounded, size: 18, color: textSecondary),
+                          tooltip: 'Eliminar capítulo',
+                          onPressed: () => _confirmDeleteChapter(context, controller, chapter),
+                        ),
+                      const Icon(Icons.drag_handle_rounded, size: 20, color: Colors.grey),
+                    ],
                   ),
                   onTap: () {
                     controller.selectChapter(chapter);
@@ -256,7 +273,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: accentMint,
-              foregroundColor: Colors.white,
+              foregroundColor: widget.isDark ? Colors.black : Colors.white,
               minimumSize: const Size(double.infinity, 48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
@@ -264,7 +281,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
               elevation: 0,
             ),
             icon: const Icon(Icons.add_rounded),
-            label: const Text('Add New Chapter', style: TextStyle(fontWeight: FontWeight.w700)),
+            label: const Text('Añadir Nuevo Capítulo', style: TextStyle(fontWeight: FontWeight.w700)),
             onPressed: () {
               _showAddChapterDialog(context, controller);
             },
@@ -406,10 +423,10 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
                 ),
                 IconButton(
                   icon: Icon(Icons.add_comment_rounded, size: 20, color: accentMint),
-                  tooltip: 'Insertar Referencia',
+                  tooltip: 'Insertar nota del Códice al Manuscrito',
                   onPressed: () {
                     controller.insertTextToEditor(
-                      '\n\n/* Códice (${entry.typeLabel}): ${entry.name} */\n${entry.description}\n\n',
+                      '\n\n/* Códice (${entry.typeLabel}): ${entry.name} */\nRol: ${entry.role}\nDescripción: ${entry.description}\n\n',
                     );
                     Navigator.of(context).pop();
                   },
@@ -437,14 +454,14 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        _buildMetricRow('Total Words', '$wordCount words', textPrimary, textSecondary, borderSubtle),
-        _buildMetricRow('Characters (with spaces)', '$charCount', textPrimary, textSecondary, borderSubtle),
-        _buildMetricRow('Characters (without spaces)', '$charNoSpaces', textPrimary, textSecondary, borderSubtle),
-        _buildMetricRow('Paragraphs', '$paragraphCount', textPrimary, textSecondary, borderSubtle),
-        _buildMetricRow('Est. Reading Time', WriterTextFormatter.formatReadingTime(readingTime), textPrimary, textSecondary, borderSubtle),
+        _buildMetricRow('Palabras Totales', '$wordCount palabras', textPrimary, textSecondary, borderSubtle),
+        _buildMetricRow('Caracteres (con espacios)', '$charCount', textPrimary, textSecondary, borderSubtle),
+        _buildMetricRow('Caracteres (sin espacios)', '$charNoSpaces', textPrimary, textSecondary, borderSubtle),
+        _buildMetricRow('Párrafos', '$paragraphCount', textPrimary, textSecondary, borderSubtle),
+        _buildMetricRow('Tiempo Estimado de Lectura', WriterTextFormatter.formatReadingTime(readingTime), textPrimary, textSecondary, borderSubtle),
         const SizedBox(height: 16),
         Text(
-          'POV Character & Chapter Notes',
+          'Personaje POV y Notas del Capítulo',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textPrimary),
         ),
         const SizedBox(height: 8),
@@ -459,12 +476,12 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'POV: ${activeChapter.povCharacter.isEmpty ? 'Not specified' : activeChapter.povCharacter}',
+                'POV: ${activeChapter.povCharacter.isEmpty ? 'No especificado' : activeChapter.povCharacter}',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: accentMint),
               ),
               const SizedBox(height: 6),
               Text(
-                activeChapter.notes.isEmpty ? 'No chapter notes added yet.' : activeChapter.notes,
+                activeChapter.notes.isEmpty ? 'Sin notas añadidas a este capítulo todavía.' : activeChapter.notes,
                 style: TextStyle(fontSize: 12, color: textSecondary, height: 1.4),
               ),
             ],
@@ -532,7 +549,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
               ),
               IconButton(
                 icon: Icon(Icons.add_comment_rounded, size: 20, color: accentMint),
-                tooltip: 'Insert to Canvas',
+                tooltip: 'Insertar en el Manuscrito',
                 onPressed: () {
                   controller.insertIdeaToEditor(idea);
                   Navigator.of(context).pop();
@@ -550,32 +567,63 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Add New Chapter'),
+          title: const Text('Añadir Nuevo Capítulo'),
           content: TextField(
             controller: _newChapterTitleController,
             autofocus: true,
             decoration: const InputDecoration(
-              hintText: 'Enter chapter title...',
+              hintText: 'Título del capítulo...',
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: const Text('Cancelar'),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () {
                 final title = _newChapterTitleController.text.trim();
                 controller.addNewChapter(title);
                 _newChapterTitleController.clear();
-                Navigator.of(context).pop(); // pop dialog
-                Navigator.of(context).pop(); // pop bottom sheet to open editor
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
               },
-              child: const Text('Add Chapter'),
+              child: const Text('Crear Capítulo'),
             ),
           ],
         );
       },
+    );
+  }
+
+  void _confirmDeleteChapter(BuildContext context, EditorController controller, ChapterModel chapter) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Eliminar capítulo?'),
+        content: Text('Se eliminará "${chapter.title}" y su contenido no podrá recuperarse.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              controller.deleteChapter(chapter.id);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
     );
   }
 }

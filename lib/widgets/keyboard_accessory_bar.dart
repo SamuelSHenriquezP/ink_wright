@@ -12,6 +12,10 @@ class KeyboardAccessoryBar extends StatelessWidget {
   final VoidCallback onOpenIdeas;
   final VoidCallback onOpenContextDrawer;
   final int wordCount;
+  final VoidCallback? onUndo;
+  final VoidCallback? onRedo;
+  final bool canUndo;
+  final bool canRedo;
 
   const KeyboardAccessoryBar({
     super.key,
@@ -21,6 +25,10 @@ class KeyboardAccessoryBar extends StatelessWidget {
     required this.onOpenIdeas,
     required this.onOpenContextDrawer,
     required this.wordCount,
+    this.onUndo,
+    this.onRedo,
+    this.canUndo = false,
+    this.canRedo = false,
   });
 
   void _openMuseSheet(BuildContext context) {
@@ -39,6 +47,28 @@ class KeyboardAccessoryBar extends StatelessWidget {
     );
   }
 
+  void _insertSpanishQuotes() {
+    final selection = textController.selection;
+    final text = textController.text;
+    int start = selection.isValid ? selection.start : text.length;
+    int end = selection.isValid ? selection.end : text.length;
+
+    if (start != end) {
+      final selected = text.substring(start, end);
+      final newText = text.replaceRange(start, end, '« $selected »');
+      textController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection(baseOffset: start + 2, extentOffset: start + 2 + selected.length),
+      );
+    } else {
+      final newText = text.replaceRange(start, end, '«  »');
+      textController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: start + 2),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
@@ -52,7 +82,7 @@ class KeyboardAccessoryBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: bgCard,
-        borderRadius: BorderRadius.circular(30.0), // Pill radius
+        borderRadius: BorderRadius.circular(30.0),
         border: Border.all(color: borderSubtle, width: 1),
         boxShadow: AppTheme.getSoftShadow(isDark),
       ),
@@ -62,7 +92,7 @@ class KeyboardAccessoryBar extends StatelessWidget {
           GestureDetector(
             onTap: onOpenContextDrawer,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(20),
@@ -70,12 +100,12 @@ class KeyboardAccessoryBar extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(Icons.edit_note_rounded, size: 16, color: textPrimary),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 4),
                   Text(
                     '$wordCount p',
                     style: TextStyle(
                       color: textPrimary,
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -83,7 +113,31 @@ class KeyboardAccessoryBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
+
+          // Undo / Redo buttons
+          IconButton(
+            icon: Icon(
+              Icons.undo_rounded,
+              size: 18,
+              color: canUndo ? textPrimary : textSecondary.withValues(alpha: 0.3),
+            ),
+            tooltip: 'Deshacer',
+            onPressed: canUndo ? onUndo : null,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.redo_rounded,
+              size: 18,
+              color: canRedo ? textPrimary : textSecondary.withValues(alpha: 0.3),
+            ),
+            tooltip: 'Rehacer',
+            onPressed: canRedo ? onRedo : null,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
 
           Container(height: 20, width: 1, color: borderSubtle),
 
@@ -178,7 +232,7 @@ class KeyboardAccessoryBar extends StatelessWidget {
                   _buildToolButton(
                     iconText: '«»',
                     tooltip: 'Comillas españolas',
-                    onTap: () => WriterTextFormatter.insertAtCursor(textController, '«  »'),
+                    onTap: _insertSpanishQuotes,
                     textPrimary: textPrimary,
                   ),
                 ],
@@ -231,7 +285,7 @@ class KeyboardAccessoryBar extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
           child: Text(
             iconText,
             style: TextStyle(

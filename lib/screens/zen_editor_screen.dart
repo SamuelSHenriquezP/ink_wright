@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../controllers/editor_controller.dart';
+import '../controllers/theme_controller.dart';
 import '../widgets/keyboard_accessory_bar.dart';
 import '../widgets/context_drawer_sheet.dart';
 import '../widgets/export_manuscript_dialog.dart';
@@ -62,8 +63,9 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<EditorController>(context);
-    final isDark = controller.isDarkMode;
-    final isZen = controller.isZenMode;
+    final themeController = Provider.of<ThemeController>(context);
+    final isDark = themeController.isDarkMode;
+    final isZen = themeController.isZenMode;
 
     final bgPrimary = isDark ? AppTheme.darkBgPrimary : AppTheme.lightBgPrimary;
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
@@ -153,7 +155,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                   ),
                                 ),
 
-                                // Live Word Counter Badge Pill
+                                // Live Word Counter Badge Pill + AutoSave Status
                                 GestureDetector(
                                   onTap: () => _openContextDrawer(context, isDark),
                                   child: Container(
@@ -163,13 +165,32 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
                                     ),
-                                    child: Text(
-                                      '$wordCount palabras',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: textPrimary,
-                                      ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '$wordCount palabras',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: textPrimary,
+                                          ),
+                                        ),
+                                        if (controller.isSaving) ...[
+                                          const SizedBox(width: 6),
+                                          SizedBox(
+                                            width: 10,
+                                            height: 10,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 1.5,
+                                              valueColor: AlwaysStoppedAnimation<Color>(textSecondary),
+                                            ),
+                                          ),
+                                        ] else ...[
+                                          const SizedBox(width: 5),
+                                          Icon(Icons.check_circle_outline_rounded, size: 12, color: textSecondary.withValues(alpha: 0.6)),
+                                        ],
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -255,7 +276,10 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                     size: 22,
                                     color: isZen ? accentColor : textSecondary,
                                   ),
-                                  onPressed: () => controller.toggleZenMode(),
+                                  onPressed: () {
+                                    themeController.toggleZenMode();
+                                    controller.toggleZenMode();
+                                  },
                                   tooltip: 'Pantalla Completa',
                                 ),
                               ],
@@ -315,7 +339,10 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                   backgroundColor: accentColor,
                   foregroundColor: isDark ? Colors.black : Colors.white,
                   child: const Icon(Icons.close_fullscreen_rounded, size: 18),
-                  onPressed: () => controller.toggleZenMode(),
+                  onPressed: () {
+                    themeController.toggleZenMode();
+                    controller.toggleZenMode();
+                  },
                 ),
               ).animate().fadeIn(duration: 200.ms),
 
@@ -328,10 +355,17 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                 child: KeyboardAccessoryBar(
                   textController: controller.textEditingController,
                   isDark: isDark,
-                  onToggleZenMode: () => controller.toggleZenMode(),
+                  onToggleZenMode: () {
+                    themeController.toggleZenMode();
+                    controller.toggleZenMode();
+                  },
                   onOpenIdeas: () => _openContextDrawer(context, isDark),
                   onOpenContextDrawer: () => _openContextDrawer(context, isDark),
                   wordCount: wordCount,
+                  canUndo: controller.canUndo,
+                  canRedo: controller.canRedo,
+                  onUndo: () => controller.undo(),
+                  onRedo: () => controller.redo(),
                 ),
               ),
           ],

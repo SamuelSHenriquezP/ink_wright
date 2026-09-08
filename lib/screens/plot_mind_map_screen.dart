@@ -388,22 +388,9 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                       initialValue: selectedAct,
                       decoration: const InputDecoration(labelText: 'Acto Narrativo'),
                       items: PlotAct.values.map((act) {
-                        final dummy = MindMapNodeModel(
-                          id: '',
-                          bookId: '',
-                          title: '',
-                          description: '',
-                          act: act,
-                          type: PlotNodeType.mainPlot,
-                          dx: 0,
-                          dy: 0,
-                          connectedToIds: [],
-                          colorHex: 0,
-                          iconEmoji: '',
-                        );
                         return DropdownMenuItem(
                           value: act,
-                          child: Text(dummy.actLabel),
+                          child: Text(act.label),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -415,22 +402,9 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                       initialValue: selectedType,
                       decoration: const InputDecoration(labelText: 'Tipo de Elemento'),
                       items: PlotNodeType.values.map((type) {
-                        final dummy = MindMapNodeModel(
-                          id: '',
-                          bookId: '',
-                          title: '',
-                          description: '',
-                          act: PlotAct.act1Exposition,
-                          type: type,
-                          dx: 0,
-                          dy: 0,
-                          connectedToIds: [],
-                          colorHex: 0,
-                          iconEmoji: '',
-                        );
                         return DropdownMenuItem(
                           value: type,
-                          child: Text(dummy.typeLabel),
+                          child: Text(type.label),
                         );
                       }).toList(),
                       onChanged: (val) {

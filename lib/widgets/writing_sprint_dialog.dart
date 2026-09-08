@@ -1,9 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../controllers/editor_controller.dart';
-import '../formatters/writer_text_formatter.dart';
+import '../controllers/sprint_controller.dart';
 
 class WritingSprintDialog extends StatefulWidget {
   final bool isDark;
@@ -18,71 +17,28 @@ class WritingSprintDialog extends StatefulWidget {
 }
 
 class _WritingSprintDialogState extends State<WritingSprintDialog> {
-  int _selectedDuration = 25; // default 25 min
+  int _selectedDuration = 25;
   final TextEditingController _targetWordsCtrl = TextEditingController(text: '500');
-
-  Timer? _timer;
-  int _secondsRemaining = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    final controller = Provider.of<EditorController>(context, listen: false);
-    if (controller.activeSprint != null && controller.activeSprint!.isActive) {
-      _secondsRemaining = controller.activeSprint!.durationMinutes * 60 -
-          DateTime.now().difference(controller.activeSprint!.startTime).inSeconds;
-      if (_secondsRemaining > 0) {
-        _startTimerCountdown();
-      }
-    }
-  }
 
   @override
   void dispose() {
-    _timer?.cancel();
     _targetWordsCtrl.dispose();
     super.dispose();
   }
 
-  void _startTimerCountdown() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_secondsRemaining <= 1) {
-        timer.cancel();
-        setState(() {
-          _secondsRemaining = 0;
-        });
-      } else {
-        setState(() {
-          _secondsRemaining--;
-        });
-      }
-    });
-  }
-
-  String _formatTimer(int totalSeconds) {
-    if (totalSeconds <= 0) return '00:00';
-    final m = totalSeconds ~/ 60;
-    final s = totalSeconds % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final controller = Provider.of<EditorController>(context);
+    final sprintController = Provider.of<SprintController>(context);
+    final editorController = Provider.of<EditorController>(context, listen: false);
+
     final bgCard = widget.isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
     final textPrimary = widget.isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = widget.isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = widget.isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
     final accentColor = widget.isDark ? Colors.white : Colors.black;
 
-    final sprint = controller.activeSprint;
-    final isSprintActive = sprint != null && sprint.isActive;
-
-    final currentWords = WriterTextFormatter.countWords(controller.textEditingController.text);
-    final wordsWrittenInSprint = isSprintActive
-        ? (currentWords - sprint.startingWordCount).clamp(0, 99999)
-        : 0;
+    final sprint = sprintController.activeSprint;
+    final isSprintActive = sprintController.isSprintActive;
 
     return Dialog(
       backgroundColor: bgCard,
@@ -122,7 +78,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
 
             const SizedBox(height: 16),
 
-            if (isSprintActive) ...[
+            if (isSprintActive && sprint != null) ...[
               // Active Sprint Display Card
               Container(
                 padding: const EdgeInsets.all(20),
@@ -134,7 +90,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                 child: Column(
                   children: [
                     Text(
-                      _formatTimer(_secondsRemaining),
+                      sprintController.formattedTimeRemaining,
                       style: TextStyle(
                         fontSize: 42,
                         fontWeight: FontWeight.w900,
@@ -154,7 +110,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                     ),
                     const SizedBox(height: 16),
                     LinearProgressIndicator(
-                      value: (wordsWrittenInSprint / sprint.targetWords).clamp(0.0, 1.0),
+                      value: sprint.progress,
                       backgroundColor: widget.isDark ? Colors.white12 : Colors.black12,
                       valueColor: AlwaysStoppedAnimation<Color>(accentColor),
                       borderRadius: BorderRadius.circular(10),
@@ -165,7 +121,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '$wordsWrittenInSprint / ${sprint.targetWords} palabras',
+                          '${sprint.wordsWritten} / ${sprint.targetWords} palabras',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -173,7 +129,7 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                           ),
                         ),
                         Text(
-                          '${((wordsWrittenInSprint / sprint.targetWords) * 100).clamp(0, 100).round()}%',
+                          '${(sprint.progress * 100).round()}%',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
@@ -199,8 +155,8 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                 icon: const Icon(Icons.stop_circle_rounded),
                 label: const Text('Detener Sprint Actual', style: TextStyle(fontWeight: FontWeight.w700)),
                 onPressed: () {
-                  _timer?.cancel();
-                  controller.stopSprint();
+                  sprintController.stopSprint();
+                  editorController.stopSprint();
                 },
               ),
             ] else ...[
@@ -292,12 +248,17 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                 label: const Text('Iniciar Sprint de Escritura', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 onPressed: () {
                   final target = int.tryParse(_targetWordsCtrl.text) ?? 500;
-                  controller.startSprint(
+                  final currentContent = editorController.textEditingController.text;
+
+                  sprintController.startSprint(
+                    durationMinutes: _selectedDuration,
+                    targetWords: target,
+                    currentContent: currentContent,
+                  );
+                  editorController.startSprint(
                     durationMinutes: _selectedDuration,
                     targetWords: target,
                   );
-                  _secondsRemaining = _selectedDuration * 60;
-                  _startTimerCountdown();
                 },
               ),
             ],
