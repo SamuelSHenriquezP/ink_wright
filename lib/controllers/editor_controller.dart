@@ -7,7 +7,6 @@ import '../models/chapter_snapshot_model.dart';
 import '../models/idea_snippet_model.dart';
 import '../models/writer_stats_model.dart';
 import '../models/codex_entry_model.dart';
-import '../models/soundscape_model.dart';
 import '../models/writing_sprint_model.dart';
 import '../models/mind_map_node_model.dart';
 import '../models/character_model.dart';
@@ -30,12 +29,8 @@ class EditorController extends ChangeNotifier {
   List<BookModel> _allBooks = [];
   List<IdeaSnippetModel> _ideas = [];
   List<CodexEntryModel> _codexEntries = [];
-  List<SoundscapeModel> _soundscapes = [];
   List<MindMapNodeModel> _mindMapNodes = [];
   List<CharacterModel> _characters = [];
-
-  SoundscapeModel? _activeSoundscape;
-  bool _isPlayingAmbience = false;
 
   WritingSprintModel? _activeSprint;
   String _selectedFontFamily = 'Lora';
@@ -75,7 +70,6 @@ class EditorController extends ChangeNotifier {
   List<BookModel> get allBooks => List.unmodifiable(_allBooks);
   List<IdeaSnippetModel> get ideas => List.unmodifiable(_ideas);
   List<CodexEntryModel> get codexEntries => List.unmodifiable(_codexEntries);
-  List<SoundscapeModel> get soundscapes => List.unmodifiable(_soundscapes);
 
   // Each mind map is strictly individual per book
   List<MindMapNodeModel> get mindMapNodes =>
@@ -86,8 +80,6 @@ class EditorController extends ChangeNotifier {
       _characters.where((c) => c.bookId == _activeBook.id).toList();
   List<CharacterModel> get allCharacters => List.unmodifiable(_characters);
 
-  SoundscapeModel? get activeSoundscape => _activeSoundscape;
-  bool get isPlayingAmbience => _isPlayingAmbience;
   WritingSprintModel? get activeSprint => _activeSprint;
   String get selectedFontFamily => _selectedFontFamily;
   double get fontSize => _fontSize;
@@ -262,42 +254,6 @@ Cada libro en Ink & Wright tiene su propio **Mapa Mental independiente**. Lo que
         isPinned: true,
       ),
     ];
-
-    _soundscapes = [
-      const SoundscapeModel(
-        id: 'snd_1',
-        title: 'Lluvia sobre Ventanal',
-        category: 'Naturaleza',
-        iconEmoji: '🌧️',
-        description: 'Suaves gotas de lluvia sobre cristales antiguos',
-        colorHex: 0xFF18181B,
-      ),
-      const SoundscapeModel(
-        id: 'snd_2',
-        title: 'Chimenea de Biblioteca',
-        category: 'Ambiente',
-        iconEmoji: '🔥',
-        description: 'Leña crujiendo suavemente y pasar de páginas',
-        colorHex: 0xFF27272A,
-      ),
-      const SoundscapeModel(
-        id: 'snd_3',
-        title: 'Café de Escritores',
-        category: 'Urbano',
-        iconEmoji: '☕',
-        description: 'Murmullo lejano y lluvia tenue de fondo',
-        colorHex: 0xFF3F3F46,
-      ),
-      const SoundscapeModel(
-        id: 'snd_4',
-        title: 'Brisa en el Bosque',
-        category: 'Naturaleza',
-        iconEmoji: '🌲',
-        description: 'Viento susurrando entre las copas de los árboles',
-        colorHex: 0xFF52525B,
-      ),
-    ];
-    _activeSoundscape = _soundscapes[0];
 
     // Initial Mind Map Nodes (Individual para el libro tutorial 'b_tutorial')
     _mindMapNodes = [
@@ -1233,18 +1189,6 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       return item;
     }).toList();
     _saveCurrentData(debounced: false);
-    notifyListeners();
-  }
-
-  // --- SOUNDSCAPE ACTIONS ---
-
-  void toggleSoundscape(SoundscapeModel soundscape) {
-    if (_activeSoundscape?.id == soundscape.id && _isPlayingAmbience) {
-      _isPlayingAmbience = false;
-    } else {
-      _activeSoundscape = soundscape;
-      _isPlayingAmbience = true;
-    }
     notifyListeners();
   }
 

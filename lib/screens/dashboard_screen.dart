@@ -8,7 +8,6 @@ import '../controllers/editor_controller.dart';
 import '../widgets/book_card.dart';
 import '../widgets/idea_chip_card.dart';
 import '../widgets/codex_card.dart';
-import '../widgets/soundscape_bar.dart';
 import '../widgets/muse_assistant_sheet.dart';
 import '../widgets/writing_sprint_dialog.dart';
 import '../widgets/export_manuscript_dialog.dart';
@@ -1526,7 +1525,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
 
-            // SECCIÓN 7: HERRAMIENTAS & AMBIENTE
+            // SECCIÓN 7: HERRAMIENTAS & PRODUCTIVIDAD
             if (_selectedFilterIndex == 7) ...[
               SliverToBoxAdapter(
                 child: Padding(
@@ -1534,8 +1533,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Column(
                     children: [
                       ProgressRingCard(stats: controller.writerStats, isDark: isDark),
-                      const SizedBox(height: 16),
-                      SoundscapeBar(isDark: isDark),
                       const SizedBox(height: 16),
                       Row(
                         children: [

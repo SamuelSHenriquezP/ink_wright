@@ -622,6 +622,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: widget.isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
           title: const Text('Añadir Nuevo Capítulo'),
           content: TextField(
             controller: _newChapterTitleController,
@@ -637,8 +638,8 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
+                backgroundColor: widget.isDark ? Colors.white : Colors.black,
+                foregroundColor: widget.isDark ? Colors.black : Colors.white,
               ),
               onPressed: () {
                 final title = _newChapterTitleController.text.trim();
@@ -659,6 +660,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: widget.isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
         title: const Text('¿Eliminar capítulo?'),
         content: Text('Se eliminará "${chapter.title}" y su contenido no podrá recuperarse.'),
         actions: [
@@ -704,6 +706,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: widget.isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
         title: const Text('Dividir Capítulo'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -739,8 +742,8 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.black,
-              foregroundColor: Colors.white,
+              backgroundColor: widget.isDark ? Colors.white : Colors.black,
+              foregroundColor: widget.isDark ? Colors.black : Colors.white,
             ),
             onPressed: () {
               final pos = int.tryParse(splitPosCtrl.text.trim()) ?? (content.length ~/ 2);
@@ -758,6 +761,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: widget.isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
         title: const Text('Fusionar Capítulos'),
         content: Text(
           '¿Fusionar "${chapter.title}" con "${nextChapter.title}"?\n\nEl contenido de "${nextChapter.title}" se añadirá al final de "${chapter.title}" y el segundo capítulo desaparecerá de la lista.',
@@ -769,8 +773,8 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.black,
-              foregroundColor: Colors.white,
+              backgroundColor: widget.isDark ? Colors.white : Colors.black,
+              foregroundColor: widget.isDark ? Colors.black : Colors.white,
             ),
             onPressed: () {
               controller.mergeChapterWithNext(chapter.id);

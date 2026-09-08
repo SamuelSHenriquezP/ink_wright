@@ -10,7 +10,6 @@ import '../widgets/keyboard_accessory_bar.dart';
 import '../widgets/context_drawer_sheet.dart';
 import '../widgets/chapter_history_sheet.dart';
 import '../widgets/export_manuscript_dialog.dart';
-import '../widgets/soundscape_bar.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'dashboard_screen.dart';
 
@@ -23,7 +22,6 @@ class ZenEditorScreen extends StatefulWidget {
 
 class _ZenEditorScreenState extends State<ZenEditorScreen> {
   final ScrollController _scrollController = ScrollController();
-  bool _showSoundscapeOverlay = false;
 
   // Find & Replace state
   bool _showFindReplace = false;
@@ -789,21 +787,6 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                     tooltip: 'Historial de Versiones e Instantáneas',
                                   ),
 
-                                  // Soundscape Toggle Button
-                                  IconButton(
-                                    icon: Icon(
-                                      controller.isPlayingAmbience ? Icons.graphic_eq_rounded : Icons.headset_outlined,
-                                      size: 20,
-                                      color: controller.isPlayingAmbience ? accentColor : textSecondary,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _showSoundscapeOverlay = !_showSoundscapeOverlay;
-                                      });
-                                    },
-                                    tooltip: 'Sonidos de Ambiente',
-                                  ),
-
                                   // Export Manuscript Button
                                   IconButton(
                                     icon: Icon(Icons.ios_share_rounded, size: 20, color: textSecondary),
@@ -834,13 +817,6 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                     // Floating Find & Replace Bar
                     if (_showFindReplace && !isZen)
                       _buildFindReplaceBar(controller, isDark, textPrimary, textSecondary, borderSubtle, bgCard),
-
-                    // Soundscape Quick Bar Banner (if toggled)
-                    if (_showSoundscapeOverlay && !isZen)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: SoundscapeBar(isDark: isDark),
-                      ).animate().fadeIn(duration: 200.ms),
 
                     // Zen Canvas Paper Text Area
                     Expanded(
