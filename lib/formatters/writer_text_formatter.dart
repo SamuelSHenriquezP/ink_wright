@@ -37,11 +37,12 @@ class WriterTextFormatter {
     return count;
   }
 
-  /// Counts non-empty paragraphs
+  /// Counts non-empty paragraphs separated by one or more blank lines.
+  /// Consecutive lines without a blank line are considered part of the same paragraph.
   static int countParagraphs(String text) {
     if (text.trim().isEmpty) return 0;
-    final lines = text.split('\n');
-    return lines.where((line) => line.trim().isNotEmpty).length;
+    final blocks = text.split(RegExp(r'\n\s*\n+'));
+    return blocks.where((block) => block.trim().isNotEmpty).length;
   }
 
   /// Estimates reading time in minutes (assuming 200 WPM)

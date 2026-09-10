@@ -32,6 +32,23 @@ void main() {
       expect(WriterTextFormatter.countWords(''), equals(0));
     });
 
+    test('Paragraph counting logic only increments when separated by empty lines', () {
+      expect(WriterTextFormatter.countParagraphs(''), equals(0));
+      expect(WriterTextFormatter.countParagraphs('   \n  \n  '), equals(0));
+
+      // Single newlines without empty lines are lines/sentences of the SAME paragraph
+      const singleNewlineText = 'Tú eres lo más hermoso que tengo\nSeñor.\nY te tengo porque te placio darte a mi.\nTe necesito.';
+      expect(WriterTextFormatter.countParagraphs(singleNewlineText), equals(1));
+
+      // Empty line distance separates paragraphs
+      const twoParagraphs = 'Primer párrafo con varias líneas.\nSegunda línea del primer párrafo.\n\nSegundo párrafo tras una línea vacía.';
+      expect(WriterTextFormatter.countParagraphs(twoParagraphs), equals(2));
+
+      // Multiple blank lines
+      const threeParagraphs = 'Párrafo 1.\n\n\nPárrafo 2.\n  \n Párrafo 3.';
+      expect(WriterTextFormatter.countParagraphs(threeParagraphs), equals(3));
+    });
+
     test('Reading time estimation', () {
       expect(WriterTextFormatter.estimateReadingTime('Word ' * 400), equals(2));
       expect(WriterTextFormatter.formatReadingTime(45), equals('45 mins read'));

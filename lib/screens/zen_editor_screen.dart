@@ -1103,7 +1103,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
     final words = WriterTextFormatter.countWords(text);
     final chars = text.length;
     final charsNoSpaces = text.replaceAll(RegExp(r'\s+'), '').length;
-    final paragraphs = text.split('\n').where((l) => l.trim().isNotEmpty).length;
+    final paragraphs = WriterTextFormatter.countParagraphs(text);
     final readingTimeMinutes = (words / 200).ceil();
 
     showDialog(
