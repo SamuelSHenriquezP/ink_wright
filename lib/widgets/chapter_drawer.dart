@@ -9,11 +9,15 @@ import '../formatters/writer_text_formatter.dart';
 class ChapterDrawer extends StatelessWidget {
   final EditorController controller;
   final bool isDark;
+  final VoidCallback? onSelectChapter;
+  final double? width;
 
   const ChapterDrawer({
     super.key,
     required this.controller,
     required this.isDark,
+    this.onSelectChapter,
+    this.width,
   });
 
   String _formatDate(DateTime dt) {
@@ -73,7 +77,12 @@ class ChapterDrawer extends StatelessWidget {
                 controller.addNewChapter(title);
               }
               Navigator.of(ctx).pop();
-              Navigator.of(context).pop(); // Close drawer to focus on new chapter
+              if (Scaffold.maybeOf(context)?.isDrawerOpen == true ||
+                  Scaffold.maybeOf(context)?.isEndDrawerOpen == true) {
+                Navigator.of(context).pop();
+              } else {
+                onSelectChapter?.call();
+              }
             },
             child: const Text('Crear'),
           ),
@@ -104,7 +113,7 @@ class ChapterDrawer extends StatelessWidget {
 
     return Drawer(
       backgroundColor: bgPrimary,
-      width: MediaQuery.of(context).size.width * 0.84,
+      width: width ?? MediaQuery.of(context).size.width * 0.84,
       child: SafeArea(
         child: Column(
           children: [
@@ -225,7 +234,12 @@ class ChapterDrawer extends StatelessWidget {
                               if (!isActive) {
                                 controller.selectChapter(ch);
                               }
-                              Navigator.of(context).pop();
+                              if (Scaffold.maybeOf(context)?.isDrawerOpen == true ||
+                                  Scaffold.maybeOf(context)?.isEndDrawerOpen == true) {
+                                Navigator.of(context).pop();
+                              } else {
+                                onSelectChapter?.call();
+                              }
                             },
                             child: Container(
                               padding: const EdgeInsets.all(12),

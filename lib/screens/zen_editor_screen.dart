@@ -176,6 +176,199 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
     );
   }
 
+  void _showNewBookDialog(BuildContext context, EditorController controller, bool isDark) {
+    final titleCtrl = TextEditingController();
+    final subtitleCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Nuevo Libro',
+          style: TextStyle(
+            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleCtrl,
+              autofocus: true,
+              style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+              decoration: InputDecoration(
+                labelText: 'Título del libro / proyecto',
+                labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: subtitleCtrl,
+              style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+              decoration: InputDecoration(
+                labelText: 'Subtítulo o premisa (opcional)',
+                labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? Colors.white : Colors.black,
+              foregroundColor: isDark ? Colors.black : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              final title = titleCtrl.text.trim();
+              if (title.isNotEmpty) {
+                controller.createNewBook(
+                  title,
+                  subtitleCtrl.text.trim(),
+                  50000,
+                );
+                _syncTitleController(controller);
+                Navigator.of(ctx).pop();
+                if (_pageController.hasClients) {
+                  _pageController.animateToPage(
+                    1,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                  );
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Libro "$title" creado con éxito.'),
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Crear Libro', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openQuickActionsModal(BuildContext context, EditorController controller, bool isDark) {
+    final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: textSecondary.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Acciones Rápidas',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: textPrimary,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.post_add_rounded, size: 22, color: textPrimary),
+                  ),
+                  title: Text('Nuevo Capítulo', style: TextStyle(fontWeight: FontWeight.w700, color: textPrimary, fontSize: 14)),
+                  subtitle: Text('Añade un nuevo capítulo al libro actual', style: TextStyle(color: textSecondary, fontSize: 12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _showNewChapterDialog(context, controller, isDark);
+                  },
+                ),
+                Divider(height: 1, color: borderSubtle),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.auto_stories_outlined, size: 22, color: textPrimary),
+                  ),
+                  title: Text('Nuevo Libro', style: TextStyle(fontWeight: FontWeight.w700, color: textPrimary, fontSize: 14)),
+                  subtitle: Text('Crea un nuevo libro o proyecto literario', style: TextStyle(color: textSecondary, fontSize: 12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _showNewBookDialog(context, controller, isDark);
+                  },
+                ),
+                Divider(height: 1, color: borderSubtle),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.file_download_outlined, size: 22, color: textPrimary),
+                  ),
+                  title: Text('Exportar', style: TextStyle(fontWeight: FontWeight.w700, color: textPrimary, fontSize: 14)),
+                  subtitle: Text('Exporta tu manuscrito en PDF, DOCX, TXT o Markdown', style: TextStyle(color: textSecondary, fontSize: 12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _openExportDialog(context, isDark);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _toggleFindReplace() {
     setState(() {
       _showFindReplace = !_showFindReplace;
@@ -1317,101 +1510,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                   ),
                                 ),
 
-                                // End-of-Chapter Navigation Card
-                                const SizedBox(height: 48),
-                                Center(
-                                  child: Text(
-                                    '•   •   •',
-                                    style: TextStyle(
-                                      letterSpacing: 8,
-                                      color: textSecondary.withValues(alpha: 0.4),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                Container(
-                                  padding: const EdgeInsets.all(18),
-                                  decoration: BoxDecoration(
-                                    color: bgCard,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: borderSubtle),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        'Fin del Capítulo ${controller.activeChapterIndex + 1}',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: textSecondary,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 14),
-                                      Row(
-                                        children: [
-                                          if (controller.hasPreviousChapter) ...[
-                                            Expanded(
-                                              child: OutlinedButton.icon(
-                                                style: OutlinedButton.styleFrom(
-                                                  foregroundColor: textPrimary,
-                                                  side: BorderSide(color: borderSubtle),
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                                ),
-                                                icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                                                label: const Text('Anterior', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                                                onPressed: () {
-                                                  controller.goToPreviousChapter();
-                                                  _syncTitleController(controller);
-                                                  if (_scrollController.hasClients) _scrollController.jumpTo(0);
-                                                },
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                          ],
-                                          if (controller.hasNextChapter) ...[
-                                            Expanded(
-                                              child: ElevatedButton.icon(
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: accentColor,
-                                                  foregroundColor: isDark ? Colors.black : Colors.white,
-                                                  elevation: 0,
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                                ),
-                                                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                                                label: const Text('Siguiente', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                                                onPressed: () {
-                                                  controller.goToNextChapter();
-                                                  _syncTitleController(controller);
-                                                  if (_scrollController.hasClients) _scrollController.jumpTo(0);
-                                                },
-                                              ),
-                                            ),
-                                          ] else ...[
-                                            Expanded(
-                                              child: ElevatedButton.icon(
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: accentColor,
-                                                  foregroundColor: isDark ? Colors.black : Colors.white,
-                                                  elevation: 0,
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                                ),
-                                                icon: const Icon(Icons.add_rounded, size: 16),
-                                                label: const Text('Nuevo Capítulo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                                                onPressed: () => _showNewChapterDialog(context, controller, isDark),
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 60),
+                                const SizedBox(height: 100),
                               ],
                             ),
                           ),
@@ -1451,9 +1550,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                     canRedo: controller.canRedo,
                     onUndo: () => controller.undo(),
                     onRedo: () => controller.redo(),
-                    onCloseKeyboard: () => FocusScope.of(context).unfocus(),
                     onAnnotateSelection: () => _annotateSelection(context, controller, isDark),
-                    onOpenOptionsSheet: () => _openEditorOptionsMenu(context, controller, themeController, isDark),
                   ),
                 ),
 
@@ -1468,19 +1565,20 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                     foregroundColor: isDark ? Colors.black : Colors.white,
                     elevation: 4,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                    tooltip: 'Opciones del Editor (+)',
-                    onPressed: () => _openEditorOptionsMenu(context, controller, themeController, isDark),
+                    tooltip: 'Acciones Rápidas (+)',
+                    onPressed: () => _openQuickActionsModal(context, controller, isDark),
                     child: const Icon(Icons.add_rounded, size: 28),
                   ),
                 ).animate().scale(duration: 150.ms, curve: Curves.easeOut),
               ],
             ),
 
-            // Page 2: Chapter Metrics View (Revealed when swiping to the left)
-            ChapterMetricsView(
+            // Page 2: Chapter Drawer (Revealed when swiping to the left — exact same view as 3-bars menu)
+            ChapterDrawer(
               controller: controller,
               isDark: isDark,
-              onBackToEditor: () {
+              width: double.infinity,
+              onSelectChapter: () {
                 if (_pageController.hasClients) {
                   _pageController.animateToPage(
                     1,

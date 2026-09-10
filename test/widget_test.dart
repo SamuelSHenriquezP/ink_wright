@@ -49,7 +49,7 @@ void main() {
     expect(find.text('InkWright Studio'), findsOneWidget);
   });
 
-  testWidgets('Navigation to chapter metrics screen via swipe gesture and back to editor', (WidgetTester tester) async {
+  testWidgets('Navigation to chapter metrics (swipe right) and chapters (swipe left)', (WidgetTester tester) async {
     await tester.pumpWidget(const InkWrightApp());
     await tester.pumpAndSettle();
 
@@ -74,22 +74,62 @@ void main() {
     // Returns back to editor
     expect(find.text('Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo'), findsOneWidget);
 
-    // 2. Swipe to the left (drag finger left) to open Metrics
+    // 2. Swipe to the left (drag finger left) to open Chapter Drawer
     await tester.flingFrom(const Offset(300, 40), const Offset(-400, 0), 1000);
     await tester.pumpAndSettle();
 
-    // Metrics view is displayed
-    expect(find.text('Métricas del Capítulo'), findsOneWidget);
-    expect(find.text('Palabras Totales'), findsOneWidget);
-    expect(find.text('Tiempo de Lectura'), findsOneWidget);
+    // ChapterDrawer view is displayed (same view as 3-bars menu)
+    expect(find.text('Nuevo Capítulo'), findsOneWidget);
+    expect(find.text('Capítulo 2: El Arte de Crear Personajes'), findsOneWidget);
 
-    returnBtn = find.text('Volver al Editor a Escribir');
-    await tester.ensureVisible(returnBtn);
-    await tester.pumpAndSettle();
-    await tester.tap(returnBtn);
+    // Tap a chapter to switch to it and return to editor
+    await tester.tap(find.text('Capítulo 2: El Arte de Crear Personajes'));
     await tester.pumpAndSettle();
 
-    // Returns back to editor
+    // Returns back to editor with the selected chapter
+    expect(find.text('Capítulo 2: El Arte de Crear Personajes'), findsOneWidget);
+
+    // 3. Tap the 3-bars hamburger menu at the top left to verify it opens the same ChapterDrawer
+    await tester.tap(find.byIcon(Icons.menu_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('Nuevo Capítulo'), findsOneWidget);
     expect(find.text('Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo'), findsOneWidget);
+
+    // Close drawer
+    await tester.tap(find.text('Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo'), findsOneWidget);
+  });
+
+  testWidgets('Floating + button opens exactly 3 popup options: Nuevo Capitulo, Nuevo Libro, Exportar', (WidgetTester tester) async {
+    await tester.pumpWidget(const InkWrightApp());
+    await tester.pumpAndSettle();
+
+    // Verify "Fin del Capítulo" is no longer displayed
+    expect(find.textContaining('Fin del Capítulo'), findsNothing);
+
+    // Tap the floating '+' options button
+    final fab = find.byTooltip('Acciones Rápidas (+)');
+    expect(fab, findsOneWidget);
+    await tester.tap(fab);
+    await tester.pumpAndSettle();
+
+    // Verify the 3 popup options are present
+    expect(find.text('Acciones Rápidas'), findsOneWidget);
+    expect(find.text('Nuevo Capítulo'), findsOneWidget);
+    expect(find.text('Nuevo Libro'), findsOneWidget);
+    expect(find.text('Exportar'), findsOneWidget);
+
+    // Tap "Nuevo Capítulo" option
+    await tester.tap(find.text('Nuevo Capítulo'));
+    await tester.pumpAndSettle();
+
+    // Dialog pops up
+    expect(find.text('Título del capítulo'), findsOneWidget);
+    expect(find.text('Crear Capítulo'), findsOneWidget);
+
+    // Close dialog
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
   });
 }

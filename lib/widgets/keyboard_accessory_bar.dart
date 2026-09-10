@@ -84,32 +84,32 @@ class KeyboardAccessoryBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Left: Undo / Redo controls
-          const SizedBox(width: 4),
+          // Left: Undo / Redo controls (compact)
+          const SizedBox(width: 6),
           IconButton(
             icon: Icon(
               Icons.undo_rounded,
-              size: 19,
+              size: 15,
               color: canUndo ? textPrimary : textSecondary.withValues(alpha: 0.25),
             ),
             tooltip: 'Deshacer',
             onPressed: canUndo ? onUndo : null,
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 36),
+            constraints: const BoxConstraints(minWidth: 26, minHeight: 28),
           ),
           IconButton(
             icon: Icon(
               Icons.redo_rounded,
-              size: 19,
+              size: 15,
               color: canRedo ? textPrimary : textSecondary.withValues(alpha: 0.25),
             ),
             tooltip: 'Rehacer',
             onPressed: canRedo ? onRedo : null,
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 36),
+            constraints: const BoxConstraints(minWidth: 26, minHeight: 28),
           ),
 
-          Container(height: 22, width: 1, margin: const EdgeInsets.symmetric(horizontal: 4), color: borderSubtle),
+          Container(height: 20, width: 1, margin: const EdgeInsets.symmetric(horizontal: 4), color: borderSubtle),
 
           // Center: Rich, scrollable Markdown Formatting Shortcuts
           Expanded(
@@ -234,28 +234,7 @@ class KeyboardAccessoryBar extends StatelessWidget {
               ),
             ),
           ),
-
-          Container(height: 22, width: 1, margin: const EdgeInsets.symmetric(horizontal: 4), color: borderSubtle),
-
-          // Right: Close Keyboard and Options
-          if (onCloseKeyboard != null)
-            IconButton(
-              icon: Icon(Icons.keyboard_hide_rounded, size: 20, color: textSecondary),
-              tooltip: 'Bajar teclado',
-              onPressed: onCloseKeyboard,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 34, minHeight: 36),
-            ),
-
-          if (onOpenOptionsSheet != null)
-            IconButton(
-              icon: Icon(Icons.more_vert_rounded, size: 20, color: textPrimary),
-              tooltip: 'Más opciones',
-              onPressed: onOpenOptionsSheet,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 34, minHeight: 36),
-            ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
         ],
       ),
     ).animate().fadeIn(duration: 150.ms);
