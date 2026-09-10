@@ -624,6 +624,68 @@ code block line 2
       expect(controller.codexEntries.length, equals(initialCodexCount));
     });
 
+    test('Ideas and Codex entries are strictly isolated per book and cascade delete with book', () {
+      final controller = EditorController();
+      final initialBookId = controller.activeBook.id;
+
+      // Ensure initial book has its own ideas and codex entries
+      expect(controller.ideas.every((i) => i.bookId == initialBookId), isTrue);
+      expect(controller.codexEntries.every((c) => c.bookId == initialBookId), isTrue);
+
+      // Create a second book
+      controller.createNewBook('Segundo Libro', 'Subtítulo', 50000);
+      final secondBookId = controller.activeBook.id;
+      expect(secondBookId, isNot(equals(initialBookId)));
+
+      // Second book should start with empty ideas and codex entries
+      expect(controller.ideas, isEmpty);
+      expect(controller.codexEntries, isEmpty);
+
+      // Add idea and codex entry to the second book
+      controller.addIdea(IdeaSnippetModel(
+        id: 'idea_book_2',
+        title: 'Idea Exclusiva Libro 2',
+        content: 'Detalles solo para el segundo libro',
+        category: IdeaCategory.plotTwist,
+        colorHex: 0,
+        createdAt: DateTime.now(),
+        tags: ['Giro'],
+      ));
+
+      controller.addCodexEntry(CodexEntryModel(
+        id: 'codex_book_2',
+        bookId: secondBookId,
+        name: 'Templo Olvidado',
+        type: CodexType.location,
+        role: 'Lugar místico',
+        description: 'Sólo existe en el libro 2',
+        traits: ['Místico'],
+        secrets: '',
+        avatarEmoji: '🏛️',
+        createdAt: DateTime.now(),
+      ));
+
+      expect(controller.ideas.length, equals(1));
+      expect(controller.ideas.first.id, equals('idea_book_2'));
+      expect(controller.ideas.first.bookId, equals(secondBookId));
+
+      expect(controller.codexEntries.length, equals(1));
+      expect(controller.codexEntries.first.id, equals('codex_book_2'));
+      expect(controller.codexEntries.first.bookId, equals(secondBookId));
+
+      // Switch back to initial book
+      controller.switchBook(initialBookId);
+      expect(controller.activeBook.id, equals(initialBookId));
+      expect(controller.ideas.any((i) => i.id == 'idea_book_2'), isFalse);
+      expect(controller.codexEntries.any((c) => c.id == 'codex_book_2'), isFalse);
+
+      // Delete the second book -> should cascade delete its ideas and codex entries
+      final deleted = controller.deleteBook(secondBookId);
+      expect(deleted, isTrue);
+      expect(controller.allIdeas.any((i) => i.id == 'idea_book_2'), isFalse);
+      expect(controller.allCodexEntries.any((c) => c.id == 'codex_book_2'), isFalse);
+    });
+
     test('EditorController chapter navigation and title update', () {
       final controller = EditorController();
       expect(controller.activeChapterIndex, equals(0));

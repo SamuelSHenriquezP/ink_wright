@@ -27,7 +27,7 @@ class ZenEditorScreen extends StatefulWidget {
   State<ZenEditorScreen> createState() => _ZenEditorScreenState();
 }
 
-class _ZenEditorScreenState extends State<ZenEditorScreen> {
+class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final ScrollController _scrollController = ScrollController();
   final PageController _pageController = PageController(initialPage: 1);
@@ -49,6 +49,23 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
   EditorController? _observedController;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      _observedController?.flushPendingSave();
+      _observedController?.saveCurrentSession();
+    }
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final controller = Provider.of<EditorController>(context, listen: false);
@@ -61,6 +78,9 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _observedController?.flushPendingSave();
+    _observedController?.saveCurrentSession();
     _observedController?.textEditingController.removeListener(_onEditorSelectionChanged);
     _scrollController.dispose();
     _pageController.dispose();

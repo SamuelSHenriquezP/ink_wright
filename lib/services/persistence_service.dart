@@ -11,6 +11,7 @@ import '../models/character_model.dart';
 
 class PersistenceService {
   static const String _keyBooks = 'ink_wright_books';
+  static const String _keyBooksBackup = 'ink_wright_books_backup';
   static const String _keyIdeas = 'ink_wright_ideas';
   static const String _keyCodex = 'ink_wright_codex';
   static const String _keyMindMap = 'ink_wright_mind_map';
@@ -26,6 +27,7 @@ class PersistenceService {
   static const String _keyTypewriterMode = 'ink_wright_typewriter_mode';
 
   Timer? _saveDebounceTimer;
+  Future<void> Function()? _pendingSaveAction;
   bool _isSaving = false;
   DateTime? _lastSaved;
 
@@ -37,10 +39,27 @@ class PersistenceService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_keyBooks);
-      if (jsonString == null || jsonString.isEmpty) return null;
+      if (jsonString != null && jsonString.isNotEmpty) {
+        try {
+          final List<dynamic> list = jsonDecode(jsonString) as List<dynamic>;
+          return list.map((item) => BookModel.fromMap(item as Map<String, dynamic>)).toList();
+        } catch (e) {
+          debugPrint('Error loading primary books: $e. Falling back to backup...');
+        }
+      }
 
-      final List<dynamic> list = jsonDecode(jsonString) as List<dynamic>;
-      return list.map((item) => BookModel.fromMap(item as Map<String, dynamic>)).toList();
+      // Try backup if primary failed or empty
+      final backupString = prefs.getString(_keyBooksBackup);
+      if (backupString != null && backupString.isNotEmpty) {
+        try {
+          final List<dynamic> list = jsonDecode(backupString) as List<dynamic>;
+          return list.map((item) => BookModel.fromMap(item as Map<String, dynamic>)).toList();
+        } catch (e) {
+          debugPrint('Error loading backup books: $e');
+        }
+      }
+
+      return null;
     } catch (e) {
       return null;
     }
@@ -171,6 +190,12 @@ class PersistenceService {
       final charactersJson = jsonEncode(characters.map((c) => c.toJson()).toList());
       final statsJson = jsonEncode(writerStats.toMap());
 
+      // Save previous valid books to backup key before overwriting
+      final existingBooks = prefs.getString(_keyBooks);
+      if (existingBooks != null && existingBooks.isNotEmpty) {
+        await prefs.setString(_keyBooksBackup, existingBooks);
+      }
+
       await Future.wait([
         prefs.setString(_keyBooks, booksJson),
         prefs.setString(_keyIdeas, ideasJson),
@@ -190,9 +215,21 @@ class PersistenceService {
 
       _lastSaved = DateTime.now();
     } catch (e) {
-      // Graceful error logging
+      debugPrint('Error in saveAllData: $e');
     } finally {
       _isSaving = false;
+    }
+  }
+
+  // Flush any pending debounced save immediately (e.g. when app goes to background)
+  Future<void> flushPendingSave() async {
+    if (_saveDebounceTimer != null && _saveDebounceTimer!.isActive) {
+      _saveDebounceTimer!.cancel();
+      final action = _pendingSaveAction;
+      _pendingSaveAction = null;
+      if (action != null) {
+        await action();
+      }
     }
   }
 
@@ -216,7 +253,7 @@ class PersistenceService {
     VoidCallback? onSaved,
   }) {
     _saveDebounceTimer?.cancel();
-    _saveDebounceTimer = Timer(debounceDuration, () async {
+    _pendingSaveAction = () async {
       await saveAllData(
         books: books,
         ideas: ideas,
@@ -234,6 +271,14 @@ class PersistenceService {
         typewriterMode: typewriterMode,
       );
       onSaved?.call();
+    };
+
+    _saveDebounceTimer = Timer(debounceDuration, () async {
+      final action = _pendingSaveAction;
+      _pendingSaveAction = null;
+      if (action != null) {
+        await action();
+      }
     });
   }
 

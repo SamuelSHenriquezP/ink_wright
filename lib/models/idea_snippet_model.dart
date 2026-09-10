@@ -8,6 +8,7 @@ enum IdeaCategory {
 
 class IdeaSnippetModel {
   final String id;
+  final String bookId;
   final String title;
   final String content;
   final IdeaCategory category;
@@ -18,6 +19,7 @@ class IdeaSnippetModel {
 
   IdeaSnippetModel({
     required this.id,
+    this.bookId = '',
     required this.title,
     required this.content,
     required this.category,
@@ -59,6 +61,7 @@ class IdeaSnippetModel {
 
   IdeaSnippetModel copyWith({
     String? id,
+    String? bookId,
     String? title,
     String? content,
     IdeaCategory? category,
@@ -69,6 +72,7 @@ class IdeaSnippetModel {
   }) {
     return IdeaSnippetModel(
       id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
       title: title ?? this.title,
       content: content ?? this.content,
       category: category ?? this.category,
@@ -82,6 +86,7 @@ class IdeaSnippetModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'bookId': bookId,
       'title': title,
       'content': content,
       'category': category.name,
@@ -95,6 +100,7 @@ class IdeaSnippetModel {
   factory IdeaSnippetModel.fromMap(Map<String, dynamic> map) {
     return IdeaSnippetModel(
       id: map['id'] as String? ?? '',
+      bookId: map['bookId'] as String? ?? '',
       title: map['title'] as String? ?? '',
       content: map['content'] as String? ?? '',
       category: IdeaCategory.values.firstWhere(

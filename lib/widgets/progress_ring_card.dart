@@ -35,56 +35,27 @@ class ProgressRingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row: Title & Streak Badge
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Header: Title & Daily Words Count
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Objetivo Diario de Escritura',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: textSecondary,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${stats.wordsToday} / ${stats.dailyGoalWords} palabras',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: textPrimary,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                ],
-              ),
-              // Streak Pill
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: accentMintLight,
-                  borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-                  border: Border.all(color: accentMint.withValues(alpha: 0.3), width: 1),
+              Text(
+                'Objetivo Diario de Escritura',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: textSecondary,
+                  letterSpacing: 0.2,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.local_fire_department_rounded, size: 16, color: accentMint),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Racha: ${stats.streakDays} días',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: accentMint,
-                      ),
-                    ),
-                  ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${stats.wordsToday} / ${stats.dailyGoalWords} palabras',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: textPrimary,
+                  letterSpacing: -0.3,
                 ),
               ),
             ],

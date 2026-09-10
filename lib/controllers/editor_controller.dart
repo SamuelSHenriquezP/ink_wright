@@ -68,8 +68,14 @@ class EditorController extends ChangeNotifier {
   ChapterModel get activeChapter => _activeChapter;
   WriterStatsModel get writerStats => _writerStats;
   List<BookModel> get allBooks => List.unmodifiable(_allBooks);
-  List<IdeaSnippetModel> get ideas => List.unmodifiable(_ideas);
-  List<CodexEntryModel> get codexEntries => List.unmodifiable(_codexEntries);
+  // Each idea and codex entry is strictly individual per book
+  List<IdeaSnippetModel> get ideas =>
+      _ideas.where((i) => i.bookId == _activeBook.id).toList();
+  List<CodexEntryModel> get codexEntries =>
+      _codexEntries.where((c) => c.bookId == _activeBook.id).toList();
+
+  List<IdeaSnippetModel> get allIdeas => List.unmodifiable(_ideas);
+  List<CodexEntryModel> get allCodexEntries => List.unmodifiable(_codexEntries);
 
   // Each mind map is strictly individual per book
   List<MindMapNodeModel> get mindMapNodes =>
@@ -230,6 +236,7 @@ Cada libro en Ink & Wright tiene su propio **Mapa Mental independiente**. Lo que
     _ideas = [
       IdeaSnippetModel(
         id: 'i_1',
+        bookId: 'b_tutorial',
         title: 'Consejo: El Gancho Inicial',
         content: 'Empieza siempre in media res o con una imagen que revele el tono antes que la trama.',
         category: IdeaCategory.general,
@@ -240,6 +247,7 @@ Cada libro en Ink & Wright tiene su propio **Mapa Mental independiente**. Lo que
       ),
       IdeaSnippetModel(
         id: 'i_2',
+        bookId: 'b_tutorial',
         title: 'Atmósfera y Sentidos',
         content: 'Describe al menos dos sentidos que no sean la vista en cada cambio de escena importante.',
         category: IdeaCategory.character,
@@ -396,8 +404,22 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
         textEditingController.addListener(_onTextChanged);
       }
 
-      if (savedIdeas != null) _ideas = savedIdeas;
-      if (savedCodex != null) _codexEntries = savedCodex;
+      if (savedIdeas != null) {
+        _ideas = savedIdeas.map((i) {
+          if (i.bookId.isEmpty) {
+            return i.copyWith(bookId: _activeBook.id.isNotEmpty ? _activeBook.id : 'b_tutorial');
+          }
+          return i;
+        }).toList();
+      }
+      if (savedCodex != null) {
+        _codexEntries = savedCodex.map((c) {
+          if (c.bookId.isEmpty) {
+            return c.copyWith(bookId: _activeBook.id.isNotEmpty ? _activeBook.id : 'b_tutorial');
+          }
+          return c;
+        }).toList();
+      }
       if (savedNodes != null) _mindMapNodes = savedNodes;
       if (savedCharacters != null) _characters = savedCharacters;
       if (savedStats != null) _writerStats = savedStats;
@@ -416,6 +438,10 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
 
   Future<void> saveCurrentSession() async {
     _saveCurrentData(debounced: false);
+  }
+
+  Future<void> flushPendingSave() async {
+    await _persistenceService.flushPendingSave();
   }
 
   void _saveCurrentData({bool debounced = true}) {
@@ -612,21 +638,30 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     final books = data['books'] as List<BookModel>?;
     if (books == null || books.isEmpty) return false;
 
-    _allBooks = books;
-    _ideas = (data['ideas'] as List<IdeaSnippetModel>?) ?? _ideas;
-    _codexEntries = (data['codex'] as List<CodexEntryModel>?) ?? _codexEntries;
-    _mindMapNodes = (data['mindMap'] as List<MindMapNodeModel>?) ?? _mindMapNodes;
-    _characters = (data['characters'] as List<CharacterModel>?) ?? _characters;
-    if (data['writerStats'] != null) {
-      _writerStats = data['writerStats'] as WriterStatsModel;
-    }
-
     final prefs = (data['preferences'] as Map<String, dynamic>?) ?? {};
     final savedBookId = prefs['activeBookId'] as String?;
     _activeBook = _allBooks.firstWhere(
       (b) => b.id == savedBookId,
       orElse: () => _allBooks.first,
     );
+
+    _ideas = ((data['ideas'] as List<IdeaSnippetModel>?) ?? _ideas).map((i) {
+      if (i.bookId.isEmpty) {
+        return i.copyWith(bookId: _activeBook.id.isNotEmpty ? _activeBook.id : 'b_tutorial');
+      }
+      return i;
+    }).toList();
+    _codexEntries = ((data['codex'] as List<CodexEntryModel>?) ?? _codexEntries).map((c) {
+      if (c.bookId.isEmpty) {
+        return c.copyWith(bookId: _activeBook.id.isNotEmpty ? _activeBook.id : 'b_tutorial');
+      }
+      return c;
+    }).toList();
+    _mindMapNodes = (data['mindMap'] as List<MindMapNodeModel>?) ?? _mindMapNodes;
+    _characters = (data['characters'] as List<CharacterModel>?) ?? _characters;
+    if (data['writerStats'] != null) {
+      _writerStats = data['writerStats'] as WriterStatsModel;
+    }
 
     if (_activeBook.chapters.isNotEmpty) {
       final savedChId = prefs['activeChapterId'] as String?;
@@ -1114,6 +1149,8 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     _allBooks = _allBooks.where((b) => b.id != bookId).toList();
     _mindMapNodes.removeWhere((n) => n.bookId == bookId);
     _characters.removeWhere((c) => c.bookId == bookId);
+    _ideas.removeWhere((i) => i.bookId == bookId);
+    _codexEntries.removeWhere((c) => c.bookId == bookId);
 
     if (_activeBook.id == bookId) {
       selectBook(_allBooks.first);
@@ -1171,13 +1208,19 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
   // --- IDEAS ACTIONS ---
 
   void addIdea(IdeaSnippetModel idea) {
-    _ideas.insert(0, idea);
+    final scoped = idea.bookId.isEmpty ? idea.copyWith(bookId: _activeBook.id) : idea;
+    _ideas.insert(0, scoped);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void updateIdea(IdeaSnippetModel updated) {
-    _ideas = _ideas.map((item) => item.id == updated.id ? updated : item).toList();
+    _ideas = _ideas.map((item) {
+      if (item.id == updated.id) {
+        return updated.bookId.isEmpty ? updated.copyWith(bookId: item.bookId) : updated;
+      }
+      return item;
+    }).toList();
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -1225,13 +1268,19 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
   // --- CODEX ACTIONS ---
 
   void addCodexEntry(CodexEntryModel entry) {
-    _codexEntries.insert(0, entry);
+    final scoped = entry.bookId.isEmpty ? entry.copyWith(bookId: _activeBook.id) : entry;
+    _codexEntries.insert(0, scoped);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void updateCodexEntry(CodexEntryModel updated) {
-    _codexEntries = _codexEntries.map((item) => item.id == updated.id ? updated : item).toList();
+    _codexEntries = _codexEntries.map((item) {
+      if (item.id == updated.id) {
+        return updated.bookId.isEmpty ? updated.copyWith(bookId: item.bookId) : updated;
+      }
+      return item;
+    }).toList();
     _saveCurrentData(debounced: false);
     notifyListeners();
   }

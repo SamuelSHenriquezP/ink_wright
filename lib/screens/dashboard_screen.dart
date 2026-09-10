@@ -606,151 +606,677 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showAddIdeaDialog(BuildContext context, EditorController controller) {
+  void _showAddIdeaDialog(BuildContext context, EditorController controller, bool isDark) {
     final titleCtrl = TextEditingController();
     final contentCtrl = TextEditingController();
+    final tagsCtrl = TextEditingController();
+    IdeaCategory selectedCategory = IdeaCategory.general;
 
-    showDialog(
+    final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Nueva Nota o Fragmento', style: TextStyle(fontWeight: FontWeight.w800)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleCtrl,
-                decoration: const InputDecoration(labelText: 'Título de la Nota'),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: bgCard,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: AppTheme.getSoftShadow(isDark),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Drag Handle
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: textSecondary.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.lightbulb_outline_rounded, color: textPrimary, size: 22),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Nuevo Fragmento o Idea',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: textPrimary,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Para: ${controller.activeBook.title}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () => Navigator.of(ctx).pop(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Category Selector Chips
+                      Text(
+                        'CATEGORÍA',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: textSecondary,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: Row(
+                          children: IdeaCategory.values.map((cat) {
+                            final isSelected = selectedCategory == cat;
+                            final tempSnippet = IdeaSnippetModel(
+                              id: '',
+                              bookId: controller.activeBook.id,
+                              title: '',
+                              content: '',
+                              category: cat,
+                              colorHex: 0,
+                              createdAt: DateTime.now(),
+                              tags: const [],
+                            );
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(tempSnippet.categoryIcon, style: const TextStyle(fontSize: 13)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      tempSnippet.categoryLabel,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                        color: isSelected ? (isDark ? Colors.black : Colors.white) : textPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                selected: isSelected,
+                                selectedColor: isDark ? Colors.white : Colors.black,
+                                backgroundColor: isDark ? const Color(0xFF252525) : const Color(0xFFF4F3EF),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                  side: BorderSide(
+                                    color: isSelected ? Colors.transparent : borderSubtle,
+                                  ),
+                                ),
+                                showCheckmark: false,
+                                onSelected: (selected) {
+                                  if (selected) setState(() => selectedCategory = cat);
+                                },
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Title Field
+                      TextField(
+                        controller: titleCtrl,
+                        style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600, fontSize: 15),
+                        decoration: InputDecoration(
+                          labelText: 'Título del fragmento',
+                          hintText: 'ej: Diálogo revelador en el puerto',
+                          labelStyle: TextStyle(color: textSecondary, fontSize: 13),
+                          hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF18181A) : const Color(0xFFF9F9FB),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: textPrimary, width: 1.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Content Field
+                      TextField(
+                        controller: contentCtrl,
+                        maxLines: 4,
+                        style: TextStyle(color: textPrimary, fontSize: 14, height: 1.4),
+                        decoration: InputDecoration(
+                          labelText: 'Contenido o borrador de la idea',
+                          hintText: 'Escribe tu pensamiento, diálogo o escena suelta...',
+                          alignLabelWithHint: true,
+                          labelStyle: TextStyle(color: textSecondary, fontSize: 13),
+                          hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF18181A) : const Color(0xFFF9F9FB),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: textPrimary, width: 1.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Tags Field
+                      TextField(
+                        controller: tagsCtrl,
+                        style: TextStyle(color: textPrimary, fontSize: 13),
+                        decoration: InputDecoration(
+                          labelText: 'Etiquetas (opcionales)',
+                          hintText: 'Separadas por comas: Clímax, Secreto, Misterio',
+                          labelStyle: TextStyle(color: textSecondary, fontSize: 13),
+                          hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF18181A) : const Color(0xFFF9F9FB),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: textPrimary, width: 1.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+
+                      // Actions
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: textSecondary,
+                                side: BorderSide(color: borderSubtle),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                              ),
+                              onPressed: () => Navigator.of(ctx).pop(),
+                              child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isDark ? Colors.white : Colors.black,
+                                foregroundColor: isDark ? Colors.black : Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                              ),
+                              icon: const Icon(Icons.check_rounded, size: 18),
+                              label: const Text('Guardar Fragmento', style: TextStyle(fontWeight: FontWeight.w700)),
+                              onPressed: () {
+                                final title = titleCtrl.text.trim();
+                                if (title.isEmpty) return;
+
+                                final rawTags = tagsCtrl.text.split(',');
+                                final tagsList = rawTags
+                                    .map((t) => t.trim())
+                                    .where((t) => t.isNotEmpty)
+                                    .toList();
+                                if (tagsList.isEmpty) tagsList.add('Nota');
+
+                                final newIdea = IdeaSnippetModel(
+                                  id: 'idea_${DateTime.now().millisecondsSinceEpoch}',
+                                  bookId: controller.activeBook.id,
+                                  title: title,
+                                  content: contentCtrl.text.trim(),
+                                  category: selectedCategory,
+                                  colorHex: 0xFF18181B,
+                                  createdAt: DateTime.now(),
+                                  tags: tagsList,
+                                );
+                                controller.addIdea(newIdea);
+                                Navigator.of(ctx).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Fragmento guardado en este libro'), behavior: SnackBarBehavior.floating),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: contentCtrl,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Contenido del Fragmento'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              ),
-              onPressed: () {
-                final title = titleCtrl.text.trim();
-                if (title.isNotEmpty) {
-                  final newIdea = IdeaSnippetModel(
-                    id: 'idea_${DateTime.now().millisecondsSinceEpoch}',
-                    title: title,
-                    content: contentCtrl.text.trim(),
-                    category: IdeaCategory.general,
-                    colorHex: 0xFF18181B,
-                    createdAt: DateTime.now(),
-                    tags: ['Nota'],
-                  );
-                  controller.addIdea(newIdea);
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('Guardar Nota'),
-            ),
-          ],
+            );
+          },
         );
       },
     );
   }
 
-  void _showAddCodexDialog(BuildContext context, EditorController controller) {
+  void _showAddCodexDialog(BuildContext context, EditorController controller, bool isDark) {
     final titleCtrl = TextEditingController();
     final descCtrl = TextEditingController();
+    final roleCtrl = TextEditingController();
+    final traitsCtrl = TextEditingController();
     CodexType category = CodexType.character;
 
-    showDialog(
+    final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('Entrada al Códice de Mundo', style: TextStyle(fontWeight: FontWeight.w800)),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: titleCtrl,
-                      decoration: const InputDecoration(labelText: 'Nombre de Personaje / Lugar'),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<CodexType>(
-                      initialValue: category,
-                      decoration: const InputDecoration(labelText: 'Categoría'),
-                      items: CodexType.values.map((c) {
-                        return DropdownMenuItem(
-                          value: c,
-                          child: Text(c.name.toUpperCase()),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => category = val);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: descCtrl,
-                      maxLines: 3,
-                      decoration: const InputDecoration(labelText: 'Descripción / Biografía'),
-                    ),
-                  ],
+            String defaultEmojiForCategory(CodexType c) {
+              switch (c) {
+                case CodexType.character:
+                  return '🧙‍♂️';
+                case CodexType.location:
+                  return '🏰';
+                case CodexType.artifact:
+                  return '🗝️';
+                case CodexType.lore:
+                  return '📜';
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: bgCard,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: AppTheme.getSoftShadow(isDark),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Drag Handle
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: textSecondary.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.auto_stories_outlined, color: textPrimary, size: 22),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Nueva Entrada al Códice',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: textPrimary,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Para: ${controller.activeBook.title}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () => Navigator.of(ctx).pop(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Category Selector Chips
+                      Text(
+                        'TIPO DE ELEMENTO',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: textSecondary,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: Row(
+                          children: CodexType.values.map((c) {
+                            final isSelected = category == c;
+                            final emoji = defaultEmojiForCategory(c);
+                            String label;
+                            switch (c) {
+                              case CodexType.character:
+                                label = 'Personaje';
+                                break;
+                              case CodexType.location:
+                                label = 'Lugar';
+                                break;
+                              case CodexType.artifact:
+                                label = 'Objeto / Reliquia';
+                                break;
+                              case CodexType.lore:
+                                label = 'Códice / Lore';
+                                break;
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(emoji, style: const TextStyle(fontSize: 13)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      label,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                        color: isSelected ? (isDark ? Colors.black : Colors.white) : textPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                selected: isSelected,
+                                selectedColor: isDark ? Colors.white : Colors.black,
+                                backgroundColor: isDark ? const Color(0xFF252525) : const Color(0xFFF4F3EF),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                  side: BorderSide(
+                                    color: isSelected ? Colors.transparent : borderSubtle,
+                                  ),
+                                ),
+                                showCheckmark: false,
+                                onSelected: (selected) {
+                                  if (selected) setState(() => category = c);
+                                },
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Name Field
+                      TextField(
+                        controller: titleCtrl,
+                        style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600, fontSize: 15),
+                        decoration: InputDecoration(
+                          labelText: 'Nombre del elemento',
+                          hintText: 'ej: Ciudad de Niebla o Lord Malakor',
+                          labelStyle: TextStyle(color: textSecondary, fontSize: 13),
+                          hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF18181A) : const Color(0xFFF9F9FB),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: textPrimary, width: 1.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Role / Classification Field
+                      TextField(
+                        controller: roleCtrl,
+                        style: TextStyle(color: textPrimary, fontSize: 14),
+                        decoration: InputDecoration(
+                          labelText: 'Rol o Clasificación',
+                          hintText: 'ej: Santuario Antiguo, Antagonista Principal',
+                          labelStyle: TextStyle(color: textSecondary, fontSize: 13),
+                          hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF18181A) : const Color(0xFFF9F9FB),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: textPrimary, width: 1.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Description Field
+                      TextField(
+                        controller: descCtrl,
+                        maxLines: 3,
+                        style: TextStyle(color: textPrimary, fontSize: 14, height: 1.4),
+                        decoration: InputDecoration(
+                          labelText: 'Descripción / Lore del mundo',
+                          hintText: 'Detalles, secretos, atmósfera o importancia narrativa...',
+                          alignLabelWithHint: true,
+                          labelStyle: TextStyle(color: textSecondary, fontSize: 13),
+                          hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF18181A) : const Color(0xFFF9F9FB),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: textPrimary, width: 1.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Traits Field
+                      TextField(
+                        controller: traitsCtrl,
+                        style: TextStyle(color: textPrimary, fontSize: 13),
+                        decoration: InputDecoration(
+                          labelText: 'Rasgos distintivos (opcionales)',
+                          hintText: 'Separados por comas: Antiguo, Prohibido, Místico',
+                          labelStyle: TextStyle(color: textSecondary, fontSize: 13),
+                          hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF18181A) : const Color(0xFFF9F9FB),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: borderSubtle),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: textPrimary, width: 1.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+
+                      // Actions
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: textSecondary,
+                                side: BorderSide(color: borderSubtle),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                              ),
+                              onPressed: () => Navigator.of(ctx).pop(),
+                              child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isDark ? Colors.white : Colors.black,
+                                foregroundColor: isDark ? Colors.black : Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                              ),
+                              icon: const Icon(Icons.check_rounded, size: 18),
+                              label: const Text('Guardar en el Códice', style: TextStyle(fontWeight: FontWeight.w700)),
+                              onPressed: () {
+                                final title = titleCtrl.text.trim();
+                                if (title.isEmpty) return;
+
+                                final rawTraits = traitsCtrl.text.split(',');
+                                final traitsList = rawTraits
+                                    .map((t) => t.trim())
+                                    .where((t) => t.isNotEmpty)
+                                    .toList();
+                                if (traitsList.isEmpty) traitsList.add('Lore');
+
+                                final role = roleCtrl.text.trim().isNotEmpty
+                                    ? roleCtrl.text.trim()
+                                    : 'Elemento de ${category.name}';
+
+                                final newEntry = CodexEntryModel(
+                                  id: 'codex_${DateTime.now().millisecondsSinceEpoch}',
+                                  bookId: controller.activeBook.id,
+                                  name: title,
+                                  type: category,
+                                  role: role,
+                                  description: descCtrl.text.trim(),
+                                  traits: traitsList,
+                                  secrets: '',
+                                  avatarEmoji: defaultEmojiForCategory(category),
+                                  createdAt: DateTime.now(),
+                                );
+                                controller.addCodexEntry(newEntry);
+                                Navigator.of(ctx).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Entrada guardada en el códice del libro'), behavior: SnackBarBehavior.floating),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  ),
-                  onPressed: () {
-                    final title = titleCtrl.text.trim();
-                    if (title.isNotEmpty) {
-                      final defaultEmoji = category == CodexType.character
-                          ? '🧙‍♂️'
-                          : category == CodexType.location
-                              ? '🏰'
-                              : category == CodexType.artifact
-                                  ? '🗝️'
-                                  : '📜';
-
-                      final newEntry = CodexEntryModel(
-                        id: 'codex_${DateTime.now().millisecondsSinceEpoch}',
-                        bookId: controller.activeBook.id,
-                        name: title,
-                        type: category,
-                        role: 'Elemento de ${category.name}',
-                        description: descCtrl.text.trim(),
-                        traits: ['Manuscrito'],
-                        secrets: '',
-                        avatarEmoji: defaultEmoji,
-                        createdAt: DateTime.now(),
-                      );
-                      controller.addCodexEntry(newEntry);
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: const Text('Guardar'),
-                ),
-              ],
             );
           },
         );
@@ -1682,29 +2208,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             style: TextButton.styleFrom(foregroundColor: textPrimary),
                             icon: const Icon(Icons.add_rounded, size: 18),
                             label: const Text('Nueva Entrada'),
-                            onPressed: () => _showAddCodexDialog(context, controller),
+                            onPressed: () => _showAddCodexDialog(context, controller, isDark),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 12),
-                    SizedBox(
-                      height: 190,
-                      child: ListView.builder(
+                    if (controller.codexEntries.isEmpty)
+                      Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: controller.codexEntries.length,
-                        itemBuilder: (context, index) {
-                          final entry = controller.codexEntries[index];
-                          return CodexCard(
-                            entry: entry,
-                            isDark: isDark,
-                            onTap: () => _showCodexDetailModal(context, controller, entry, isDark),
-                          );
-                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
+                            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                            border: Border.all(color: borderSubtle),
+                            boxShadow: AppTheme.getSoftShadow(isDark),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(Icons.auto_stories_outlined, size: 36, color: textSecondary.withValues(alpha: 0.5)),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Sin entradas en el códice para este libro',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textPrimary),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Registra personajes, lugares, reliquias y conceptos exclusivos de "${controller.activeBook.title}".',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 12, color: textSecondary),
+                              ),
+                              const SizedBox(height: 14),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: textPrimary,
+                                  side: BorderSide(color: borderSubtle),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                ),
+                                icon: const Icon(Icons.add_rounded, size: 16),
+                                label: const Text('Crear Primera Entrada'),
+                                onPressed: () => _showAddCodexDialog(context, controller, isDark),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      SizedBox(
+                        height: 190,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: controller.codexEntries.length,
+                          itemBuilder: (context, index) {
+                            final entry = controller.codexEntries[index];
+                            return CodexCard(
+                              entry: entry,
+                              isDark: isDark,
+                              onTap: () => _showCodexDetailModal(context, controller, entry, isDark),
+                            );
+                          },
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -1728,30 +2296,72 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             style: TextButton.styleFrom(foregroundColor: textPrimary),
                             icon: const Icon(Icons.add_rounded, size: 18),
                             label: const Text('Nueva Nota'),
-                            onPressed: () => _showAddIdeaDialog(context, controller),
+                            onPressed: () => _showAddIdeaDialog(context, controller, isDark),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 12),
-                    SizedBox(
-                      height: 155,
-                      child: ListView.builder(
+                    if (controller.ideas.isEmpty)
+                      Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: controller.ideas.length,
-                        itemBuilder: (context, index) {
-                          final idea = controller.ideas[index];
-                          return IdeaChipCard(
-                            idea: idea,
-                            isDark: isDark,
-                            onPinTap: () => controller.toggleIdeaPin(idea.id),
-                            onTap: () => _showIdeaDetailModal(context, controller, idea, isDark),
-                          );
-                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
+                            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                            border: Border.all(color: borderSubtle),
+                            boxShadow: AppTheme.getSoftShadow(isDark),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(Icons.lightbulb_outline_rounded, size: 36, color: textSecondary.withValues(alpha: 0.5)),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Sin fragmentos ni notas para este libro',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textPrimary),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Apunta diálogos, giros y notas rápidas exclusivas de "${controller.activeBook.title}".',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 12, color: textSecondary),
+                              ),
+                              const SizedBox(height: 14),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: textPrimary,
+                                  side: BorderSide(color: borderSubtle),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                ),
+                                icon: const Icon(Icons.add_rounded, size: 16),
+                                label: const Text('Crear Primer Fragmento'),
+                                onPressed: () => _showAddIdeaDialog(context, controller, isDark),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      SizedBox(
+                        height: 155,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: controller.ideas.length,
+                          itemBuilder: (context, index) {
+                            final idea = controller.ideas[index];
+                            return IdeaChipCard(
+                              idea: idea,
+                              isDark: isDark,
+                              onPinTap: () => controller.toggleIdeaPin(idea.id),
+                              onTap: () => _showIdeaDetailModal(context, controller, idea, isDark),
+                            );
+                          },
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -1791,8 +2401,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ProgressRingCard(stats: controller.writerStats, isDark: isDark),
+                      Text(
+                        'Herramientas y Productividad',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: textPrimary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Utilidades para inspirarte, estructurar y gestionar tu obra',
+                        style: TextStyle(fontSize: 12, color: textSecondary),
+                      ),
                       const SizedBox(height: 16),
                       Row(
                         children: [
