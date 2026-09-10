@@ -1403,7 +1403,8 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
 
                     // Zen Canvas Paper Text Area
                     Expanded(
-                      child: Center(
+                      child: Align(
+                        alignment: Alignment.topCenter,
                         child: Container(
                           constraints: BoxConstraints(
                             maxWidth: controller.maxEditorWidth == double.infinity

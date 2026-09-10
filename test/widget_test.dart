@@ -260,4 +260,44 @@ void main() {
     // Verify updated goal
     expect(find.textContaining('1500 palabras hoy'), findsOneWidget);
   });
+
+  testWidgets('Blank chapter title is positioned at the top of the canvas, not centered vertically', (WidgetTester tester) async {
+    await tester.pumpWidget(const InkWrightApp());
+    await tester.pumpAndSettle();
+
+    // The app auto-opens the last written chapter in ZenEditorScreen
+    final chapterHeaderFinder = find.text('CAPÍTULO 1');
+    expect(chapterHeaderFinder, findsOneWidget);
+
+    // Verify the vertical position is near the top of the screen (< 150px), not vertically centered (~300px in 600px height)
+    final headerTopY = tester.getTopLeft(chapterHeaderFinder).dy;
+    expect(headerTopY, lessThan(150.0));
+
+    final titleFinder = find.byType(TextField).first;
+    final titleTopY = tester.getTopLeft(titleFinder).dy;
+    expect(titleTopY, lessThan(180.0));
+  });
+
+  testWidgets('Library view renders physical book volume design with active badge and colophon', (WidgetTester tester) async {
+    await tester.pumpWidget(const InkWrightApp());
+    await tester.pumpAndSettle();
+
+    // Navigate back to Dashboard
+    await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
+    await tester.pumpAndSettle();
+    final backOption = find.text('Volver al Inicio');
+    await tester.ensureVisible(backOption);
+    await tester.pumpAndSettle();
+    await tester.tap(backOption);
+    await tester.pumpAndSettle();
+
+    // Verify physical book volume elements
+    expect(find.text('InkWright Studio'), findsOneWidget);
+    expect(find.text('Biblioteca de Manuscritos'), findsOneWidget);
+    expect(find.text('LIBRO ACTIVO'), findsOneWidget);
+    expect(find.textContaining('cap.'), findsWidgets);
+    expect(find.textContaining('pal.'), findsWidgets);
+    expect(find.text('Abrir Estudio'), findsWidgets);
+    expect(find.text('Escribir'), findsWidgets);
+  });
 }
