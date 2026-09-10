@@ -169,4 +169,95 @@ void main() {
     // Sheet dismissed
     expect(find.text('Exportar Manuscrito'), findsNothing);
   });
+
+  testWidgets('Dashboard two-level Library view and Book Study view navigation', (WidgetTester tester) async {
+    await tester.pumpWidget(const InkWrightApp());
+    await tester.pumpAndSettle();
+
+    // Navigate back to Dashboard
+    await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
+    await tester.pumpAndSettle();
+    final backOption = find.text('Volver al Inicio');
+    await tester.ensureVisible(backOption);
+    await tester.pumpAndSettle();
+    await tester.tap(backOption);
+    await tester.pumpAndSettle();
+
+    // 1. Initial view in Dashboard is the Library view
+    expect(find.text('InkWright Studio'), findsOneWidget);
+    expect(find.text('Biblioteca de Manuscritos'), findsOneWidget);
+    expect(find.textContaining('Tus Libros'), findsOneWidget);
+    expect(find.text('Abrir Estudio'), findsWidgets);
+
+    // 2. Tap 'Abrir Estudio' to enter Book Study view
+    await tester.tap(find.text('Abrir Estudio').first);
+    await tester.pumpAndSettle();
+
+    // Verify Book Study view is active
+    expect(find.text('Biblioteca'), findsOneWidget); // Strategic back button
+    expect(find.text('Manuscrito'), findsOneWidget);
+    expect(find.text('Personajes'), findsWidgets);
+    expect(find.text('Mapa de Trama'), findsOneWidget);
+    expect(find.text('Cambiar de Libro'), findsOneWidget);
+
+    // 3. Tap 'Biblioteca' strategic button to return to Library view
+    await tester.tap(find.text('Biblioteca'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Biblioteca de Manuscritos'), findsOneWidget);
+    expect(find.textContaining('Tus Libros'), findsOneWidget);
+  });
+
+  testWidgets('Herramientas tab shows dedicated Meta Diaria card and adjustment modal', (WidgetTester tester) async {
+    await tester.pumpWidget(const InkWrightApp());
+    await tester.pumpAndSettle();
+
+    // Navigate back to Dashboard
+    await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
+    await tester.pumpAndSettle();
+    final backOption = find.text('Volver al Inicio');
+    await tester.ensureVisible(backOption);
+    await tester.pumpAndSettle();
+    await tester.tap(backOption);
+    await tester.pumpAndSettle();
+
+    // Enter book study
+    await tester.tap(find.text('Abrir Estudio').first);
+    await tester.pumpAndSettle();
+
+    // Scroll horizontal filter pills to bring Herramientas into view
+    await tester.drag(find.byType(ListView).first, const Offset(-700, 0));
+    await tester.pumpAndSettle();
+
+    // Tap Herramientas tab
+    final herramientasTab = find.text('Herramientas');
+    expect(herramientasTab, findsOneWidget);
+    await tester.tap(herramientasTab);
+    await tester.pumpAndSettle();
+
+    // Verify dedicated Meta Diaria card is present in Herramientas
+    expect(find.text('Meta Diaria de Escritura'), findsOneWidget);
+    expect(find.text('Ajustar Meta Diaria'), findsOneWidget);
+    // Verify symmetrical backup export button
+    expect(find.text('Exportar'), findsOneWidget);
+    expect(find.text('Restaurar'), findsOneWidget);
+
+    // Tap 'Ajustar Meta Diaria'
+    await tester.tap(find.text('Ajustar Meta Diaria'));
+    await tester.pumpAndSettle();
+
+    // Verify modal options and presets
+    expect(find.text('PRESETS RÁPIDOS (PALABRAS)'), findsOneWidget);
+    expect(find.text('1500'), findsOneWidget);
+    expect(find.text('Guardar Meta Diaria'), findsOneWidget);
+
+    // Select 1500 preset and save
+    await tester.tap(find.text('1500'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Guardar Meta Diaria'));
+    await tester.pumpAndSettle();
+
+    // Verify updated goal
+    expect(find.textContaining('1500 palabras hoy'), findsOneWidget);
+  });
 }

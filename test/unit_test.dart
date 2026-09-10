@@ -1384,5 +1384,12 @@ code block line 2
       expect(ch.snapshots.length, equals(1));
       expect(ch.snapshots.first.label, equals('Instantánea Persistente'));
     });
+
+    test('EditorController updates daily goal words', () {
+      final controller = EditorController();
+      expect(controller.writerStats.dailyGoalWords, equals(2000));
+      controller.updateDailyGoal(2500);
+      expect(controller.writerStats.dailyGoalWords, equals(2500));
+    });
   });
 }

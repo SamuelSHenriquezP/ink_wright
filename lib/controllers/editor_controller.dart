@@ -1217,7 +1217,8 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
   void updateIdea(IdeaSnippetModel updated) {
     _ideas = _ideas.map((item) {
       if (item.id == updated.id) {
-        return updated.bookId.isEmpty ? updated.copyWith(bookId: item.bookId) : updated;
+        final bookId = updated.bookId.isNotEmpty ? updated.bookId : item.bookId;
+        return updated.copyWith(bookId: bookId.isNotEmpty ? bookId : _activeBook.id);
       }
       return item;
     }).toList();
@@ -1277,7 +1278,8 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
   void updateCodexEntry(CodexEntryModel updated) {
     _codexEntries = _codexEntries.map((item) {
       if (item.id == updated.id) {
-        return updated.bookId.isEmpty ? updated.copyWith(bookId: item.bookId) : updated;
+        final bookId = updated.bookId.isNotEmpty ? updated.bookId : item.bookId;
+        return updated.copyWith(bookId: bookId.isNotEmpty ? bookId : _activeBook.id);
       }
       return item;
     }).toList();
@@ -1320,6 +1322,15 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       _activeSprint = _activeSprint!.copyWith(isActive: false);
       notifyListeners();
     }
+  }
+
+  // --- WRITER STATS ACTIONS ---
+
+  void updateDailyGoal(int newGoalWords) {
+    if (newGoalWords <= 0) return;
+    _writerStats = _writerStats.copyWith(dailyGoalWords: newGoalWords);
+    _saveCurrentData(debounced: false);
+    notifyListeners();
   }
 
   // --- MIND MAP PLOT ACTIONS ---

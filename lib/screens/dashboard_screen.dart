@@ -5,7 +5,6 @@ import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../controllers/editor_controller.dart';
-import '../widgets/book_card.dart';
 import '../widgets/idea_chip_card.dart';
 import '../widgets/codex_card.dart';
 import '../widgets/muse_assistant_sheet.dart';
@@ -31,10 +30,10 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedFilterIndex = 0;
   bool _hasAutoOpenedLastText = false;
+  bool _isInsideBookView = false;
 
-  final List<String> _filters = [
-    'Manuscrito Activo',
-    'Tus Libros',
+  final List<String> _bookFilters = [
+    'Manuscrito',
     'Personajes',
     'Mapa de Trama',
     'Códice de Mundo',
@@ -56,33 +55,210 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  void _openMetricsSheet(BuildContext context, EditorController controller, bool isDark) {
+  void _showEditDailyGoalModal(BuildContext context, EditorController controller, bool isDark) {
+    final currentGoal = controller.writerStats.dailyGoalWords;
+    int selectedWords = currentGoal;
+    final customCtrl = TextEditingController(text: currentGoal.toString());
+    final presets = [500, 1000, 1500, 2000, 3000];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          decoration: BoxDecoration(
-            color: isDark ? AppTheme.darkBgPrimary : AppTheme.lightBgPrimary,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final bgCard = isDark ? const Color(0xFF1E1E22) : Colors.white;
+            final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+            final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+            final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: Container(
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.black26,
-                  borderRadius: BorderRadius.circular(2),
+                  color: bgCard,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: AppTheme.getSoftShadow(isDark),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: textSecondary.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.flag_rounded, color: textPrimary, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Meta Diaria de Escritura',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: textPrimary,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Ajusta tu objetivo diario de palabras',
+                                style: TextStyle(fontSize: 12, color: textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'PRESETS RÁPIDOS (PALABRAS)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: textSecondary,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: presets.map((p) {
+                        final isSelected = selectedWords == p;
+                        return ChoiceChip(
+                          label: Text(
+                            '$p',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                              color: isSelected ? (isDark ? Colors.black : Colors.white) : textPrimary,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: isDark ? Colors.white : Colors.black,
+                          backgroundColor: isDark ? const Color(0xFF252525) : const Color(0xFFF4F3EF),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: isSelected ? Colors.transparent : borderSubtle),
+                          ),
+                          showCheckmark: false,
+                          onSelected: (sel) {
+                            if (sel) {
+                              setModalState(() {
+                                selectedWords = p;
+                                customCtrl.text = p.toString();
+                              });
+                            }
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'O INGRESA UN VALOR PERSONALIZADO',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: textSecondary,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: customCtrl,
+                      keyboardType: TextInputType.number,
+                      style: TextStyle(color: textPrimary, fontWeight: FontWeight.w700, fontSize: 16),
+                      decoration: InputDecoration(
+                        hintText: 'ej: 1200',
+                        suffixText: 'palabras / día',
+                        suffixStyle: TextStyle(color: textSecondary, fontSize: 13),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF18181A) : const Color(0xFFF9F9FB),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: borderSubtle),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: borderSubtle),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: textPrimary, width: 1.5),
+                        ),
+                      ),
+                      onChanged: (val) {
+                        final parsed = int.tryParse(val.trim());
+                        if (parsed != null && parsed > 0) {
+                          setModalState(() {
+                            selectedWords = parsed;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? Colors.white : Colors.black,
+                          foregroundColor: isDark ? Colors.black : Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.check_rounded, size: 18),
+                        label: const Text(
+                          'Guardar Meta Diaria',
+                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                        ),
+                        onPressed: () {
+                          final parsed = int.tryParse(customCtrl.text.trim()) ?? selectedWords;
+                          if (parsed > 0) {
+                            controller.updateDailyGoal(parsed);
+                            Navigator.of(ctx).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Meta diaria establecida en $parsed palabras'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              ProgressRingCard(stats: controller.writerStats, isDark: isDark),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -534,6 +710,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   final target = int.tryParse(targetCtrl.text) ?? 80000;
                   controller.createNewBook(title, subCtrl.text.trim(), target);
                   Navigator.of(context).pop();
+                  setState(() {
+                    _isInsideBookView = true;
+                    _selectedFilterIndex = 0;
+                  });
                 }
               },
               child: const Text('Crear Libro'),
@@ -1588,107 +1768,406 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // Header Editorial Superior (Limpio y Estructurado)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          todayFormatted.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: textSecondary,
-                            letterSpacing: 1.2,
+            if (!_isInsideBookView) ...[
+              // --- VISTA BIBLIOTECA (SELECCIÓN DE LIBRO) ---
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            todayFormatted.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: textSecondary,
+                              letterSpacing: 1.2,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'InkWright Studio',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: textPrimary,
-                            letterSpacing: -0.5,
+                          const SizedBox(height: 3),
+                          Text(
+                            'InkWright Studio',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: textPrimary,
+                              letterSpacing: -0.5,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-
-                    // Selector sutil de tema claro / oscuro (sin círculos saturados)
-                    IconButton(
-                      icon: Icon(
-                        isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                        size: 22,
-                        color: textSecondary,
+                          const SizedBox(height: 2),
+                          Text(
+                            'Biblioteca de Manuscritos',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                              color: textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
-                      tooltip: isDark ? 'Modo Claro' : 'Modo Oscuro',
-                      onPressed: () {
-                        themeController.toggleThemeMode();
-                        controller.toggleThemeMode();
-                      },
-                    ),
-                  ],
+                      IconButton(
+                        icon: Icon(
+                          isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                          size: 22,
+                          color: textSecondary,
+                        ),
+                        tooltip: isDark ? 'Modo Claro' : 'Modo Oscuro',
+                        onPressed: () {
+                          themeController.toggleThemeMode();
+                          controller.toggleThemeMode();
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
 
-            // Barra de Filtros Monocromática estilo Píldora
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 44,
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _filters.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 10),
-                  itemBuilder: (context, index) {
-                    final isSelected = index == _selectedFilterIndex;
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedFilterIndex = index;
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? (isDark ? Colors.white : Colors.black)
-                              : bgCard,
-                          borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-                          border: Border.all(
-                            color: isSelected ? Colors.transparent : borderSubtle,
-                          ),
-                          boxShadow: isSelected ? AppTheme.getSoftShadow(isDark) : null,
+              // Cabecera de Libros y Acción Nuevo Libro
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Tus Libros (${controller.allBooks.length})',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: textPrimary,
                         ),
-                        child: Center(
-                          child: Text(
-                            _filters[index],
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: isSelected
-                                  ? (isDark ? Colors.black : Colors.white)
-                                  : textSecondary,
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? Colors.white : Colors.black,
+                          foregroundColor: isDark ? Colors.black : Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('Nuevo Libro', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                        onPressed: () => _showCreateBookDialog(context, controller),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Lista Vertical de Obras en la Biblioteca
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final book = controller.allBooks[index];
+                      final isActive = book.id == controller.activeBook.id;
+                      final targetWords = book.targetWordCount;
+                      final currentWords = book.currentWordCount;
+                      final ratio = targetWords > 0 ? (currentWords / targetWords).clamp(0.0, 1.0) : 0.0;
+                      final percent = (ratio * 100).toInt();
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: bgCard,
+                          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                          border: Border.all(
+                            color: isActive ? (isDark ? Colors.white38 : Colors.black38) : borderSubtle,
+                            width: isActive ? 1.5 : 1.0,
+                          ),
+                          boxShadow: AppTheme.getSoftShadow(isDark),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    book.coverEmoji,
+                                    style: const TextStyle(fontSize: 26),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              book.title,
+                                              style: TextStyle(
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.w800,
+                                                color: textPrimary,
+                                                letterSpacing: -0.3,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          if (isActive)
+                                            Container(
+                                              margin: const EdgeInsets.only(left: 6),
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: Text(
+                                                'ACTUAL',
+                                                style: TextStyle(
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: textPrimary,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        '${book.subtitle.isNotEmpty ? "${book.subtitle} • " : ""}${book.chapters.length} capítulos • ${book.currentWordCount} palabras',
+                                        style: TextStyle(fontSize: 12, color: textSecondary, fontWeight: FontWeight.w500),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (controller.allBooks.length > 1)
+                                  IconButton(
+                                    icon: Icon(Icons.more_vert_rounded, size: 20, color: textSecondary),
+                                    tooltip: 'Opciones del libro',
+                                    onPressed: () => _showBookOptions(context, controller, book, isDark),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Progreso de la obra',
+                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: textSecondary),
+                                ),
+                                Text(
+                                  '$percent% ($currentWords / $targetWords pal.)',
+                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: textPrimary),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: ratio,
+                                minHeight: 5,
+                                backgroundColor: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.07),
+                                valueColor: AlwaysStoppedAnimation<Color>(isDark ? Colors.white : Colors.black),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: textPrimary,
+                                      side: BorderSide(color: borderSubtle),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                      padding: const EdgeInsets.symmetric(vertical: 11),
+                                    ),
+                                    icon: const Icon(Icons.dashboard_outlined, size: 16),
+                                    label: const Text(
+                                      'Abrir Estudio',
+                                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                                    ),
+                                    onPressed: () {
+                                      controller.switchBook(book.id);
+                                      setState(() {
+                                        _isInsideBookView = true;
+                                        _selectedFilterIndex = 0;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: isDark ? Colors.white : Colors.black,
+                                      foregroundColor: isDark ? Colors.black : Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                      padding: const EdgeInsets.symmetric(vertical: 11),
+                                    ),
+                                    icon: const Icon(Icons.edit_note_rounded, size: 18),
+                                    label: const Text(
+                                      'Escribir',
+                                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                                    ),
+                                    onPressed: () {
+                                      controller.switchBook(book.id);
+                                      setState(() {
+                                        _isInsideBookView = true;
+                                        _selectedFilterIndex = 0;
+                                      });
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    childCount: controller.allBooks.length,
+                  ),
+                ),
+              ),
+            ] else ...[
+              // --- VISTA ESTUDIO DEL LIBRO SELECCIONADO ---
+              // Barra de Navegación Estratégica Superior
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                  child: Row(
+                    children: [
+                      // Botón Estratégico para volver a la biblioteca
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: textPrimary,
+                          side: BorderSide(color: borderSubtle),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                        label: const Text(
+                          'Biblioteca',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isInsideBookView = false;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              controller.activeBook.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: textPrimary,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            Text(
+                              'InkWright Studio',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: textSecondary,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                          size: 22,
+                          color: textSecondary,
+                        ),
+                        tooltip: isDark ? 'Modo Claro' : 'Modo Oscuro',
+                        onPressed: () {
+                          themeController.toggleThemeMode();
+                          controller.toggleThemeMode();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Barra de Filtros Monocromática estilo Píldora
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 44,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _bookFilters.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 10),
+                    itemBuilder: (context, index) {
+                      final isSelected = index == _selectedFilterIndex;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedFilterIndex = index;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? (isDark ? Colors.white : Colors.black)
+                                : bgCard,
+                            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+                            border: Border.all(
+                              color: isSelected ? Colors.transparent : borderSubtle,
+                            ),
+                            boxShadow: isSelected ? AppTheme.getSoftShadow(isDark) : null,
+                          ),
+                          child: Center(
+                            child: Text(
+                              _bookFilters[index],
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isSelected
+                                    ? (isDark ? Colors.black : Colors.white)
+                                    : textSecondary,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
             // SECCIÓN 0: MANUSCRITO ACTIVO Y ESCRITURA DIRECTA
             if (_selectedFilterIndex == 0) ...[
@@ -1886,12 +2365,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 onPressed: () {
                                   setState(() {
-                                    _selectedFilterIndex = 2; // Personajes
+                                    _selectedFilterIndex = 1; // Personajes
                                   });
                                 },
                               ),
                             ),
                           ],
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        Center(
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: textSecondary,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            ),
+                            icon: const Icon(Icons.swap_horiz_rounded, size: 16),
+                            label: const Text(
+                              'Cambiar de Libro',
+                              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isInsideBookView = false;
+                              });
+                            },
+                          ),
                         ),
                       ],
                     ),
@@ -1899,82 +2399,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 14)),
-
-              // Tarjeta de Métrica Diaria
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                    onTap: () => _openMetricsSheet(context, controller, isDark),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: bgCard,
-                        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                        border: Border.all(color: borderSubtle, width: 1.0),
-                        boxShadow: AppTheme.getSoftShadow(isDark),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(Icons.insights_rounded, size: 18, color: textPrimary),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Meta diaria: ${controller.writerStats.wordsToday} / ${controller.writerStats.dailyGoalWords} palabras',
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: textPrimary,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${controller.writerStats.dailyPercentage}%',
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: textPrimary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: LinearProgressIndicator(
-                                    value: controller.writerStats.dailyGoalRatio,
-                                    minHeight: 4,
-                                    backgroundColor: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
-                                    valueColor: AlwaysStoppedAnimation<Color>(isDark ? Colors.white : Colors.black),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Icon(Icons.arrow_forward_ios_rounded, size: 12, color: textSecondary),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 18)),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
               // Lista de Capítulos del Manuscrito Activo
               SliverToBoxAdapter(
@@ -2058,64 +2483,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
 
-            // SECCIÓN 1: TUS LIBROS / PROYECTOS
+            // SECCIÓN 1: PERSONAJES DE LA HISTORIA
             if (_selectedFilterIndex == 1) ...[
-              SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Tus Manuscritos y Libros',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              color: textPrimary,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.add_rounded),
-                            onPressed: () => _showCreateBookDialog(context, controller),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 250,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: controller.allBooks.length,
-                        itemBuilder: (context, index) {
-                          final book = controller.allBooks[index];
-                          return BookCard(
-                            book: book,
-                            isDark: isDark,
-                            onTap: () {
-                              controller.switchBook(book.id);
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
-                              );
-                            },
-                            onMoreTap: controller.allBooks.length > 1
-                                ? () => _showBookOptions(context, controller, book, isDark)
-                                : null,
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            // SECCIÓN 2: PERSONAJES DE LA HISTORIA
-            if (_selectedFilterIndex == 2) ...[
               SliverToBoxAdapter(
                 child: SizedBox(
                   height: MediaQuery.of(context).size.height * 0.72,
@@ -2124,8 +2493,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
 
-            // SECCIÓN 3: MAPA DE TRAMA BANNER
-            if (_selectedFilterIndex == 3) ...[
+            // SECCIÓN 2: MAPA DE TRAMA BANNER
+            if (_selectedFilterIndex == 2) ...[
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -2190,8 +2559,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
 
-            // SECCIÓN 4: CÓDICE DE MUNDO
-            if (_selectedFilterIndex == 4) ...[
+            // SECCIÓN 3: CÓDICE DE MUNDO
+            if (_selectedFilterIndex == 3) ...[
               SliverToBoxAdapter(
                 child: Column(
                   children: [
@@ -2278,8 +2647,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
 
-            // SECCIÓN 5: NOTAS & IDEAS
-            if (_selectedFilterIndex == 5) ...[
+            // SECCIÓN 4: NOTAS & IDEAS
+            if (_selectedFilterIndex == 4) ...[
               SliverToBoxAdapter(
                 child: Column(
                   children: [
@@ -2367,8 +2736,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
 
-            // SECCIÓN 6: MÉTRICAS & ESTADÍSTICAS (Opción menor)
-            if (_selectedFilterIndex == 6) ...[
+            // SECCIÓN 5: MÉTRICAS & ESTADÍSTICAS
+            if (_selectedFilterIndex == 5) ...[
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -2395,14 +2764,116 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
 
-            // SECCIÓN 7: HERRAMIENTAS & PRODUCTIVIDAD
-            if (_selectedFilterIndex == 7) ...[
+            // SECCIÓN 6: HERRAMIENTAS & PRODUCTIVIDAD
+            if (_selectedFilterIndex == 6) ...[
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Tarjeta de Meta Diaria de Escritura (Configurable con respiro visual amplio)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: bgCard,
+                          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                          border: Border.all(color: borderSubtle, width: 1.0),
+                          boxShadow: AppTheme.getSoftShadow(isDark),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(Icons.flag_rounded, size: 20, color: textPrimary),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Meta Diaria de Escritura',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                            color: textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${controller.writerStats.wordsToday} de ${controller.writerStats.dailyGoalWords} palabras hoy',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                // Porcentaje separado con respiro visual amplio
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Text(
+                                    '${controller.writerStats.dailyPercentage}%',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(5),
+                              child: LinearProgressIndicator(
+                                value: controller.writerStats.dailyGoalRatio,
+                                minHeight: 6,
+                                backgroundColor: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
+                                valueColor: AlwaysStoppedAnimation<Color>(isDark ? Colors.white : Colors.black),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: textPrimary,
+                                  side: BorderSide(color: borderSubtle),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                                ),
+                                icon: const Icon(Icons.tune_rounded, size: 17),
+                                label: const Text(
+                                  'Ajustar Meta Diaria',
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                                ),
+                                onPressed: () => _showEditDailyGoalModal(context, controller, isDark),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 22),
+
                       Text(
                         'Herramientas y Productividad',
                         style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: textPrimary),
@@ -2552,7 +3023,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       elevation: 0,
                                     ),
                                     icon: const Icon(Icons.download_rounded, size: 17),
-                                    label: const Text('Exportar Respaldo', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                                    label: const Text('Exportar', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                                     onPressed: () => _handleExportBackup(context, controller, isDark),
                                   ),
                                 ),
@@ -2580,27 +3051,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ],
-
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
-        ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
       ),
 
-      // FAB para ir directo al Editor
+      // FAB adaptativo según vista (Biblioteca o Estudio del Manuscrito)
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: isDark ? Colors.white : Colors.black,
         foregroundColor: isDark ? Colors.black : Colors.white,
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        icon: const Icon(Icons.edit_note_rounded),
-        label: const Text(
-          'Escribir',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        icon: Icon(!_isInsideBookView ? Icons.add_rounded : Icons.edit_note_rounded),
+        label: Text(
+          !_isInsideBookView ? 'Nuevo Libro' : 'Escribir',
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
-          );
+          if (!_isInsideBookView) {
+            _showCreateBookDialog(context, controller);
+          } else {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
+            );
+          }
         },
       ),
     );
