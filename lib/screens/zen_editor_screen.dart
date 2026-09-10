@@ -104,10 +104,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
   }
 
   void _openExportDialog(BuildContext context, bool isDark) {
-    showDialog(
-      context: context,
-      builder: (_) => ExportManuscriptDialog(isDark: isDark),
-    );
+    ExportManuscriptDialog.show(context, isDark: isDark);
   }
 
   void _openSprintDialog(BuildContext context, bool isDark) {

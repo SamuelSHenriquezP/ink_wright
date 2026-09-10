@@ -485,10 +485,7 @@ class ChapterMetricsView extends StatelessWidget {
                             icon: const Icon(Icons.ios_share_rounded, size: 18),
                             label: const Text('Exportar', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                             onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => ExportManuscriptDialog(isDark: isDark),
-                              );
+                              ExportManuscriptDialog.show(context, isDark: isDark);
                             },
                           ),
                         ),

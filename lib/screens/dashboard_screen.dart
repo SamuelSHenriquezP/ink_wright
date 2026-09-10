@@ -105,10 +105,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _openExportDialog(BuildContext context, bool isDark) {
-    showDialog(
-      context: context,
-      builder: (_) => ExportManuscriptDialog(isDark: isDark),
-    );
+    ExportManuscriptDialog.show(context, isDark: isDark);
   }
 
   Future<void> _handleExportBackup(BuildContext context, EditorController controller, bool isDark) async {

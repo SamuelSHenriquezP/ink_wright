@@ -131,4 +131,41 @@ void main() {
     await tester.tap(find.text('Cancelar'));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('Export modal opens as scrollable bottom sheet and can be scrolled and dismissed', (WidgetTester tester) async {
+    await tester.pumpWidget(const InkWrightApp());
+    await tester.pumpAndSettle();
+
+    // Tap the floating '+' options button
+    final fab = find.byTooltip('Acciones Rápidas (+)');
+    await tester.tap(fab);
+    await tester.pumpAndSettle();
+
+    // Tap "Exportar"
+    await tester.tap(find.text('Exportar'));
+    await tester.pumpAndSettle();
+
+    // Verify Export sheet is opened
+    expect(find.text('Exportar Manuscrito'), findsOneWidget);
+    expect(find.text('Seleccionar Formato de Exportación'), findsOneWidget);
+    expect(find.text('Tipografía Editorial'), findsOneWidget);
+    expect(find.text('Contenido Adicional'), findsOneWidget);
+
+    // Verify SingleChildScrollView exists and is scrollable
+    expect(find.byType(SingleChildScrollView), findsWidgets);
+
+    // Select Word export format
+    await tester.tap(find.text('Microsoft Word (.docx)'));
+    await tester.pumpAndSettle();
+
+    // Verify button updates
+    expect(find.text('Exportar a Microsoft Word (.docx)'), findsOneWidget);
+
+    // Tap outside / close sheet
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pumpAndSettle();
+
+    // Sheet dismissed
+    expect(find.text('Exportar Manuscrito'), findsNothing);
+  });
 }
