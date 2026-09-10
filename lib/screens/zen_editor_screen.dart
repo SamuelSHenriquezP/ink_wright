@@ -31,6 +31,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
   final ScrollController _scrollController = ScrollController();
   final PageController _pageController = PageController(initialPage: 1);
   bool _isReadOnly = false;
+  bool _isFabExpanded = false;
 
   // Chapter title controller
   final TextEditingController _chapterTitleController = TextEditingController();
@@ -262,111 +263,78 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
     );
   }
 
-  void _openQuickActionsModal(BuildContext context, EditorController controller, bool isDark) {
-    final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
+  Widget _buildFloatingOptionItem({
+    required IconData icon,
+    required String label,
+    required int delayMs,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    final bgPill = isDark ? const Color(0xFF222225) : Colors.white;
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
-    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final borderSubtle = isDark ? const Color(0xFF38383C) : const Color(0xFFE2E0D8);
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: bgCard,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: textSecondary.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Text Label Pill
+          Material(
+            color: Colors.transparent,
+            elevation: 4,
+            shadowColor: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: bgPill,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderSubtle, width: 0.8),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: textPrimary,
+                  letterSpacing: -0.1,
                 ),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Acciones Rápidas',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: textPrimary,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.post_add_rounded, size: 22, color: textPrimary),
-                  ),
-                  title: Text('Nuevo Capítulo', style: TextStyle(fontWeight: FontWeight.w700, color: textPrimary, fontSize: 14)),
-                  subtitle: Text('Añade un nuevo capítulo al libro actual', style: TextStyle(color: textSecondary, fontSize: 12)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _showNewChapterDialog(context, controller, isDark);
-                  },
-                ),
-                Divider(height: 1, color: borderSubtle),
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.auto_stories_outlined, size: 22, color: textPrimary),
-                  ),
-                  title: Text('Nuevo Libro', style: TextStyle(fontWeight: FontWeight.w700, color: textPrimary, fontSize: 14)),
-                  subtitle: Text('Crea un nuevo libro o proyecto literario', style: TextStyle(color: textSecondary, fontSize: 12)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _showNewBookDialog(context, controller, isDark);
-                  },
-                ),
-                Divider(height: 1, color: borderSubtle),
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.file_download_outlined, size: 22, color: textPrimary),
-                  ),
-                  title: Text('Exportar', style: TextStyle(fontWeight: FontWeight.w700, color: textPrimary, fontSize: 14)),
-                  subtitle: Text('Exporta tu manuscrito en PDF, DOCX, TXT o Markdown', style: TextStyle(color: textSecondary, fontSize: 12)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _openExportDialog(context, isDark);
-                  },
-                ),
-              ],
+              ),
             ),
           ),
-        );
-      },
-    );
+          const SizedBox(width: 12),
+
+          // Circular Floating Action Button
+          Material(
+            color: Colors.transparent,
+            elevation: 5,
+            shadowColor: Colors.black.withValues(alpha: isDark ? 0.5 : 0.2),
+            shape: const CircleBorder(),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: bgPill,
+                border: Border.all(color: borderSubtle, width: 0.8),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: textPrimary,
+              ),
+            ),
+          ),
+          // Align with center of 56px FAB ((56 - 44) / 2 = 6px)
+          const SizedBox(width: 6),
+        ],
+      ),
+    )
+        .animate()
+        .fadeIn(duration: 160.ms, delay: Duration(milliseconds: delayMs))
+        .slideY(begin: 0.2, end: 0, duration: 160.ms, curve: Curves.easeOut);
   }
 
   void _toggleFindReplace() {
@@ -1213,17 +1181,32 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
           if (_showFindReplace) _toggleFindReplace();
         },
       },
-      child: Scaffold(
-        key: _scaffoldKey,
-        drawer: ChapterDrawer(controller: controller, isDark: isDark),
-        drawerEnableOpenDragGesture: false,
-        backgroundColor: bgPrimary,
-        body: SafeArea(
-          child: PageView(
-            controller: _pageController,
-            physics: isKeyboardOpen
-                ? const NeverScrollableScrollPhysics()
-                : const PageScrollPhysics(),
+      child: PopScope(
+        canPop: !_isFabExpanded,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          if (_isFabExpanded) {
+            setState(() {
+              _isFabExpanded = false;
+            });
+          }
+        },
+        child: Scaffold(
+          key: _scaffoldKey,
+          drawer: ChapterDrawer(controller: controller, isDark: isDark),
+          drawerEnableOpenDragGesture: false,
+          backgroundColor: bgPrimary,
+          body: SafeArea(
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (idx) {
+                if (_isFabExpanded) {
+                  setState(() => _isFabExpanded = false);
+                }
+              },
+              physics: isKeyboardOpen
+                  ? const NeverScrollableScrollPhysics()
+                  : const PageScrollPhysics(),
             children: [
               // Page 0: Chapter Drawer (Revealed when swiping to the right — matches top-left menu)
               ChapterDrawer(
@@ -1557,20 +1540,93 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                   ),
                 ),
 
-              // Floating '+' Options Button (Only shown when keyboard is closed)
+              // Scrim / Backdrop overlay when FAB is expanded
+              if (_isFabExpanded && !isZen && !isKeyboardOpen)
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => setState(() => _isFabExpanded = false),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: isDark ? 0.6 : 0.35),
+                    ),
+                  ).animate().fadeIn(duration: 150.ms),
+                ),
+
+              // Floating Speed Dial Options + Main FAB (Only shown when keyboard is closed)
               if (!isZen && !isKeyboardOpen)
                 Positioned(
                   bottom: 24,
                   right: 20,
-                  child: FloatingActionButton(
-                    heroTag: 'editor_fab_options',
-                    backgroundColor: accentColor,
-                    foregroundColor: isDark ? Colors.black : Colors.white,
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                    tooltip: 'Acciones Rápidas (+)',
-                    onPressed: () => _openQuickActionsModal(context, controller, isDark),
-                    child: const Icon(Icons.add_rounded, size: 28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (_isFabExpanded) ...[
+                        // Option 3: Exportar (Top-most)
+                        _buildFloatingOptionItem(
+                          icon: Icons.file_download_outlined,
+                          label: 'Exportar',
+                          delayMs: 80,
+                          isDark: isDark,
+                          onTap: () {
+                            setState(() => _isFabExpanded = false);
+                            _openExportDialog(context, isDark);
+                          },
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Option 2: Nuevo Libro (Middle)
+                        _buildFloatingOptionItem(
+                          icon: Icons.auto_stories_outlined,
+                          label: 'Nuevo Libro',
+                          delayMs: 40,
+                          isDark: isDark,
+                          onTap: () {
+                            setState(() => _isFabExpanded = false);
+                            _showNewBookDialog(context, controller, isDark);
+                          },
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Option 1: Nuevo Capítulo (Bottom-most above FAB)
+                        _buildFloatingOptionItem(
+                          icon: Icons.post_add_rounded,
+                          label: 'Nuevo Capítulo',
+                          delayMs: 0,
+                          isDark: isDark,
+                          onTap: () {
+                            setState(() => _isFabExpanded = false);
+                            _showNewChapterDialog(context, controller, isDark);
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Main FAB Toggle (+ / X)
+                      FloatingActionButton(
+                        heroTag: 'editor_fab_options',
+                        backgroundColor: _isFabExpanded
+                            ? (isDark ? const Color(0xFF2C2C2E) : const Color(0xFF1E1E20))
+                            : accentColor,
+                        foregroundColor: _isFabExpanded
+                            ? Colors.white
+                            : (isDark ? Colors.black : Colors.white),
+                        elevation: 5,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                        tooltip: _isFabExpanded ? 'Cerrar' : 'Acciones Rápidas (+)',
+                        onPressed: () {
+                          setState(() {
+                            _isFabExpanded = !_isFabExpanded;
+                          });
+                        },
+                        child: AnimatedRotation(
+                          turns: _isFabExpanded ? 0.125 : 0.0,
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          child: const Icon(Icons.add_rounded, size: 28),
+                        ),
+                      ),
+                    ],
                   ),
                 ).animate().scale(duration: 150.ms, curve: Curves.easeOut),
               ],
@@ -1594,6 +1650,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
         ),
       ),
     ),
+  ),
   );
   }
 }

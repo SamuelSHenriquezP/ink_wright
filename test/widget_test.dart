@@ -114,8 +114,7 @@ void main() {
     await tester.tap(fab);
     await tester.pumpAndSettle();
 
-    // Verify the 3 popup options are present
-    expect(find.text('Acciones Rápidas'), findsOneWidget);
+    // Verify the 3 floating speed dial options are present
     expect(find.text('Nuevo Capítulo'), findsOneWidget);
     expect(find.text('Nuevo Libro'), findsOneWidget);
     expect(find.text('Exportar'), findsOneWidget);
