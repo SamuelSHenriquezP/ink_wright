@@ -486,6 +486,50 @@ code block line 2
       );
     });
 
+    testWidgets('Markdown hidden markers do not apply negative letterSpacing that truncates line edges', (tester) async {
+      const sentence = '**Tú** eres lo más hermoso que tengo Señor.';
+      final controller = MarkdownEditingController(
+        text: sentence,
+        hideMarkdownSymbols: true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                final span = controller.buildTextSpan(
+                  context: context,
+                  style: const TextStyle(fontSize: 16.5),
+                  withComposing: false,
+                );
+
+                expect(span.toPlainText(), equals(sentence));
+
+                // Assert no child span has negative letter spacing
+                void checkNoNegativeSpacing(InlineSpan s) {
+                  if (s is TextSpan) {
+                    final spacing = s.style?.letterSpacing;
+                    if (spacing != null) {
+                      expect(spacing >= 0.0, isTrue, reason: 'letterSpacing must not be negative');
+                    }
+                    if (s.children != null) {
+                      for (final child in s.children!) {
+                        checkNoNegativeSpacing(child);
+                      }
+                    }
+                  }
+                }
+
+                checkNoNegativeSpacing(span);
+                return Text.rich(span);
+              },
+            ),
+          ),
+        ),
+      );
+    });
+
     test('MarkdownEditingController format shortcut methods apply formatting', () {
       final controller = MarkdownEditingController(text: 'Palabra');
       controller.selection = const TextSelection(baseOffset: 0, extentOffset: 7);

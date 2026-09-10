@@ -105,7 +105,6 @@ class MarkdownEditingController extends TextEditingController {
       fontSize: 0.001,
       height: 0.001,
       color: Colors.transparent,
-      letterSpacing: -1.0,
     );
 
     bool inCodeBlock = false;

@@ -49,15 +49,30 @@ void main() {
     expect(find.text('InkWright Studio'), findsOneWidget);
   });
 
-  testWidgets('Navigation to chapter metrics (swipe right) and chapters (swipe left)', (WidgetTester tester) async {
+  testWidgets('Navigation to chapters (swipe right) and chapter metrics (swipe left)', (WidgetTester tester) async {
     await tester.pumpWidget(const InkWrightApp());
     await tester.pumpAndSettle();
 
     // Editor is active initially
     expect(find.text('Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo'), findsOneWidget);
 
-    // 1. Swipe to the right (drag finger right) to open Metrics
+    // 1. Swipe to the right (drag finger right) to open Chapter Drawer (Page 0)
     await tester.flingFrom(const Offset(200, 40), const Offset(400, 0), 1000);
+    await tester.pumpAndSettle();
+
+    // ChapterDrawer view is displayed (same view as 3-bars menu)
+    expect(find.text('Nuevo Capítulo'), findsOneWidget);
+    expect(find.text('Capítulo 2: El Arte de Crear Personajes'), findsOneWidget);
+
+    // Tap a chapter to switch to it and return to editor
+    await tester.tap(find.text('Capítulo 2: El Arte de Crear Personajes'));
+    await tester.pumpAndSettle();
+
+    // Returns back to editor with the selected chapter
+    expect(find.text('Capítulo 2: El Arte de Crear Personajes'), findsOneWidget);
+
+    // 2. Swipe to the left (drag finger left) to open Metrics (Page 2)
+    await tester.flingFrom(const Offset(300, 40), const Offset(-400, 0), 1000);
     await tester.pumpAndSettle();
 
     // Metrics view is displayed
@@ -72,21 +87,6 @@ void main() {
     await tester.pumpAndSettle();
 
     // Returns back to editor
-    expect(find.text('Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo'), findsOneWidget);
-
-    // 2. Swipe to the left (drag finger left) to open Chapter Drawer
-    await tester.flingFrom(const Offset(300, 40), const Offset(-400, 0), 1000);
-    await tester.pumpAndSettle();
-
-    // ChapterDrawer view is displayed (same view as 3-bars menu)
-    expect(find.text('Nuevo Capítulo'), findsOneWidget);
-    expect(find.text('Capítulo 2: El Arte de Crear Personajes'), findsOneWidget);
-
-    // Tap a chapter to switch to it and return to editor
-    await tester.tap(find.text('Capítulo 2: El Arte de Crear Personajes'));
-    await tester.pumpAndSettle();
-
-    // Returns back to editor with the selected chapter
     expect(find.text('Capítulo 2: El Arte de Crear Personajes'), findsOneWidget);
 
     // 3. Tap the 3-bars hamburger menu at the top left to verify it opens the same ChapterDrawer

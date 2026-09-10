@@ -1225,11 +1225,12 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                 ? const NeverScrollableScrollPhysics()
                 : const PageScrollPhysics(),
             children: [
-              // Page 0: Chapter Metrics View (Revealed when swiping to the right)
-              ChapterMetricsView(
+              // Page 0: Chapter Drawer (Revealed when swiping to the right — matches top-left menu)
+              ChapterDrawer(
                 controller: controller,
                 isDark: isDark,
-                onBackToEditor: () {
+                width: double.infinity,
+                onSelectChapter: () {
                   if (_pageController.hasClients) {
                     _pageController.animateToPage(
                       1,
@@ -1453,6 +1454,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                 // Editable Chapter Title Field
                                 TextField(
                                   controller: _chapterTitleController,
+                                  clipBehavior: Clip.none,
                                   readOnly: _isReadOnly,
                                   style: GoogleFonts.getFont(
                                     controller.selectedFontFamily,
@@ -1483,6 +1485,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                   readOnly: _isReadOnly,
                                   controller: controller.textEditingController,
                                   focusNode: controller.focusNode,
+                                  clipBehavior: Clip.none,
                                   maxLines: null,
                                   keyboardType: TextInputType.multiline,
                                   cursorColor: accentColor,
@@ -1573,12 +1576,11 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
               ],
             ),
 
-            // Page 2: Chapter Drawer (Revealed when swiping to the left — exact same view as 3-bars menu)
-            ChapterDrawer(
+            // Page 2: Chapter Metrics View (Revealed when swiping to the left)
+            ChapterMetricsView(
               controller: controller,
               isDark: isDark,
-              width: double.infinity,
-              onSelectChapter: () {
+              onBackToEditor: () {
                 if (_pageController.hasClients) {
                   _pageController.animateToPage(
                     1,
