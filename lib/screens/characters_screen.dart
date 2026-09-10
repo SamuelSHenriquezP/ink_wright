@@ -392,7 +392,7 @@ class _CharactersScreenState extends State<CharactersScreen> {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: borderSubtle),
                     ),
                     child: Text(character.avatarEmoji, style: const TextStyle(fontSize: 28)),
@@ -418,7 +418,7 @@ class _CharactersScreenState extends State<CharactersScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: isDark ? Colors.white12 : Colors.black87,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 character.role.toUpperCase(),
@@ -746,34 +746,40 @@ class _CharactersScreenState extends State<CharactersScreen> {
       children: [
         // Top Header
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Personajes de la Historia',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: textPrimary,
-                      letterSpacing: -0.4,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Personajes',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: textPrimary,
+                        letterSpacing: -0.4,
+                      ),
                     ),
-                  ),
-                  Text(
-                    '${controller.activeBook.title} • ${characters.length} personaje${characters.length == 1 ? '' : 's'}',
-                    style: TextStyle(fontSize: 12, color: textSecondary),
-                  ),
-                ],
+                    Text(
+                      '${controller.activeBook.title} • ${characters.length} personaje${characters.length == 1 ? '' : 's'}',
+                      style: TextStyle(fontSize: 11, color: textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isDark ? Colors.white : Colors.black,
                   foregroundColor: isDark ? Colors.black : Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  elevation: 0,
                 ),
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: const Text(
@@ -788,14 +794,14 @@ class _CharactersScreenState extends State<CharactersScreen> {
 
         // Role Filter Pills
         SizedBox(
-          height: 44,
+          height: 40,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: _roleFilters.map((role) {
               final isSelected = _selectedRoleFilter == role;
               return Padding(
-                padding: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.only(right: 6),
                 child: ChoiceChip(
                   label: Text(role),
                   selected: isSelected,
@@ -803,7 +809,7 @@ class _CharactersScreenState extends State<CharactersScreen> {
                     if (selected) setState(() => _selectedRoleFilter = role);
                   },
                   labelStyle: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     color: isSelected
                         ? (isDark ? Colors.black : Colors.white)
@@ -812,7 +818,7 @@ class _CharactersScreenState extends State<CharactersScreen> {
                   selectedColor: isDark ? Colors.white : Colors.black,
                   backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(8),
                     side: BorderSide(
                       color: isSelected
                           ? Colors.transparent
@@ -836,37 +842,38 @@ class _CharactersScreenState extends State<CharactersScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: 64,
-                          height: 64,
+                          width: 56,
+                          height: 56,
                           decoration: BoxDecoration(
                             color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                            shape: BoxShape.circle,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.person_add_alt_1_rounded, size: 32, color: textSecondary),
+                          child: Icon(Icons.person_add_alt_1_rounded, size: 28, color: textSecondary),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
                         Text(
                           _selectedRoleFilter == 'Todos'
-                              ? 'No hay personajes en este libro aún'
+                              ? 'Sin personajes registrados aún'
                               : 'No hay personajes con rol "$_selectedRoleFilter"',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary),
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: textPrimary),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Crea a tus protagonistas, antagonistas y secundarios con su psicología y biografía escrita.',
-                          style: TextStyle(fontSize: 13, color: textSecondary),
+                          'Crea protagonistas, antagonistas y aliados con su psicología y biografía.',
+                          style: TextStyle(fontSize: 12, color: textSecondary),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 16),
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: textPrimary,
-                            side: BorderSide(color: borderSubtle),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        const SizedBox(height: 14),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark ? Colors.white : Colors.black,
+                            foregroundColor: isDark ? Colors.black : Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           ),
                           icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('Crear Primer Personaje'),
+                          label: const Text('Crear Primer Personaje', style: TextStyle(fontWeight: FontWeight.w700)),
                           onPressed: () => _showCharacterFormDialog(context, controller),
                         ),
                       ],
@@ -874,45 +881,45 @@ class _CharactersScreenState extends State<CharactersScreen> {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
                   physics: const BouncingScrollPhysics(),
                   itemCount: filteredCharacters.length,
                   itemBuilder: (context, index) {
                     final character = filteredCharacters[index];
                     return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
+                      margin: const EdgeInsets.only(bottom: 10),
                       decoration: BoxDecoration(
                         color: bgCard,
-                        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: borderSubtle),
                         boxShadow: AppTheme.getSoftShadow(isDark),
                       ),
                       child: InkWell(
                         onTap: () => _showCharacterDetailSheet(context, character, controller),
-                        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                        borderRadius: BorderRadius.circular(10),
                         child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(14),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Avatar
+                                  // Square Avatar Badge
                                   Container(
-                                    width: 46,
-                                    height: 46,
+                                    width: 44,
+                                    height: 44,
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
                                       color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                                      shape: BoxShape.circle,
+                                      borderRadius: BorderRadius.circular(8),
                                       border: Border.all(color: borderSubtle),
                                     ),
-                                    child: Text(character.avatarEmoji, style: const TextStyle(fontSize: 24)),
+                                    child: Text(character.avatarEmoji, style: const TextStyle(fontSize: 22)),
                                   ),
                                   const SizedBox(width: 12),
 
-                                  // Name & Role
+                                  // Name, Role & Archetype
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -926,14 +933,14 @@ class _CharactersScreenState extends State<CharactersScreen> {
                                             letterSpacing: -0.2,
                                           ),
                                         ),
-                                        const SizedBox(height: 2),
+                                        const SizedBox(height: 4),
                                         Row(
                                           children: [
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               decoration: BoxDecoration(
                                                 color: isDark ? Colors.white12 : Colors.black87,
-                                                borderRadius: BorderRadius.circular(10),
+                                                borderRadius: BorderRadius.circular(6),
                                               ),
                                               child: Text(
                                                 character.role.toUpperCase(),
@@ -947,9 +954,13 @@ class _CharactersScreenState extends State<CharactersScreen> {
                                             ),
                                             if (character.archetype.isNotEmpty) ...[
                                               const SizedBox(width: 6),
-                                              Text(
-                                                character.archetype,
-                                                style: TextStyle(fontSize: 11, color: textSecondary, fontWeight: FontWeight.w600),
+                                              Expanded(
+                                                child: Text(
+                                                  character.archetype,
+                                                  style: TextStyle(fontSize: 11, color: textSecondary, fontWeight: FontWeight.w600),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
                                               ),
                                             ],
                                           ],
@@ -958,10 +969,11 @@ class _CharactersScreenState extends State<CharactersScreen> {
                                     ),
                                   ),
 
-                                  // Quick Insert Button
+                                  // Quick Action: Insert in Editor
                                   IconButton(
                                     icon: const Icon(Icons.post_add_rounded, size: 20),
                                     tooltip: 'Insertar en Manuscrito',
+                                    visualDensity: VisualDensity.compact,
                                     onPressed: () {
                                       controller.insertCharacterToEditor(character);
                                       ScaffoldMessenger.of(context).showSnackBar(
@@ -975,9 +987,28 @@ class _CharactersScreenState extends State<CharactersScreen> {
                                 ],
                               ),
 
+                              // Motivation / Core drive if present
+                              if (character.motivation.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(Icons.flag_outlined, size: 13, color: textSecondary),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        character.motivation,
+                                        style: TextStyle(fontSize: 12, color: textPrimary.withValues(alpha: 0.9), fontWeight: FontWeight.w500),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+
                               // Quote if present
                               if (character.quote.isNotEmpty) ...[
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 8),
                                 Text(
                                   character.quote,
                                   style: TextStyle(
@@ -992,31 +1023,31 @@ class _CharactersScreenState extends State<CharactersScreen> {
 
                               // Biography snippet (El personaje escrito)
                               if (character.writtenBiography.isNotEmpty) ...[
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 8),
                                 Text(
                                   character.writtenBiography,
                                   style: TextStyle(
-                                    fontSize: 13,
-                                    color: textPrimary.withValues(alpha: 0.85),
-                                    height: 1.45,
+                                    fontSize: 12,
+                                    color: textPrimary.withValues(alpha: 0.8),
+                                    height: 1.4,
                                   ),
-                                  maxLines: 3,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ],
 
                               // Traits Chips
                               if (character.traits.isNotEmpty) ...[
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 10),
                                 Wrap(
                                   spacing: 6,
                                   runSpacing: 4,
                                   children: character.traits.take(4).map((t) {
                                     return Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                       decoration: BoxDecoration(
                                         color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04),
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(6),
                                         border: Border.all(color: borderSubtle),
                                       ),
                                       child: Text(

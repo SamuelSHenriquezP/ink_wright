@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../formatters/writer_text_formatter.dart';
 
 /// A high-performance [TextEditingController] that dynamically renders
 /// Markdown styling (headers, bold, italics, blockquotes, code, checklists,
@@ -11,12 +12,14 @@ import '../theme/app_theme.dart';
 class MarkdownEditingController extends TextEditingController {
   bool isLiveMarkdownEnabled;
   bool isDarkMode;
+  bool hideMarkdownSymbols;
 
   // Performance Cache: Prevents re-running full markdown regex parsing during idle cursor blinking / non-mutating layout passes
   String? _cachedText;
   TextStyle? _cachedStyle;
   bool? _cachedDarkMode;
   bool? _cachedLiveMarkdown;
+  bool? _cachedHideMarkdownSymbols;
   bool? _cachedWithComposing;
   TextSpan? _cachedSpan;
 
@@ -26,7 +29,25 @@ class MarkdownEditingController extends TextEditingController {
     super.text,
     this.isLiveMarkdownEnabled = true,
     this.isDarkMode = false,
+    this.hideMarkdownSymbols = true,
   });
+
+  void toggleHideMarkdownSymbols() {
+    hideMarkdownSymbols = !hideMarkdownSymbols;
+    _cachedSpan = null;
+    notifyListeners();
+  }
+
+  // Quick formatting actions
+  void formatBold() => WriterTextFormatter.toggleFormat(this, '**');
+  void formatItalic() => WriterTextFormatter.toggleFormat(this, '*');
+  void formatStrikethrough() => WriterTextFormatter.toggleFormat(this, '~~');
+  void formatHeading(int level) => WriterTextFormatter.toggleLinePrefix(this, '${"#" * level} ');
+  void formatBlockquote() => WriterTextFormatter.toggleLinePrefix(this, '> ');
+  void formatBulletList() => WriterTextFormatter.toggleLinePrefix(this, '- ');
+  void formatCheckboxList() => WriterTextFormatter.insertCheckboxList(this);
+  void insertDialogueDash() => WriterTextFormatter.insertEmDash(this);
+  void insertSpanishQuotes() => WriterTextFormatter.insertSpanishQuotes(this);
 
   // Matches inline Markdown patterns within a single line
   static final RegExp _inlineRegex = RegExp(
@@ -62,6 +83,7 @@ class MarkdownEditingController extends TextEditingController {
         _cachedStyle == style &&
         _cachedDarkMode == isDarkMode &&
         _cachedLiveMarkdown == isLiveMarkdownEnabled &&
+        _cachedHideMarkdownSymbols == hideMarkdownSymbols &&
         _cachedWithComposing == withComposing) {
       return _cachedSpan!;
     }
@@ -79,6 +101,13 @@ class MarkdownEditingController extends TextEditingController {
     final markerColor = (baseStyle.color ?? (isDarkMode ? Colors.white : Colors.black))
         .withValues(alpha: 0.35);
 
+    final hiddenMarkerStyle = const TextStyle(
+      fontSize: 0.001,
+      height: 0.001,
+      color: Colors.transparent,
+      letterSpacing: -1.0,
+    );
+
     bool inCodeBlock = false;
 
     for (int i = 0; i < lines.length; i++) {
@@ -91,7 +120,7 @@ class MarkdownEditingController extends TextEditingController {
       } else if (inCodeBlock) {
         spans.add(_buildCodeContentSpan(line, baseStyle));
       } else {
-        _parseLine(line, spans, baseStyle, markerColor);
+        _parseLine(line, spans, baseStyle, markerColor, hiddenMarkerStyle);
       }
 
       if (i < lines.length - 1) {
@@ -104,6 +133,7 @@ class MarkdownEditingController extends TextEditingController {
     _cachedStyle = style;
     _cachedDarkMode = isDarkMode;
     _cachedLiveMarkdown = isLiveMarkdownEnabled;
+    _cachedHideMarkdownSymbols = hideMarkdownSymbols;
     _cachedWithComposing = withComposing;
     _cachedSpan = result;
     return result;
@@ -114,10 +144,15 @@ class MarkdownEditingController extends TextEditingController {
     List<InlineSpan> spans,
     TextStyle baseStyle,
     Color markerColor,
+    TextStyle hiddenMarkerStyle,
   ) {
     if (line.isEmpty) {
       return;
     }
+
+    final lineMarkerStyle = hideMarkdownSymbols
+        ? hiddenMarkerStyle
+        : baseStyle.copyWith(color: markerColor, fontWeight: FontWeight.normal);
 
     // 1. Headers
     if (line.startsWith('# ')) {
@@ -129,9 +164,9 @@ class MarkdownEditingController extends TextEditingController {
       );
       spans.add(TextSpan(
         text: '# ',
-        style: h1Style.copyWith(color: markerColor, fontWeight: FontWeight.normal),
+        style: lineMarkerStyle,
       ));
-      _parseInline(line.substring(2), spans, h1Style, markerColor);
+      _parseInline(line.substring(2), spans, h1Style, markerColor, hiddenMarkerStyle);
       return;
     }
 
@@ -144,9 +179,9 @@ class MarkdownEditingController extends TextEditingController {
       );
       spans.add(TextSpan(
         text: '## ',
-        style: h2Style.copyWith(color: markerColor, fontWeight: FontWeight.normal),
+        style: lineMarkerStyle,
       ));
-      _parseInline(line.substring(3), spans, h2Style, markerColor);
+      _parseInline(line.substring(3), spans, h2Style, markerColor, hiddenMarkerStyle);
       return;
     }
 
@@ -158,9 +193,9 @@ class MarkdownEditingController extends TextEditingController {
       );
       spans.add(TextSpan(
         text: '### ',
-        style: h3Style.copyWith(color: markerColor, fontWeight: FontWeight.normal),
+        style: lineMarkerStyle,
       ));
-      _parseInline(line.substring(4), spans, h3Style, markerColor);
+      _parseInline(line.substring(4), spans, h3Style, markerColor, hiddenMarkerStyle);
       return;
     }
 
@@ -172,9 +207,9 @@ class MarkdownEditingController extends TextEditingController {
       );
       spans.add(TextSpan(
         text: '#### ',
-        style: h4Style.copyWith(color: markerColor, fontWeight: FontWeight.normal),
+        style: lineMarkerStyle,
       ));
-      _parseInline(line.substring(5), spans, h4Style, markerColor);
+      _parseInline(line.substring(5), spans, h4Style, markerColor, hiddenMarkerStyle);
       return;
     }
 
@@ -188,10 +223,10 @@ class MarkdownEditingController extends TextEditingController {
       );
       spans.add(TextSpan(
         text: quoteMarker,
-        style: baseStyle.copyWith(color: markerColor, fontWeight: FontWeight.bold),
+        style: lineMarkerStyle,
       ));
       if (line.length > quoteMarker.length) {
-        _parseInline(line.substring(quoteMarker.length), spans, quoteStyle, markerColor);
+        _parseInline(line.substring(quoteMarker.length), spans, quoteStyle, markerColor, hiddenMarkerStyle);
       }
       return;
     }
@@ -205,7 +240,7 @@ class MarkdownEditingController extends TextEditingController {
           fontWeight: FontWeight.w600,
         ),
       ));
-      _parseInline(line.substring(6), spans, baseStyle, markerColor);
+      _parseInline(line.substring(6), spans, baseStyle, markerColor, hiddenMarkerStyle);
       return;
     }
 
@@ -223,7 +258,7 @@ class MarkdownEditingController extends TextEditingController {
         text: line.substring(0, 6),
         style: baseStyle.copyWith(color: markerColor, fontWeight: FontWeight.bold),
       ));
-      _parseInline(line.substring(6), spans, checkedStyle, markerColor);
+      _parseInline(line.substring(6), spans, checkedStyle, markerColor, hiddenMarkerStyle);
       return;
     }
 
@@ -233,7 +268,7 @@ class MarkdownEditingController extends TextEditingController {
         text: line.substring(0, 2),
         style: baseStyle.copyWith(color: markerColor, fontWeight: FontWeight.bold),
       ));
-      _parseInline(line.substring(2), spans, baseStyle, markerColor);
+      _parseInline(line.substring(2), spans, baseStyle, markerColor, hiddenMarkerStyle);
       return;
     }
 
@@ -245,7 +280,7 @@ class MarkdownEditingController extends TextEditingController {
         text: prefix,
         style: baseStyle.copyWith(color: markerColor, fontWeight: FontWeight.w700),
       ));
-      _parseInline(line.substring(prefix.length), spans, baseStyle, markerColor);
+      _parseInline(line.substring(prefix.length), spans, baseStyle, markerColor, hiddenMarkerStyle);
       return;
     }
 
@@ -258,7 +293,7 @@ class MarkdownEditingController extends TextEditingController {
           fontWeight: FontWeight.bold,
         ),
       ));
-      _parseInline(line.substring(2), spans, baseStyle, markerColor);
+      _parseInline(line.substring(2), spans, baseStyle, markerColor, hiddenMarkerStyle);
       return;
     }
 
@@ -267,7 +302,7 @@ class MarkdownEditingController extends TextEditingController {
         text: '-- ',
         style: baseStyle.copyWith(color: markerColor, fontWeight: FontWeight.bold),
       ));
-      _parseInline(line.substring(3), spans, baseStyle, markerColor);
+      _parseInline(line.substring(3), spans, baseStyle, markerColor, hiddenMarkerStyle);
       return;
     }
 
@@ -286,7 +321,7 @@ class MarkdownEditingController extends TextEditingController {
     }
 
     // 8. Normal line with inline tokens
-    _parseInline(line, spans, baseStyle, markerColor);
+    _parseInline(line, spans, baseStyle, markerColor, hiddenMarkerStyle);
   }
 
   void _parseInline(
@@ -294,6 +329,7 @@ class MarkdownEditingController extends TextEditingController {
     List<InlineSpan> spans,
     TextStyle currentStyle,
     Color markerColor,
+    TextStyle hiddenMarkerStyle,
   ) {
     if (text.isEmpty) return;
 
@@ -313,7 +349,7 @@ class MarkdownEditingController extends TextEditingController {
       }
 
       final fullMatch = match.group(0)!;
-      _formatMatchedToken(fullMatch, spans, currentStyle, markerColor);
+      _formatMatchedToken(fullMatch, spans, currentStyle, markerColor, hiddenMarkerStyle);
       lastEnd = match.end;
     }
 
@@ -330,13 +366,16 @@ class MarkdownEditingController extends TextEditingController {
     List<InlineSpan> spans,
     TextStyle currentStyle,
     Color markerColor,
+    TextStyle hiddenMarkerStyle,
   ) {
-    final markerStyle = currentStyle.copyWith(
-      color: markerColor,
-      fontWeight: FontWeight.normal,
-      fontStyle: FontStyle.normal,
-      decoration: TextDecoration.none,
-    );
+    final markerStyle = hideMarkdownSymbols
+        ? hiddenMarkerStyle
+        : currentStyle.copyWith(
+            color: markerColor,
+            fontWeight: FontWeight.normal,
+            fontStyle: FontStyle.normal,
+            decoration: TextDecoration.none,
+          );
 
     // 1. Bold Italic (***text*** or ___text___)
     if ((token.startsWith('***') && token.endsWith('***')) ||
@@ -437,12 +476,16 @@ class MarkdownEditingController extends TextEditingController {
     // 7. Guillemets («text»)
     if (token.startsWith('«') && token.endsWith('»')) {
       if (token.length >= 2) {
-        spans.add(TextSpan(text: '«', style: markerStyle.copyWith(fontWeight: FontWeight.bold)));
+        final quoteCharStyle = currentStyle.copyWith(
+          color: markerColor,
+          fontWeight: FontWeight.bold,
+        );
+        spans.add(TextSpan(text: '«', style: quoteCharStyle));
         spans.add(TextSpan(
           text: token.substring(1, token.length - 1),
           style: currentStyle.copyWith(fontStyle: FontStyle.italic),
         ));
-        spans.add(TextSpan(text: '»', style: markerStyle.copyWith(fontWeight: FontWeight.bold)));
+        spans.add(TextSpan(text: '»', style: quoteCharStyle));
         return;
       }
     }

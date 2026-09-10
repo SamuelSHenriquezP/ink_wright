@@ -36,9 +36,60 @@ void main() {
     expect(find.text('Manual del Escritor — Guía de Ink & Wright'), findsOneWidget);
     expect(find.text('Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo'), findsOneWidget);
 
-    // Tapping back returns to Dashboard
-    await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+    // Tapping options and 'Volver al Inicio' returns to Dashboard
+    await tester.tap(find.byIcon(Icons.more_vert_rounded).first);
+    await tester.pumpAndSettle();
+
+    final backOption = find.text('Volver al Inicio');
+    await tester.ensureVisible(backOption);
+    await tester.pumpAndSettle();
+
+    await tester.tap(backOption);
     await tester.pumpAndSettle();
     expect(find.text('InkWright Studio'), findsOneWidget);
+  });
+
+  testWidgets('Navigation to chapter metrics screen via swipe gesture and back to editor', (WidgetTester tester) async {
+    await tester.pumpWidget(const InkWrightApp());
+    await tester.pumpAndSettle();
+
+    // Editor is active initially
+    expect(find.text('Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo'), findsOneWidget);
+
+    // 1. Swipe to the right (drag finger right) to open Metrics
+    await tester.flingFrom(const Offset(200, 40), const Offset(400, 0), 1000);
+    await tester.pumpAndSettle();
+
+    // Metrics view is displayed
+    expect(find.text('Métricas del Capítulo'), findsOneWidget);
+    expect(find.text('Palabras Totales'), findsOneWidget);
+    expect(find.text('Tiempo de Lectura'), findsOneWidget);
+
+    var returnBtn = find.text('Volver al Editor a Escribir');
+    await tester.ensureVisible(returnBtn);
+    await tester.pumpAndSettle();
+    await tester.tap(returnBtn);
+    await tester.pumpAndSettle();
+
+    // Returns back to editor
+    expect(find.text('Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo'), findsOneWidget);
+
+    // 2. Swipe to the left (drag finger left) to open Metrics
+    await tester.flingFrom(const Offset(300, 40), const Offset(-400, 0), 1000);
+    await tester.pumpAndSettle();
+
+    // Metrics view is displayed
+    expect(find.text('Métricas del Capítulo'), findsOneWidget);
+    expect(find.text('Palabras Totales'), findsOneWidget);
+    expect(find.text('Tiempo de Lectura'), findsOneWidget);
+
+    returnBtn = find.text('Volver al Editor a Escribir');
+    await tester.ensureVisible(returnBtn);
+    await tester.pumpAndSettle();
+    await tester.tap(returnBtn);
+    await tester.pumpAndSettle();
+
+    // Returns back to editor
+    expect(find.text('Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo'), findsOneWidget);
   });
 }

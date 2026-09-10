@@ -62,6 +62,89 @@ class WriterTextFormatter {
     return '${hours}h ${remainingMins}m read';
   }
 
+  /// Estimates reading time aloud in minutes (assuming 130 WPM)
+  static int estimateReadingTimeAloud(String text) {
+    final words = countWords(text);
+    if (words == 0) return 0;
+    return (words / 130).ceil();
+  }
+
+  /// Counts non-empty sentences using common punctuation marks (. ! ?)
+  static int countSentences(String text) {
+    if (text.trim().isEmpty) return 0;
+    final matches = RegExp(r'[^.!?]+[.!?]+(\s|$)').allMatches(text);
+    final count = matches.length;
+    return count > 0 ? count : 1;
+  }
+
+  /// Calculates percentage of dialogue vs narrative text based on dialogue lines and quotes
+  static Map<String, double> analyzeDialogueVsNarrative(String text) {
+    if (text.trim().isEmpty) return {'dialogue': 0.0, 'narrative': 1.0};
+    final lines = text.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    if (lines.isEmpty) return {'dialogue': 0.0, 'narrative': 1.0};
+
+    int dialogueLines = 0;
+    for (final line in lines) {
+      if (line.startsWith('—') ||
+          line.startsWith('-') ||
+          line.startsWith('«') ||
+          line.startsWith('"') ||
+          line.startsWith('“')) {
+        dialogueLines++;
+      }
+    }
+    final ratio = (dialogueLines / lines.length).clamp(0.0, 1.0);
+    return {
+      'dialogue': ratio,
+      'narrative': (1.0 - ratio).clamp(0.0, 1.0),
+    };
+  }
+
+  /// Analyzes vocabulary richness (ratio of unique words to total words, 0.0 to 1.0)
+  static double analyzeVocabularyRichness(String text) {
+    if (text.trim().isEmpty) return 0.0;
+    final words = text
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), ' ')
+        .split(RegExp(r'\s+'))
+        .where((w) => w.length > 1)
+        .toList();
+    if (words.isEmpty) return 0.0;
+    final uniqueWords = words.toSet();
+    return (uniqueWords.length / words.length).clamp(0.0, 1.0);
+  }
+
+  /// Extracts the most frequent meaningful words (filtering common Spanish stopwords)
+  static List<MapEntry<String, int>> getTopFrequentWords(String text, {int limit = 8}) {
+    if (text.trim().isEmpty) return [];
+    const stopWords = {
+      'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas',
+      'de', 'del', 'a', 'al', 'en', 'con', 'por', 'para', 'sin', 'sobre',
+      'que', 'qué', 'como', 'cómo', 'cual', 'cuál', 'donde', 'dónde',
+      'cuando', 'cuándo', 'quien', 'quién', 'y', 'e', 'o', 'u', 'pero',
+      'mas', 'más', 'sino', 'aunque', 'porque', 'se', 'me', 'te', 'nos',
+      'le', 'les', 'lo', 'su', 'sus', 'mi', 'mis', 'tu', 'tus',
+      'este', 'esta', 'estos', 'estas', 'ese', 'esa', 'esos', 'esas',
+      'aquel', 'aquella', 'aquello', 'ya', 'no', 'si', 'sí', 'fue', 'era',
+      'ha', 'han', 'hay', 'es', 'son', 'ser', 'estar', 'estaba', 'muy',
+      'todo', 'toda', 'todos', 'todas', 'cada', 'otro', 'otra', 'otros', 'otras',
+    };
+
+    final rawWords = text
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), ' ')
+        .split(RegExp(r'\s+'))
+        .where((w) => w.length >= 3 && !stopWords.contains(w));
+
+    final freqMap = <String, int>{};
+    for (final word in rawWords) {
+      freqMap[word] = (freqMap[word] ?? 0) + 1;
+    }
+
+    final sorted = freqMap.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.take(limit).toList();
+  }
+
   /// Surrounds selected text with bold, italic, etc., or inserts tags
   static void toggleFormat(
     TextEditingController controller,
@@ -119,7 +202,7 @@ class WriterTextFormatter {
     }
   }
 
-  /// Inserts a line prefix like '# ', '## ', '> ', '• ' at current line start
+  /// Inserts or toggles a line prefix like '# ', '## ', '> ', '• ' at current line start
   static void insertLinePrefix(TextEditingController controller, String prefix) {
     final selection = controller.selection;
     final text = controller.text;
@@ -145,6 +228,37 @@ class WriterTextFormatter {
       controller.value = TextEditingValue(
         text: newText,
         selection: TextSelection.collapsed(offset: cursor + prefix.length),
+      );
+    }
+  }
+
+  /// Alias for insertLinePrefix that indicates toggle behavior
+  static void toggleLinePrefix(TextEditingController controller, String prefix) =>
+      insertLinePrefix(controller, prefix);
+
+  /// Inserts a dialogue em-dash at cursor
+  static void insertEmDash(TextEditingController controller) =>
+      insertAtCursor(controller, '— ');
+
+  /// Inserts Spanish / literary guillemets « » around selection or at cursor
+  static void insertSpanishQuotes(TextEditingController controller) {
+    final selection = controller.selection;
+    final text = controller.text;
+    int start = selection.isValid ? selection.start : text.length;
+    int end = selection.isValid ? selection.end : text.length;
+
+    if (start != end) {
+      final selected = text.substring(start, end);
+      final newText = text.replaceRange(start, end, '« $selected »');
+      controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection(baseOffset: start + 2, extentOffset: start + 2 + selected.length),
+      );
+    } else {
+      final newText = text.replaceRange(start, end, '«  »');
+      controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: start + 2),
       );
     }
   }

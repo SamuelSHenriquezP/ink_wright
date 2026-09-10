@@ -761,6 +761,290 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showCodexDetailModal(BuildContext context, EditorController controller, CodexEntryModel entry, bool isDark) {
+    final titleCtrl = TextEditingController(text: entry.name);
+    final descCtrl = TextEditingController(text: entry.description);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final bgCard = isDark ? const Color(0xFF1E1E22) : Colors.white;
+        final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+        final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: bgCard,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(entry.avatarEmoji, style: const TextStyle(fontSize: 22)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              entry.name,
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPrimary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              entry.type.name.toUpperCase(),
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                        tooltip: 'Eliminar entrada',
+                        onPressed: () {
+                          controller.deleteCodexEntry(entry.id);
+                          Navigator.of(ctx).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Entrada eliminada'), behavior: SnackBarBehavior.floating),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: titleCtrl,
+                    style: TextStyle(color: textPrimary, fontWeight: FontWeight.w700),
+                    decoration: InputDecoration(
+                      labelText: 'Título / Nombre',
+                      labelStyle: TextStyle(color: textSecondary),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 4,
+                    style: TextStyle(color: textPrimary),
+                    decoration: InputDecoration(
+                      labelText: 'Descripción / Lore',
+                      labelStyle: TextStyle(color: textSecondary),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.save_outlined, size: 18),
+                          label: const Text('Guardar'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: textPrimary,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () {
+                            final updated = entry.copyWith(
+                              name: titleCtrl.text.trim(),
+                              description: descCtrl.text.trim(),
+                            );
+                            controller.updateCodexEntry(updated);
+                            Navigator.of(ctx).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Entrada actualizada'), behavior: SnackBarBehavior.floating),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                        label: const Text('Insertar en Editor'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? Colors.white : Colors.black,
+                          foregroundColor: isDark ? Colors.black : Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          controller.insertTextToEditor(
+                            '\n/* Referencia Códice: ${entry.name} */\n${entry.description}\n',
+                          );
+                          Navigator.of(ctx).pop();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showIdeaDetailModal(BuildContext context, EditorController controller, IdeaSnippetModel idea, bool isDark) {
+    final titleCtrl = TextEditingController(text: idea.title);
+    final contentCtrl = TextEditingController(text: idea.content);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final bgCard = isDark ? const Color(0xFF1E1E22) : Colors.white;
+        final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+        final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: bgCard,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.lightbulb_outline_rounded, color: textPrimary),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          idea.title,
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPrimary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          idea.isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                          color: idea.isPinned ? (isDark ? Colors.white : Colors.black) : textSecondary,
+                        ),
+                        tooltip: 'Fijar nota',
+                        onPressed: () {
+                          controller.toggleIdeaPin(idea.id);
+                          Navigator.of(ctx).pop();
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                        tooltip: 'Eliminar nota',
+                        onPressed: () {
+                          controller.deleteIdea(idea.id);
+                          Navigator.of(ctx).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Nota eliminada'), behavior: SnackBarBehavior.floating),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: titleCtrl,
+                    style: TextStyle(color: textPrimary, fontWeight: FontWeight.w700),
+                    decoration: InputDecoration(
+                      labelText: 'Título de la Nota',
+                      labelStyle: TextStyle(color: textSecondary),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: contentCtrl,
+                    maxLines: 4,
+                    style: TextStyle(color: textPrimary),
+                    decoration: InputDecoration(
+                      labelText: 'Contenido / Fragmento',
+                      labelStyle: TextStyle(color: textSecondary),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.save_outlined, size: 18),
+                          label: const Text('Guardar'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: textPrimary,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () {
+                            final updated = idea.copyWith(
+                              title: titleCtrl.text.trim(),
+                              content: contentCtrl.text.trim(),
+                            );
+                            controller.updateIdea(updated);
+                            Navigator.of(ctx).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Nota actualizada'), behavior: SnackBarBehavior.floating),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                        label: const Text('Insertar en Editor'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? Colors.white : Colors.black,
+                          foregroundColor: isDark ? Colors.black : Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          controller.insertIdeaToEditor(idea);
+                          Navigator.of(ctx).pop();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<EditorController>(context);
@@ -1428,14 +1712,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           return CodexCard(
                             entry: entry,
                             isDark: isDark,
-                            onTap: () {
-                              controller.insertTextToEditor(
-                                '\n/* Referencia Códice: ${entry.name} */\n${entry.description}\n',
-                              );
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
-                              );
-                            },
+                            onTap: () => _showCodexDetailModal(context, controller, entry, isDark),
                           );
                         },
                       ),
@@ -1482,12 +1759,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             idea: idea,
                             isDark: isDark,
                             onPinTap: () => controller.toggleIdeaPin(idea.id),
-                            onTap: () {
-                              controller.insertIdeaToEditor(idea);
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
-                              );
-                            },
+                            onTap: () => _showIdeaDetailModal(context, controller, idea, isDark),
                           );
                         },
                       ),

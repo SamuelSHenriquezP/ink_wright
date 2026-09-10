@@ -6,10 +6,16 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/theme_controller.dart';
+import '../models/idea_snippet_model.dart';
+import '../models/codex_entry_model.dart';
 import '../widgets/keyboard_accessory_bar.dart';
 import '../widgets/context_drawer_sheet.dart';
 import '../widgets/chapter_history_sheet.dart';
+import '../widgets/chapter_drawer.dart';
+import '../widgets/editor_options_sheet.dart';
 import '../widgets/export_manuscript_dialog.dart';
+import '../widgets/writing_sprint_dialog.dart';
+import '../widgets/chapter_metrics_view.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'dashboard_screen.dart';
 
@@ -21,7 +27,14 @@ class ZenEditorScreen extends StatefulWidget {
 }
 
 class _ZenEditorScreenState extends State<ZenEditorScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final ScrollController _scrollController = ScrollController();
+  final PageController _pageController = PageController(initialPage: 1);
+  bool _isReadOnly = false;
+
+  // Chapter title controller
+  final TextEditingController _chapterTitleController = TextEditingController();
+  String? _lastLoadedChapterId;
 
   // Find & Replace state
   bool _showFindReplace = false;
@@ -48,6 +61,8 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
   void dispose() {
     _observedController?.textEditingController.removeListener(_onEditorSelectionChanged);
     _scrollController.dispose();
+    _pageController.dispose();
+    _chapterTitleController.dispose();
     _findController.dispose();
     _replaceController.dispose();
     _findFocusNode.dispose();
@@ -91,6 +106,73 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
     showDialog(
       context: context,
       builder: (_) => ExportManuscriptDialog(isDark: isDark),
+    );
+  }
+
+  void _openSprintDialog(BuildContext context, bool isDark) {
+    showDialog(
+      context: context,
+      builder: (_) => WritingSprintDialog(isDark: isDark),
+    );
+  }
+
+  void _syncTitleController(EditorController controller) {
+    if (_lastLoadedChapterId != controller.activeChapter.id) {
+      _lastLoadedChapterId = controller.activeChapter.id;
+      _chapterTitleController.text = controller.activeChapter.title;
+    }
+  }
+
+  void _showNewChapterDialog(BuildContext context, EditorController controller, bool isDark) {
+    final newNum = controller.activeBook.chapters.length + 1;
+    final titleCtrl = TextEditingController(text: 'Capítulo $newNum');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Nuevo Capítulo',
+          style: TextStyle(
+            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: TextField(
+          controller: titleCtrl,
+          autofocus: true,
+          style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+          decoration: InputDecoration(
+            labelText: 'Título del capítulo',
+            labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancelar', style: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? Colors.white : Colors.black,
+              foregroundColor: isDark ? Colors.black : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              final t = titleCtrl.text.trim();
+              controller.addNewChapter(t.isEmpty ? 'Capítulo $newNum' : t);
+              _syncTitleController(controller);
+              Navigator.of(ctx).pop();
+              if (_scrollController.hasClients) {
+                _scrollController.jumpTo(0);
+              }
+              controller.focusNode.requestFocus();
+            },
+            child: const Text('Crear Capítulo', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -562,6 +644,354 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
     ).animate().fadeIn(duration: 150.ms);
   }
 
+  void _annotateSelection(BuildContext context, EditorController controller, bool isDark) {
+    final selection = controller.textEditingController.selection;
+    final text = controller.textEditingController.text;
+    if (!selection.isValid || selection.isCollapsed || selection.start < 0 || selection.end > text.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecciona primero una frase o fragmento en el editor para anotarlo.'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final selectedText = text.substring(selection.start, selection.end).trim();
+    if (selectedText.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final bgCard = isDark ? const Color(0xFF1E1E22) : Colors.white;
+        final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+        final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: bgCard,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Anotar Selección',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPrimary),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '«$selectedText»',
+                    style: TextStyle(
+                      fontStyle: FontStyle.italic,
+                      fontSize: 13,
+                      color: textSecondary,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.lightbulb_outline_rounded),
+                  title: Text('Guardar como Idea / Nota', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Añade este fragmento al banco de ideas del proyecto', style: TextStyle(color: textSecondary, fontSize: 12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    controller.addIdea(IdeaSnippetModel(
+                      id: 'idea_${DateTime.now().millisecondsSinceEpoch}',
+                      title: selectedText.length > 30 ? '${selectedText.substring(0, 30)}...' : selectedText,
+                      content: selectedText,
+                      category: IdeaCategory.general,
+                      colorHex: 0xFF18181B,
+                      createdAt: DateTime.now(),
+                      tags: ['Idea', 'Nota'],
+                    ));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Guardado en Ideas con éxito.'), behavior: SnackBarBehavior.floating),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.auto_stories_outlined),
+                  title: Text('Guardar en Códice del Mundo (Lore)', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Registra este concepto en la enciclopedia de la historia', style: TextStyle(color: textSecondary, fontSize: 12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _showAddCodexDialog(context, controller, isDark, selectedText);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.comment_outlined),
+                  title: Text('Insertar como Nota de Autor', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Envuelve el texto entre marcas Markdown <!-- [Nota]: ... -->', style: TextStyle(color: textSecondary, fontSize: 12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    final wrapped = '<!-- [Nota]: $selectedText -->';
+                    final newText = text.replaceRange(selection.start, selection.end, wrapped);
+                    controller.textEditingController.value = TextEditingValue(
+                      text: newText,
+                      selection: TextSelection.collapsed(offset: selection.start + wrapped.length),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAddCodexDialog(BuildContext context, EditorController controller, bool isDark, String initialContent) {
+    final titleCtrl = TextEditingController(
+      text: initialContent.length > 30 ? '${initialContent.substring(0, 30)}...' : initialContent,
+    );
+    String selectedCategory = 'Lore';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
+          title: Text(
+            'Nueva Entrada del Códice',
+            style: TextStyle(
+              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                autofocus: true,
+                style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Título del concepto / entrada',
+                  labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                ),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                initialValue: selectedCategory,
+                dropdownColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
+                style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Categoría',
+                  labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+                ),
+                items: ['Lore', 'Ubicaciones', 'Objetos', 'Magia / Leyes', 'Facciones']
+                    .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setDlgState(() => selectedCategory = val);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('Cancelar', style: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark ? Colors.white : Colors.black,
+                foregroundColor: isDark ? Colors.black : Colors.white,
+              ),
+              onPressed: () {
+                final title = titleCtrl.text.trim();
+                if (title.isNotEmpty) {
+                  CodexType codexType = CodexType.lore;
+                  if (selectedCategory == 'Ubicaciones') codexType = CodexType.location;
+                  if (selectedCategory == 'Objetos') codexType = CodexType.artifact;
+
+                  controller.addCodexEntry(CodexEntryModel(
+                    id: 'codex_${DateTime.now().millisecondsSinceEpoch}',
+                    bookId: controller.activeBook.id,
+                    name: title,
+                    type: codexType,
+                    role: selectedCategory,
+                    description: initialContent,
+                    traits: [selectedCategory],
+                    secrets: '',
+                    avatarEmoji: codexType == CodexType.location
+                        ? '🏰'
+                        : (codexType == CodexType.artifact ? '🗝️' : '📜'),
+                    createdAt: DateTime.now(),
+                  ));
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Entrada añadida al Códice con éxito.'), behavior: SnackBarBehavior.floating),
+                  );
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openEditorOptionsMenu(
+    BuildContext context,
+    EditorController controller,
+    ThemeController themeController,
+    bool isDark,
+  ) {
+    EditorOptionsMenuSheet.show(
+      context: context,
+      isDark: isDark,
+      chapterTitle: controller.activeChapter.title,
+      chapterContent: controller.textEditingController.text,
+      isReadOnly: _isReadOnly,
+      isTypewriter: controller.isTypewriterMode,
+      hideMarkdownSymbols: controller.textEditingController.hideMarkdownSymbols,
+      hasNextChapter: controller.hasNextChapter,
+      hasPreviousChapter: controller.hasPreviousChapter,
+      onNextChapter: () {
+        controller.goToNextChapter();
+        _syncTitleController(controller);
+        if (_scrollController.hasClients) _scrollController.jumpTo(0);
+      },
+      onPreviousChapter: () {
+        controller.goToPreviousChapter();
+        _syncTitleController(controller);
+        if (_scrollController.hasClients) _scrollController.jumpTo(0);
+      },
+      onNewChapter: () => _showNewChapterDialog(context, controller, isDark),
+      onWritingSprint: () => _openSprintDialog(context, isDark),
+      onMuseAssistant: () => _openContextDrawer(context, isDark),
+      onToggleReadOnly: () {
+        setState(() {
+          _isReadOnly = !_isReadOnly;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_isReadOnly ? 'Modo Solo Lectura activado' : 'Modo Edición activado'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
+      onToggleTypewriter: () {
+        controller.toggleTypewriterMode();
+      },
+      onToggleHideMarkdown: () {
+        controller.textEditingController.toggleHideMarkdownSymbols();
+        setState(() {});
+      },
+      onFindReplace: () {
+        if (!_showFindReplace) _toggleFindReplace();
+      },
+      onExport: () {
+        _openExportDialog(context, isDark);
+      },
+      onHistory: () {
+        ChapterHistorySheet.show(context, controller.activeChapter, isDark);
+      },
+      onTypography: () {
+        _openTypographySheet(context, controller, isDark);
+      },
+      onStats: () {
+        _openStatsDialog(context, controller, isDark);
+        if (_pageController.hasClients) {
+          _pageController.animateToPage(
+            2,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+          );
+        }
+      },
+      onGoToDashboard: () {
+        controller.saveCurrentSession();
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const DashboardScreen()),
+          );
+        }
+      },
+    );
+  }
+
+  void _openStatsDialog(BuildContext context, EditorController controller, bool isDark) {
+    final text = controller.textEditingController.text;
+    final words = WriterTextFormatter.countWords(text);
+    final chars = text.length;
+    final charsNoSpaces = text.replaceAll(RegExp(r'\s+'), '').length;
+    final paragraphs = text.split('\n').where((l) => l.trim().isNotEmpty).length;
+    final readingTimeMinutes = (words / 200).ceil();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
+        title: Text(
+          'Métricas del Capítulo',
+          style: TextStyle(
+            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildStatRow('Palabras', '$words', isDark),
+            const Divider(height: 16),
+            _buildStatRow('Caracteres (con espacios)', '$chars', isDark),
+            const Divider(height: 16),
+            _buildStatRow('Caracteres (sin espacios)', '$charsNoSpaces', isDark),
+            const Divider(height: 16),
+            _buildStatRow('Párrafos', '$paragraphs', isDark),
+            const Divider(height: 16),
+            _buildStatRow('Tiempo de lectura aprox.', '$readingTimeMinutes min', isDark),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cerrar', style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, String val, bool isDark) {
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(color: textSecondary, fontSize: 13)),
+        Text(val, style: TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<EditorController>(context);
@@ -576,10 +1006,11 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
     final accentColor = isDark ? Colors.white : Colors.black;
 
-    final activeChapter = controller.activeChapter;
     final activeBook = controller.activeBook;
     final content = controller.textEditingController.text;
     final wordCount = WriterTextFormatter.countWords(content);
+    _syncTitleController(controller);
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return CallbackShortcuts(
       bindings: {
@@ -590,46 +1021,62 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
         },
       },
       child: Scaffold(
+        key: _scaffoldKey,
+        drawer: ChapterDrawer(controller: controller, isDark: isDark),
+        drawerEnableOpenDragGesture: false,
         backgroundColor: bgPrimary,
         body: SafeArea(
-          child: Stack(
+          child: PageView(
+            controller: _pageController,
+            physics: isKeyboardOpen
+                ? const NeverScrollableScrollPhysics()
+                : const PageScrollPhysics(),
+            children: [
+              // Page 0: Chapter Metrics View (Revealed when swiping to the right)
+              ChapterMetricsView(
+                controller: controller,
+                isDark: isDark,
+                onBackToEditor: () {
+                  if (_pageController.hasClients) {
+                    _pageController.animateToPage(
+                      1,
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                },
+              ),
+
+              // Page 1: Main Text Editor Canvas
+              Stack(
             children: [
               // Main Text Editor Canvas
               Positioned.fill(
                 child: Column(
                   children: [
-                    // App Bar (Animated out when Zen mode active)
+                    // Minimalist App Bar matching Screenshot 2 (Animated out when Zen mode active)
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
-                      height: isZen ? 0 : 64,
+                      height: isZen ? 0 : 58,
                       curve: Curves.easeInOut,
                       child: isZen
                           ? const SizedBox.shrink()
                           : Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
                               child: Row(
                                 children: [
-                                  // Back to Dashboard Button
+                                  // [ = ] Hamburger Menu Button (Opens Chapter Drawer)
                                   IconButton(
-                                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                                    onPressed: () {
-                                      controller.saveCurrentSession();
-                                      if (Navigator.of(context).canPop()) {
-                                        Navigator.of(context).pop();
-                                      } else {
-                                        Navigator.of(context).pushReplacement(
-                                          MaterialPageRoute(builder: (_) => const DashboardScreen()),
-                                        );
-                                      }
-                                    },
-                                    tooltip: 'Volver al Inicio',
+                                    icon: const Icon(Icons.menu_rounded, size: 24),
+                                    onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                                    tooltip: 'Capítulos',
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 4),
 
-                                  // Book & Chapter Title Button (Opens Context Drawer)
+                                  // Chapter & Book Title (Tap opens chapter drawer too)
                                   Expanded(
                                     child: GestureDetector(
-                                      onTap: () => _openContextDrawer(context, isDark),
+                                      onTap: () => _scaffoldKey.currentState?.openDrawer(),
                                       child: Column(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -640,117 +1087,97 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                                 child: Text(
                                                   activeBook.title,
                                                   style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: textSecondary,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: textPrimary,
+                                                    letterSpacing: -0.2,
                                                   ),
+                                                  maxLines: 1,
                                                   overflow: TextOverflow.ellipsis,
                                                 ),
                                               ),
                                               const SizedBox(width: 4),
-                                              Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: textSecondary),
+                                              Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: textSecondary),
                                             ],
                                           ),
                                           Text(
-                                            activeChapter.title,
+                                            'Capítulo ${controller.activeChapterIndex + 1} de ${controller.totalChapters}',
                                             style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w800,
-                                              color: textPrimary,
-                                              letterSpacing: -0.2,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                              color: textSecondary,
                                             ),
-                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ),
                                     ),
                                   ),
 
-                                  // Live Word Counter Badge Pill + AutoSave Status
-                                  GestureDetector(
-                                    onTap: () => _openContextDrawer(context, isDark),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  // AutoSave Status Indicator
+                                  if (controller.isSaving) ...[
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      margin: const EdgeInsets.only(right: 8),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 1.5,
+                                        valueColor: AlwaysStoppedAnimation<Color>(textSecondary),
+                                      ),
+                                    ),
+                                  ],
+
+                                  // Read-Only Indicator Badge (if active)
+                                  if (_isReadOnly)
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 6),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
+                                        color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text(
-                                            '$wordCount palabras',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w700,
-                                              color: textPrimary,
-                                            ),
-                                          ),
-                                          if (controller.isSaving) ...[
-                                            const SizedBox(width: 6),
-                                            SizedBox(
-                                              width: 10,
-                                              height: 10,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 1.5,
-                                                valueColor: AlwaysStoppedAnimation<Color>(textSecondary),
-                                              ),
-                                            ),
-                                          ] else ...[
-                                            const SizedBox(width: 5),
-                                            Icon(Icons.check_circle_outline_rounded, size: 12, color: textSecondary.withValues(alpha: 0.6)),
-                                          ],
+                                          Icon(Icons.lock_outline_rounded, size: 12, color: textSecondary),
+                                          const SizedBox(width: 4),
+                                          Text('Lectura', style: TextStyle(fontSize: 11, color: textSecondary, fontWeight: FontWeight.bold)),
                                         ],
                                       ),
                                     ),
-                                  ),
 
-                                  const SizedBox(width: 6),
-
-                                  // Markdown Live Toggle Pill
+                                  // Format Badge Pill [MD] / [MD*]
                                   GestureDetector(
-                                    onTap: () => controller.toggleLiveMarkdown(),
+                                    onTap: () {
+                                      controller.textEditingController.toggleHideMarkdownSymbols();
+                                      setState(() {});
+                                    },
                                     child: Tooltip(
-                                      message: controller.isLiveMarkdownEnabled
-                                          ? 'Markdown en vivo activo (pulsa para desactivar)'
-                                          : 'Markdown en vivo desactivado (pulsa para activar)',
+                                      message: controller.textEditingController.hideMarkdownSymbols
+                                          ? 'Símbolos Markdown ocultos (pulsa para mostrar)'
+                                          : 'Símbolos Markdown visibles (pulsa para ocultar)',
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                         decoration: BoxDecoration(
-                                          color: controller.isLiveMarkdownEnabled
+                                          color: controller.textEditingController.hideMarkdownSymbols
                                               ? (isDark ? Colors.white12 : Colors.black)
                                               : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
-                                          borderRadius: BorderRadius.circular(20),
+                                          borderRadius: BorderRadius.circular(16),
                                           border: Border.all(
-                                            color: controller.isLiveMarkdownEnabled
-                                                ? (isDark ? Colors.white54 : Colors.black)
-                                                : (isDark ? Colors.white24 : Colors.black12),
+                                            color: controller.textEditingController.hideMarkdownSymbols
+                                              ? (isDark ? Colors.white54 : Colors.black)
+                                              : (isDark ? Colors.white24 : Colors.black12),
                                           ),
                                         ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.auto_stories_outlined,
-                                              size: 13,
-                                              color: controller.isLiveMarkdownEnabled
-                                                  ? Colors.white
-                                                  : textSecondary,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              'MD',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w800,
-                                                letterSpacing: 0.5,
-                                                color: controller.isLiveMarkdownEnabled
-                                                    ? Colors.white
-                                                    : textSecondary,
-                                              ),
-                                            ),
-                                          ],
+                                        child: Text(
+                                          controller.textEditingController.hideMarkdownSymbols ? 'MD' : 'MD*',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 0.5,
+                                            color: controller.textEditingController.hideMarkdownSymbols
+                                                ? Colors.white
+                                                : textSecondary,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -758,54 +1185,11 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
 
                                   const SizedBox(width: 4),
 
-                                  // Find & Replace Toggle Button
+                                  // [ ⋮ ] 2-Column Options Sheet Menu Button
                                   IconButton(
-                                    icon: Icon(
-                                      Icons.search_rounded,
-                                      size: 20,
-                                      color: _showFindReplace ? accentColor : textSecondary,
-                                    ),
-                                    onPressed: _toggleFindReplace,
-                                    tooltip: 'Buscar y reemplazar (Ctrl+F)',
-                                  ),
-
-                                  // Typography & Typewriter Settings Button
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.format_size_rounded,
-                                      size: 20,
-                                      color: controller.isTypewriterMode ? accentColor : textSecondary,
-                                    ),
-                                    onPressed: () => _openTypographySheet(context, controller, isDark),
-                                    tooltip: 'Tipografía y Máquina de escribir',
-                                  ),
-
-                                  // Chapter History & Snapshots Button
-                                  IconButton(
-                                    icon: Icon(Icons.history_rounded, size: 20, color: textSecondary),
-                                    onPressed: () => ChapterHistorySheet.show(context, controller.activeChapter, isDark),
-                                    tooltip: 'Historial de Versiones e Instantáneas',
-                                  ),
-
-                                  // Export Manuscript Button
-                                  IconButton(
-                                    icon: Icon(Icons.ios_share_rounded, size: 20, color: textSecondary),
-                                    onPressed: () => _openExportDialog(context, isDark),
-                                    tooltip: 'Exportar Manuscrito',
-                                  ),
-
-                                  // Botón Pantalla Completa
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.fullscreen_rounded,
-                                      size: 22,
-                                      color: isZen ? accentColor : textSecondary,
-                                    ),
-                                    onPressed: () {
-                                      themeController.toggleZenMode();
-                                      controller.toggleZenMode();
-                                    },
-                                    tooltip: 'Pantalla Completa',
+                                    icon: const Icon(Icons.more_vert_rounded, size: 22),
+                                    onPressed: () => _openEditorOptionsMenu(context, controller, themeController, isDark),
+                                    tooltip: 'Opciones del Editor',
                                   ),
                                 ],
                               ),
@@ -827,39 +1211,208 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                                 ? double.infinity
                                 : controller.maxEditorWidth,
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                          child: TextField(
-                            controller: controller.textEditingController,
-                            focusNode: controller.focusNode,
-                            scrollController: _scrollController,
-                            maxLines: null,
-                            expands: true,
-                            keyboardType: TextInputType.multiline,
-                            cursorColor: accentColor,
-                            cursorWidth: 2.5,
-                            cursorRadius: const Radius.circular(2),
-                            scrollPadding: controller.isTypewriterMode
-                                ? EdgeInsets.symmetric(vertical: MediaQuery.of(context).size.height * 0.4)
-                                : const EdgeInsets.all(20),
-                            style: _getEditorFontTextStyle(
-                              controller.selectedFontFamily,
-                              controller.fontSize,
-                              controller.lineHeight,
-                              isDark,
+                          child: SingleChildScrollView(
+                            controller: _scrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: EdgeInsets.fromLTRB(
+                              24,
+                              20,
+                              24,
+                              controller.isTypewriterMode
+                                  ? MediaQuery.of(context).size.height * 0.4
+                                  : 140,
                             ),
-                            decoration: InputDecoration(
-                              hintText: 'Empieza a escribir tu historia aquí...',
-                              hintStyle: _getEditorFontTextStyle(
-                                controller.selectedFontFamily,
-                                controller.fontSize,
-                                controller.lineHeight,
-                                isDark,
-                              ).copyWith(
-                                color: textSecondary.withValues(alpha: 0.4),
-                                fontStyle: FontStyle.italic,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Editorial Chapter Header Block
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'CAPÍTULO ${controller.activeChapterIndex + 1}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.5,
+                                        color: textSecondary,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        '$wordCount pal. • ${WriterTextFormatter.estimateReadingTime(content)} min',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Editable Chapter Title Field
+                                TextField(
+                                  controller: _chapterTitleController,
+                                  readOnly: _isReadOnly,
+                                  style: GoogleFonts.getFont(
+                                    controller.selectedFontFamily,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.3,
+                                    color: textPrimary,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Título del capítulo...',
+                                    hintStyle: TextStyle(
+                                      color: textSecondary.withValues(alpha: 0.4),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    border: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                                  ),
+                                  onChanged: (val) {
+                                    controller.updateActiveChapterTitle(val);
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                Divider(height: 1, color: borderSubtle),
+                                const SizedBox(height: 16),
+
+                                // Chapter Manuscript Body
+                                TextField(
+                                  readOnly: _isReadOnly,
+                                  controller: controller.textEditingController,
+                                  focusNode: controller.focusNode,
+                                  maxLines: null,
+                                  keyboardType: TextInputType.multiline,
+                                  cursorColor: accentColor,
+                                  cursorWidth: 2.5,
+                                  cursorRadius: const Radius.circular(2),
+                                  style: _getEditorFontTextStyle(
+                                    controller.selectedFontFamily,
+                                    controller.fontSize,
+                                    controller.lineHeight,
+                                    isDark,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Empieza a escribir tu historia aquí...',
+                                    hintStyle: _getEditorFontTextStyle(
+                                      controller.selectedFontFamily,
+                                      controller.fontSize,
+                                      controller.lineHeight,
+                                      isDark,
+                                    ).copyWith(
+                                      color: textSecondary.withValues(alpha: 0.4),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+
+                                // End-of-Chapter Navigation Card
+                                const SizedBox(height: 48),
+                                Center(
+                                  child: Text(
+                                    '•   •   •',
+                                    style: TextStyle(
+                                      letterSpacing: 8,
+                                      color: textSecondary.withValues(alpha: 0.4),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Container(
+                                  padding: const EdgeInsets.all(18),
+                                  decoration: BoxDecoration(
+                                    color: bgCard,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: borderSubtle),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Fin del Capítulo ${controller.activeChapterIndex + 1}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 14),
+                                      Row(
+                                        children: [
+                                          if (controller.hasPreviousChapter) ...[
+                                            Expanded(
+                                              child: OutlinedButton.icon(
+                                                style: OutlinedButton.styleFrom(
+                                                  foregroundColor: textPrimary,
+                                                  side: BorderSide(color: borderSubtle),
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                                ),
+                                                icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                                                label: const Text('Anterior', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                                                onPressed: () {
+                                                  controller.goToPreviousChapter();
+                                                  _syncTitleController(controller);
+                                                  if (_scrollController.hasClients) _scrollController.jumpTo(0);
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                          if (controller.hasNextChapter) ...[
+                                            Expanded(
+                                              child: ElevatedButton.icon(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: accentColor,
+                                                  foregroundColor: isDark ? Colors.black : Colors.white,
+                                                  elevation: 0,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                                ),
+                                                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                                                label: const Text('Siguiente', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                                                onPressed: () {
+                                                  controller.goToNextChapter();
+                                                  _syncTitleController(controller);
+                                                  if (_scrollController.hasClients) _scrollController.jumpTo(0);
+                                                },
+                                              ),
+                                            ),
+                                          ] else ...[
+                                            Expanded(
+                                              child: ElevatedButton.icon(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: accentColor,
+                                                  foregroundColor: isDark ? Colors.black : Colors.white,
+                                                  elevation: 0,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                                ),
+                                                icon: const Icon(Icons.add_rounded, size: 16),
+                                                label: const Text('Nuevo Capítulo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                                                onPressed: () => _showNewChapterDialog(context, controller, isDark),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 60),
+                              ],
                             ),
                           ),
                         ),
@@ -885,32 +1438,62 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                   ),
                 ).animate().fadeIn(duration: 200.ms),
 
-              // Keyboard Accessory Toolbar (Bottom)
-              if (!isZen)
+              // Keyboard Accessory Toolbar (Only shown when virtual keyboard is active)
+              if (!isZen && isKeyboardOpen)
                 Positioned(
                   left: 0,
                   right: 0,
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  bottom: 0,
                   child: KeyboardAccessoryBar(
                     textController: controller.textEditingController,
                     isDark: isDark,
-                    onToggleZenMode: () {
-                      themeController.toggleZenMode();
-                      controller.toggleZenMode();
-                    },
-                    onOpenIdeas: () => _openContextDrawer(context, isDark),
-                    onOpenContextDrawer: () => _openContextDrawer(context, isDark),
-                    wordCount: wordCount,
                     canUndo: controller.canUndo,
                     canRedo: controller.canRedo,
                     onUndo: () => controller.undo(),
                     onRedo: () => controller.redo(),
+                    onCloseKeyboard: () => FocusScope.of(context).unfocus(),
+                    onAnnotateSelection: () => _annotateSelection(context, controller, isDark),
+                    onOpenOptionsSheet: () => _openEditorOptionsMenu(context, controller, themeController, isDark),
                   ),
                 ),
-            ],
-          ),
+
+              // Floating '+' Options Button (Only shown when keyboard is closed)
+              if (!isZen && !isKeyboardOpen)
+                Positioned(
+                  bottom: 24,
+                  right: 20,
+                  child: FloatingActionButton(
+                    heroTag: 'editor_fab_options',
+                    backgroundColor: accentColor,
+                    foregroundColor: isDark ? Colors.black : Colors.white,
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                    tooltip: 'Opciones del Editor (+)',
+                    onPressed: () => _openEditorOptionsMenu(context, controller, themeController, isDark),
+                    child: const Icon(Icons.add_rounded, size: 28),
+                  ),
+                ).animate().scale(duration: 150.ms, curve: Curves.easeOut),
+              ],
+            ),
+
+            // Page 2: Chapter Metrics View (Revealed when swiping to the left)
+            ChapterMetricsView(
+              controller: controller,
+              isDark: isDark,
+              onBackToEditor: () {
+                if (_pageController.hasClients) {
+                  _pageController.animateToPage(
+                    1,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                  );
+                }
+              },
+            ),
+          ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

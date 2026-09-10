@@ -2,50 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_theme.dart';
 import '../formatters/writer_text_formatter.dart';
-import 'muse_assistant_sheet.dart';
-import 'writing_sprint_dialog.dart';
 
 class KeyboardAccessoryBar extends StatelessWidget {
   final TextEditingController textController;
   final bool isDark;
-  final VoidCallback onToggleZenMode;
-  final VoidCallback onOpenIdeas;
-  final VoidCallback onOpenContextDrawer;
-  final int wordCount;
   final VoidCallback? onUndo;
   final VoidCallback? onRedo;
   final bool canUndo;
   final bool canRedo;
+  final VoidCallback? onAnnotateSelection;
+  final VoidCallback? onOpenOptionsSheet;
+  final VoidCallback? onCloseKeyboard;
+
+  // Optional legacy parameters for compatibility
+  final VoidCallback? onToggleZenMode;
+  final VoidCallback? onOpenIdeas;
+  final VoidCallback? onOpenContextDrawer;
+  final int wordCount;
 
   const KeyboardAccessoryBar({
     super.key,
     required this.textController,
     required this.isDark,
-    required this.onToggleZenMode,
-    required this.onOpenIdeas,
-    required this.onOpenContextDrawer,
-    required this.wordCount,
     this.onUndo,
     this.onRedo,
     this.canUndo = false,
     this.canRedo = false,
+    this.onAnnotateSelection,
+    this.onOpenOptionsSheet,
+    this.onCloseKeyboard,
+    this.onToggleZenMode,
+    this.onOpenIdeas,
+    this.onOpenContextDrawer,
+    this.wordCount = 0,
   });
-
-  void _openMuseSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => MuseAssistantSheet(isDark: isDark),
-    );
-  }
-
-  void _openSprintDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => WritingSprintDialog(isDark: isDark),
-    );
-  }
 
   void _insertSpanishQuotes() {
     final selection = textController.selection;
@@ -71,229 +61,268 @@ class KeyboardAccessoryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
+    final bgCard = isDark ? const Color(0xFF1E1E22) : Colors.white;
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final keyBg = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05);
 
     return Container(
-      height: 52,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      height: 48,
       decoration: BoxDecoration(
         color: bgCard,
-        borderRadius: BorderRadius.circular(30.0),
-        border: Border.all(color: borderSubtle, width: 1),
-        boxShadow: AppTheme.getSoftShadow(isDark),
+        border: Border(
+          top: BorderSide(color: borderSubtle, width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          // Word count pill badge
-          GestureDetector(
-            onTap: onOpenContextDrawer,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.edit_note_rounded, size: 16, color: textPrimary),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$wordCount p',
-                    style: TextStyle(
-                      color: textPrimary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-
-          // Undo / Redo buttons
+          // Left: Undo / Redo controls
+          const SizedBox(width: 4),
           IconButton(
             icon: Icon(
               Icons.undo_rounded,
-              size: 18,
-              color: canUndo ? textPrimary : textSecondary.withValues(alpha: 0.3),
+              size: 19,
+              color: canUndo ? textPrimary : textSecondary.withValues(alpha: 0.25),
             ),
             tooltip: 'Deshacer',
             onPressed: canUndo ? onUndo : null,
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 36),
           ),
           IconButton(
             icon: Icon(
               Icons.redo_rounded,
-              size: 18,
-              color: canRedo ? textPrimary : textSecondary.withValues(alpha: 0.3),
+              size: 19,
+              color: canRedo ? textPrimary : textSecondary.withValues(alpha: 0.25),
             ),
             tooltip: 'Rehacer',
             onPressed: canRedo ? onRedo : null,
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 36),
           ),
 
-          Container(height: 20, width: 1, color: borderSubtle),
+          Container(height: 22, width: 1, margin: const EdgeInsets.symmetric(horizontal: 4), color: borderSubtle),
 
-          // Scrollable Quick Toolbar
+          // Center: Rich, scrollable Markdown Formatting Shortcuts
           Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               child: Row(
                 children: [
-                  const SizedBox(width: 4),
-                  _buildToolButton(
-                    iconText: 'B',
-                    tooltip: 'Negrita',
+                  _buildKeyButton(
+                    label: 'B',
+                    tooltip: 'Negrita (**)',
                     onTap: () => WriterTextFormatter.toggleFormat(textController, '**'),
                     textPrimary: textPrimary,
+                    keyBg: keyBg,
                     isBold: true,
                   ),
-                  _buildToolButton(
-                    iconText: 'I',
-                    tooltip: 'Cursiva',
+                  _buildKeyButton(
+                    label: 'I',
+                    tooltip: 'Cursiva (*)',
                     onTap: () => WriterTextFormatter.toggleFormat(textController, '*'),
                     textPrimary: textPrimary,
+                    keyBg: keyBg,
                     isItalic: true,
                   ),
-                  _buildToolButton(
-                    iconText: 'S',
-                    tooltip: 'Tachado',
-                    onTap: () => WriterTextFormatter.toggleFormat(textController, '~~'),
-                    textPrimary: textPrimary,
-                  ),
-                  _buildToolButton(
-                    iconText: 'H1',
-                    tooltip: 'Título 1',
+                  _buildKeyButton(
+                    label: 'H1',
+                    tooltip: 'Título 1 (#)',
                     onTap: () => WriterTextFormatter.insertLinePrefix(textController, '# '),
                     textPrimary: textPrimary,
+                    keyBg: keyBg,
+                    isBold: true,
                   ),
-                  _buildToolButton(
-                    iconText: 'H2',
-                    tooltip: 'Título 2',
+                  _buildKeyButton(
+                    label: 'H2',
+                    tooltip: 'Título 2 (##)',
                     onTap: () => WriterTextFormatter.insertLinePrefix(textController, '## '),
                     textPrimary: textPrimary,
+                    keyBg: keyBg,
+                    isBold: true,
                   ),
-                  _buildToolButton(
-                    iconText: 'H3',
-                    tooltip: 'Título 3',
+                  _buildKeyButton(
+                    label: 'H3',
+                    tooltip: 'Título 3 (###)',
                     onTap: () => WriterTextFormatter.insertLinePrefix(textController, '### '),
                     textPrimary: textPrimary,
+                    keyBg: keyBg,
                   ),
-                  _buildToolButton(
-                    iconText: '•',
+                  _buildKeyButton(
+                    label: '—',
+                    tooltip: 'Raya de diálogo literaria',
+                    onTap: () => WriterTextFormatter.insertAtCursor(textController, '— '),
+                    textPrimary: textPrimary,
+                    keyBg: keyBg,
+                    isBold: true,
+                  ),
+                  _buildKeyButton(
+                    label: '« »',
+                    tooltip: 'Comillas latinas / españolas',
+                    onTap: _insertSpanishQuotes,
+                    textPrimary: textPrimary,
+                    keyBg: keyBg,
+                  ),
+                  _buildKeyButton(
+                    label: '•',
                     tooltip: 'Lista con viñetas',
                     onTap: () => WriterTextFormatter.insertLinePrefix(textController, '- '),
                     textPrimary: textPrimary,
+                    keyBg: keyBg,
+                    isBold: true,
                   ),
-                  _buildToolButton(
-                    iconText: '1.',
+                  _buildKeyButton(
+                    label: '1.',
                     tooltip: 'Lista numerada',
                     onTap: () => WriterTextFormatter.insertNumberedList(textController),
                     textPrimary: textPrimary,
+                    keyBg: keyBg,
                   ),
-                  _buildToolButton(
-                    iconText: '☑',
-                    tooltip: 'Lista de verificación / tareas',
+                  _buildKeyButton(
+                    label: '☑',
+                    tooltip: 'Lista de tareas (- [ ])',
                     onTap: () => WriterTextFormatter.insertCheckboxList(textController),
                     textPrimary: textPrimary,
+                    keyBg: keyBg,
                   ),
-                  _buildToolButton(
-                    iconText: '“ ”',
-                    tooltip: 'Cita textual',
+                  _buildKeyButton(
+                    label: '“ ”',
+                    tooltip: 'Cita en bloque (>)',
                     onTap: () => WriterTextFormatter.insertLinePrefix(textController, '> '),
                     textPrimary: textPrimary,
+                    keyBg: keyBg,
                   ),
-                  _buildToolButton(
-                    iconText: '* * *',
-                    tooltip: 'Salto / Separador de escena',
-                    onTap: () => WriterTextFormatter.insertSceneBreak(textController),
+                  _buildKeyButton(
+                    label: 'S',
+                    tooltip: 'Tachado (~~)',
+                    onTap: () => WriterTextFormatter.toggleFormat(textController, '~~'),
                     textPrimary: textPrimary,
+                    keyBg: keyBg,
                   ),
-                  _buildToolButton(
-                    iconText: '</>',
-                    tooltip: 'Código / Texto fijo',
+                  _buildKeyButton(
+                    label: '</>',
+                    tooltip: 'Código inline (`)',
                     onTap: () => WriterTextFormatter.toggleFormat(textController, '`'),
                     textPrimary: textPrimary,
+                    keyBg: keyBg,
                   ),
-                  _buildToolButton(
-                    iconText: '—',
-                    tooltip: 'Raya de diálogo',
-                    onTap: () => WriterTextFormatter.insertAtCursor(textController, '— '),
+                  _buildKeyButton(
+                    label: '* * *',
+                    tooltip: 'Separador de escena',
+                    onTap: () => WriterTextFormatter.insertSceneBreak(textController),
                     textPrimary: textPrimary,
+                    keyBg: keyBg,
                   ),
-                  _buildToolButton(
-                    iconText: '«»',
-                    tooltip: 'Comillas españolas',
-                    onTap: _insertSpanishQuotes,
-                    textPrimary: textPrimary,
-                  ),
+                  if (onAnnotateSelection != null)
+                    _buildIconKey(
+                      icon: Icons.bookmark_add_outlined,
+                      tooltip: 'Anotar en Ideas / Códice',
+                      onTap: onAnnotateSelection!,
+                      textPrimary: textPrimary,
+                      keyBg: keyBg,
+                    ),
                 ],
               ),
             ),
           ),
 
-          Container(height: 20, width: 1, color: borderSubtle),
+          Container(height: 22, width: 1, margin: const EdgeInsets.symmetric(horizontal: 4), color: borderSubtle),
 
-          // Quick Action Buttons (Writing Tools + Writing Sprint + Zen Focus)
-          IconButton(
-            icon: const Icon(Icons.auto_awesome_outlined, size: 18),
-            tooltip: 'Herramientas de Escritura',
-            onPressed: () => _openMuseSheet(context),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
+          // Right: Close Keyboard and Options
+          if (onCloseKeyboard != null)
+            IconButton(
+              icon: Icon(Icons.keyboard_hide_rounded, size: 20, color: textSecondary),
+              tooltip: 'Bajar teclado',
+              onPressed: onCloseKeyboard,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 34, minHeight: 36),
+            ),
 
-          IconButton(
-            icon: Icon(Icons.timer_outlined, size: 18, color: textSecondary),
-            tooltip: 'Sprint de Escritura',
-            onPressed: () => _openSprintDialog(context),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-
-          IconButton(
-            icon: Icon(Icons.fullscreen_rounded, size: 22, color: textPrimary),
-            tooltip: 'Pantalla Completa',
-            onPressed: onToggleZenMode,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
+          if (onOpenOptionsSheet != null)
+            IconButton(
+              icon: Icon(Icons.more_vert_rounded, size: 20, color: textPrimary),
+              tooltip: 'Más opciones',
+              onPressed: onOpenOptionsSheet,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 34, minHeight: 36),
+            ),
+          const SizedBox(width: 4),
         ],
       ),
-    ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.2, end: 0);
+    ).animate().fadeIn(duration: 150.ms);
   }
 
-  Widget _buildToolButton({
-    required String iconText,
+  Widget _buildKeyButton({
+    required String label,
     required String tooltip,
     required VoidCallback onTap,
     required Color textPrimary,
+    required Color keyBg,
     bool isBold = false,
     bool isItalic = false,
   }) {
     return Tooltip(
       message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
-          child: Text(
-            iconText,
-            style: TextStyle(
-              color: textPrimary,
-              fontSize: 14,
-              fontWeight: isBold ? FontWeight.w800 : FontWeight.w500,
-              fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: keyBg,
+              borderRadius: BorderRadius.circular(6),
             ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: textPrimary,
+                fontSize: 13,
+                fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+                fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIconKey({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    required Color textPrimary,
+    required Color keyBg,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: keyBg,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, size: 16, color: textPrimary),
           ),
         ),
       ),

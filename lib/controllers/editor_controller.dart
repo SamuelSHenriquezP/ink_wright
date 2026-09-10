@@ -78,6 +78,18 @@ class EditorController extends ChangeNotifier {
   // Characters are strictly individual per book
   List<CharacterModel> get characters =>
       _characters.where((c) => c.bookId == _activeBook.id).toList();
+
+  int get activeChapterIndex =>
+      _activeBook.chapters.indexWhere((c) => c.id == _activeChapter.id);
+  int get totalChapters => _activeBook.chapters.length;
+  bool get hasNextChapter {
+    final idx = activeChapterIndex;
+    return idx != -1 && idx < _activeBook.chapters.length - 1;
+  }
+  bool get hasPreviousChapter {
+    final idx = activeChapterIndex;
+    return idx > 0;
+  }
   List<CharacterModel> get allCharacters => List.unmodifiable(_characters);
 
   WritingSprintModel? get activeSprint => _activeSprint;
@@ -722,6 +734,31 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     notifyListeners();
   }
 
+  void goToNextChapter() {
+    final idx = activeChapterIndex;
+    if (idx != -1 && idx < _activeBook.chapters.length - 1) {
+      selectChapter(_activeBook.chapters[idx + 1]);
+    }
+  }
+
+  void goToPreviousChapter() {
+    final idx = activeChapterIndex;
+    if (idx > 0) {
+      selectChapter(_activeBook.chapters[idx - 1]);
+    }
+  }
+
+  void updateActiveChapterTitle(String newTitle) {
+    if (newTitle.trim().isEmpty || newTitle.trim() == _activeChapter.title) return;
+    final updated = _activeChapter.copyWith(title: newTitle.trim(), lastEdited: DateTime.now());
+    _activeChapter = updated;
+    final updatedChapters = _activeBook.chapters.map((c) => c.id == updated.id ? updated : c).toList();
+    _activeBook = _activeBook.copyWith(chapters: updatedChapters);
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _saveCurrentData(debounced: true);
+    notifyListeners();
+  }
+
   void reorderChapters(int oldIndex, int newIndex) {
     if (oldIndex < newIndex) {
       newIndex -= 1;
@@ -1139,6 +1176,18 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     notifyListeners();
   }
 
+  void updateIdea(IdeaSnippetModel updated) {
+    _ideas = _ideas.map((item) => item.id == updated.id ? updated : item).toList();
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  void deleteIdea(String ideaId) {
+    _ideas.removeWhere((item) => item.id == ideaId);
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
   void toggleIdeaPin(String ideaId) {
     _ideas = _ideas.map((item) {
       if (item.id == ideaId) {
@@ -1177,6 +1226,18 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
 
   void addCodexEntry(CodexEntryModel entry) {
     _codexEntries.insert(0, entry);
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  void updateCodexEntry(CodexEntryModel updated) {
+    _codexEntries = _codexEntries.map((item) => item.id == updated.id ? updated : item).toList();
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  void deleteCodexEntry(String entryId) {
+    _codexEntries.removeWhere((item) => item.id == entryId);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }

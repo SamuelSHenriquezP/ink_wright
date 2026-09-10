@@ -51,6 +51,43 @@ void main() {
       WriterTextFormatter.insertCheckboxList(ctrl);
       expect(ctrl.text.startsWith('- [ ] '), isTrue);
     });
+
+    test('Aloud reading time estimation', () {
+      expect(WriterTextFormatter.estimateReadingTimeAloud(''), equals(0));
+      expect(WriterTextFormatter.estimateReadingTimeAloud('Palabra ' * 260), equals(2));
+    });
+
+    test('Sentence counting logic', () {
+      expect(WriterTextFormatter.countSentences(''), equals(0));
+      expect(WriterTextFormatter.countSentences('Hola mundo. ¿Cómo estás? ¡Excelente!'), equals(3));
+    });
+
+    test('Dialogue vs Narrative analysis', () {
+      const sample = '—Hola, dijo Juan.\nEl sol brillaba en lo alto.\n—Nos vemos mañana.';
+      final result = WriterTextFormatter.analyzeDialogueVsNarrative(sample);
+      expect(result['dialogue'], isNotNull);
+      expect(result['narrative'], isNotNull);
+      expect(result['dialogue']! + result['narrative']!, closeTo(1.0, 0.01));
+      expect(result['dialogue']!, greaterThan(0.5));
+    });
+
+    test('Vocabulary richness analysis', () {
+      expect(WriterTextFormatter.analyzeVocabularyRichness(''), equals(0.0));
+      final richnessAllUnique = WriterTextFormatter.analyzeVocabularyRichness('El cielo azul resplandece');
+      expect(richnessAllUnique, equals(1.0));
+      final richnessRepeats = WriterTextFormatter.analyzeVocabularyRichness('hola hola hola hola');
+      expect(richnessRepeats, equals(0.25));
+    });
+
+    test('Top frequent words extraction without stopwords', () {
+      const sample = 'El castillo era un castillo oscuro en el bosque y el castillo dominaba el bosque.';
+      final top = WriterTextFormatter.getTopFrequentWords(sample, limit: 3);
+      final wordKeys = top.map((e) => e.key).toList();
+      expect(wordKeys, contains('castillo'));
+      expect(wordKeys, contains('bosque'));
+      expect(wordKeys, isNot(contains('el')));
+      expect(wordKeys, isNot(contains('un')));
+    });
   });
 
   group('ChapterModel Tests', () {
@@ -398,6 +435,153 @@ code block line 2
           ),
         ),
       );
+    });
+
+    testWidgets('hideMarkdownSymbols hides syntax markers while preserving text and formatting', (tester) async {
+      final controller = MarkdownEditingController(
+        text: '# Título\n**Negrita**\n*Cursiva*\n— Diálogo\n«Cita»',
+        hideMarkdownSymbols: true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                final span = controller.buildTextSpan(
+                  context: context,
+                  style: const TextStyle(fontSize: 16),
+                  withComposing: false,
+                );
+                // Exact text invariant is strictly preserved
+                expect(span.toPlainText(), equals('# Título\n**Negrita**\n*Cursiva*\n— Diálogo\n«Cita»'));
+
+                // Verify hidden markers exist and have transparent color
+                bool hasHiddenSpan = false;
+                void inspectSpan(InlineSpan s) {
+                  if (s is TextSpan) {
+                    if (s.style?.color == Colors.transparent) {
+                      hasHiddenSpan = true;
+                    }
+                    if (s.children != null) {
+                      for (final child in s.children!) {
+                        inspectSpan(child);
+                      }
+                    }
+                  }
+                }
+
+                inspectSpan(span);
+                expect(hasHiddenSpan, isTrue);
+
+                // Toggle hideMarkdownSymbols
+                controller.toggleHideMarkdownSymbols();
+                expect(controller.hideMarkdownSymbols, isFalse);
+
+                return Text.rich(span);
+              },
+            ),
+          ),
+        ),
+      );
+    });
+
+    test('MarkdownEditingController format shortcut methods apply formatting', () {
+      final controller = MarkdownEditingController(text: 'Palabra');
+      controller.selection = const TextSelection(baseOffset: 0, extentOffset: 7);
+
+      controller.formatBold();
+      expect(controller.text, equals('**Palabra**'));
+
+      // Toggling bold again unwraps it
+      controller.selection = const TextSelection(baseOffset: 0, extentOffset: 11);
+      controller.formatBold();
+      expect(controller.text, equals('Palabra'));
+
+      // Test Italic formatting
+      final italicController = MarkdownEditingController(text: 'Palabra');
+      italicController.selection = const TextSelection(baseOffset: 0, extentOffset: 7);
+      italicController.formatItalic();
+      expect(italicController.text, equals('*Palabra*'));
+
+      final lineController = MarkdownEditingController(text: 'Capítulo Uno');
+      lineController.selection = const TextSelection.collapsed(offset: 0);
+      lineController.formatHeading(1);
+      expect(lineController.text, equals('# Capítulo Uno'));
+    });
+
+    test('EditorController CRUD for Ideas and Codex entries', () {
+      final controller = EditorController();
+      final initialIdeasCount = controller.ideas.length;
+      final initialCodexCount = controller.codexEntries.length;
+
+      // Add Idea
+      final idea = IdeaSnippetModel(
+        id: 'test_idea_1',
+        title: 'Idea de Prueba',
+        content: 'Un misterio en el bosque',
+        category: IdeaCategory.general,
+        colorHex: 0xFF18181B,
+        createdAt: DateTime.now(),
+        tags: ['Nota'],
+      );
+      controller.addIdea(idea);
+      expect(controller.ideas.length, equals(initialIdeasCount + 1));
+
+      // Update Idea
+      final updatedIdea = idea.copyWith(title: 'Idea Modificada');
+      controller.updateIdea(updatedIdea);
+      expect(controller.ideas.first.title, equals('Idea Modificada'));
+
+      // Delete Idea
+      controller.deleteIdea('test_idea_1');
+      expect(controller.ideas.length, equals(initialIdeasCount));
+
+      // Add Codex Entry
+      final entry = CodexEntryModel(
+        id: 'test_codex_1',
+        bookId: controller.activeBook.id,
+        name: 'Castillo Sombrío',
+        type: CodexType.location,
+        role: 'Fortaleza antigua',
+        description: 'Construido en el siglo XIV',
+        traits: ['Antiguo'],
+        secrets: '',
+        avatarEmoji: '🏰',
+        createdAt: DateTime.now(),
+      );
+      controller.addCodexEntry(entry);
+      expect(controller.codexEntries.length, equals(initialCodexCount + 1));
+
+      // Update Codex Entry
+      final updatedEntry = entry.copyWith(name: 'Castillo Renovado');
+      controller.updateCodexEntry(updatedEntry);
+      expect(controller.codexEntries.first.name, equals('Castillo Renovado'));
+
+      // Delete Codex Entry
+      controller.deleteCodexEntry('test_codex_1');
+      expect(controller.codexEntries.length, equals(initialCodexCount));
+    });
+
+    test('EditorController chapter navigation and title update', () {
+      final controller = EditorController();
+      expect(controller.activeChapterIndex, equals(0));
+      expect(controller.hasPreviousChapter, isFalse);
+      expect(controller.hasNextChapter, isTrue);
+
+      // Navigate to next chapter
+      controller.goToNextChapter();
+      expect(controller.activeChapterIndex, equals(1));
+      expect(controller.hasPreviousChapter, isTrue);
+
+      // Update chapter title
+      controller.updateActiveChapterTitle('Capítulo 2: Renombrado');
+      expect(controller.activeChapter.title, equals('Capítulo 2: Renombrado'));
+
+      // Navigate back to previous chapter
+      controller.goToPreviousChapter();
+      expect(controller.activeChapterIndex, equals(0));
+      expect(controller.hasPreviousChapter, isFalse);
     });
   });
 
