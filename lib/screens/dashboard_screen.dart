@@ -1062,12 +1062,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // Header Minimalista Superior
+            // Header Editorial Superior (Limpio y Estructurado)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1075,17 +1076,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Text(
                           todayFormatted.toUpperCase(),
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: textSecondary,
                             letterSpacing: 1.2,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
                           'InkWright Studio',
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: 24,
                             fontWeight: FontWeight.w800,
                             color: textPrimary,
                             letterSpacing: -0.5,
@@ -1094,99 +1095,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     ),
 
-                    // Iconos de Acceso Rápido
-                    Row(
-                      children: [
-                        // Asistente Muse
-                        Container(
-                          decoration: BoxDecoration(
-                            color: bgCard,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: borderSubtle),
-                            boxShadow: AppTheme.getSoftShadow(isDark),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.auto_awesome_outlined, size: 18),
-                            onPressed: () => _openMuseStudio(context, isDark),
-                            tooltip: 'Herramientas de Escritura',
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-
-                        // Mapa de Trama
-                        Container(
-                          decoration: BoxDecoration(
-                            color: bgCard,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: borderSubtle),
-                            boxShadow: AppTheme.getSoftShadow(isDark),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.hub_outlined, size: 18),
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const PlotMindMapScreen()),
-                              );
-                            },
-                            tooltip: 'Mapa Mental de Trama',
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-
-                        // Métricas y Estadísticas
-                        Container(
-                          decoration: BoxDecoration(
-                            color: bgCard,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: borderSubtle),
-                            boxShadow: AppTheme.getSoftShadow(isDark),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.insights_rounded, size: 18),
-                            onPressed: () => _openMetricsSheet(context, controller, isDark),
-                            tooltip: 'Métricas de Escritura',
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-
-                        // Guía de Inicio y Tutorial
-                        Container(
-                          decoration: BoxDecoration(
-                            color: bgCard,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: borderSubtle),
-                            boxShadow: AppTheme.getSoftShadow(isDark),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.menu_book_rounded, size: 18),
-                            onPressed: () => _openTutorialSheet(context, isDark, controller),
-                            tooltip: 'Guía de Inicio & Tutorial',
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-
-                        // Modo Noche / Día
-                        Container(
-                          decoration: BoxDecoration(
-                            color: bgCard,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: borderSubtle),
-                            boxShadow: AppTheme.getSoftShadow(isDark),
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                              size: 18,
-                              color: textPrimary,
-                            ),
-                            onPressed: () {
-                              themeController.toggleThemeMode();
-                              controller.toggleThemeMode();
-                            },
-                            tooltip: 'Cambiar Tema',
-                          ),
-                        ),
-                      ],
+                    // Selector sutil de tema claro / oscuro (sin círculos saturados)
+                    IconButton(
+                      icon: Icon(
+                        isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                        size: 22,
+                        color: textSecondary,
+                      ),
+                      tooltip: isDark ? 'Modo Claro' : 'Modo Oscuro',
+                      onPressed: () {
+                        themeController.toggleThemeMode();
+                        controller.toggleThemeMode();
+                      },
                     ),
                   ],
                 ),
@@ -1242,7 +1162,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
             // SECCIÓN 0: MANUSCRITO ACTIVO Y ESCRITURA DIRECTA
             if (_selectedFilterIndex == 0) ...[
@@ -1251,11 +1171,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
-                    padding: const EdgeInsets.all(22),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: bgCard,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: borderSubtle, width: 1.5),
+                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                      border: Border.all(color: borderSubtle, width: 1.0),
                       boxShadow: AppTheme.getSoftShadow(isDark),
                     ),
                     child: Column(
@@ -1263,9 +1183,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              controller.activeBook.coverEmoji,
-                              style: const TextStyle(fontSize: 32),
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                controller.activeBook.coverEmoji,
+                                style: const TextStyle(fontSize: 28),
+                              ),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -1275,31 +1204,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   Text(
                                     controller.activeBook.title,
                                     style: TextStyle(
-                                      fontSize: 19,
+                                      fontSize: 18,
                                       fontWeight: FontWeight.w800,
                                       color: textPrimary,
                                       letterSpacing: -0.3,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 2),
+                                  const SizedBox(height: 3),
                                   Text(
-                                    '${controller.activeBook.chapters.length} capítulos • ${controller.activeBook.currentWordCount} palabras totales',
-                                    style: TextStyle(fontSize: 12, color: textSecondary),
+                                    '${controller.activeBook.chapters.length} capítulos • ${controller.activeBook.currentWordCount} palabras',
+                                    style: TextStyle(fontSize: 12.5, color: textSecondary, fontWeight: FontWeight.w500),
                                   ),
                                 ],
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
 
-                        // Botón Prominente "Continuar Escribiendo"
+                        // Barra de Progreso del Objetivo de Palabras
+                        Builder(
+                          builder: (context) {
+                            final targetWords = controller.activeBook.targetWordCount;
+                            final currentWords = controller.activeBook.currentWordCount;
+                            final ratio = targetWords > 0 ? (currentWords / targetWords).clamp(0.0, 1.0) : 0.0;
+                            final percent = (ratio * 100).toInt();
+
+                            return Column(
+                              children: [
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Progreso del Libro',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textPrimary),
+                                    ),
+                                    Text(
+                                      '$percent% ($currentWords / $targetWords pal.)',
+                                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: textSecondary),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: ratio,
+                                    minHeight: 5,
+                                    backgroundColor: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.07),
+                                    valueColor: AlwaysStoppedAnimation<Color>(isDark ? Colors.white : Colors.black),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 18),
+
+                        // Botón Principal "Continuar Escribiendo"
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isDark ? Colors.white : Colors.black,
                             foregroundColor: isDark ? Colors.black : Colors.white,
-                            minimumSize: const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            minimumSize: const Size(double.infinity, 48),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                             elevation: 0,
                           ),
                           icon: const Icon(Icons.edit_note_rounded, size: 20),
@@ -1313,24 +1284,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             );
                           },
                         ),
+
                         const SizedBox(height: 10),
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: textPrimary,
-                            side: BorderSide(color: borderSubtle),
-                            minimumSize: const Size(double.infinity, 44),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                          ),
-                          icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('Añadir Nuevo Capítulo'),
-                          onPressed: () {
-                            controller.addNewChapter('Nuevo Capítulo');
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 10),
+
+                        // Fila de 3 Acciones Secundarias (Nombres concisos y legibles completos)
                         Row(
                           children: [
                             Expanded(
@@ -1338,18 +1295,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: textPrimary,
                                   side: BorderSide(color: borderSubtle),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  minimumSize: const Size(0, 42),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(21)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                                 ),
-                                icon: const Icon(Icons.person_search_rounded, size: 16),
-                                label: Text(
-                                  'Personajes (${controller.characters.length})',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                icon: const Icon(Icons.add_rounded, size: 17),
+                                label: const Text(
+                                  'Capítulo',
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                                 ),
                                 onPressed: () {
-                                  setState(() {
-                                    _selectedFilterIndex = 2; // Personajes
-                                  });
+                                  controller.addNewChapter('Nuevo Capítulo');
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
+                                  );
                                 },
                               ),
                             ),
@@ -1359,18 +1321,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: textPrimary,
                                   side: BorderSide(color: borderSubtle),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  minimumSize: const Size(0, 42),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(21)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                                 ),
                                 icon: const Icon(Icons.hub_outlined, size: 16),
-                                label: Text(
-                                  'Mapa Trama (${controller.mindMapNodes.length})',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                label: const Text(
+                                  'Mapa Mental',
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                                 ),
                                 onPressed: () {
                                   Navigator.of(context).push(
                                     MaterialPageRoute(builder: (_) => const PlotMindMapScreen()),
                                   );
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: textPrimary,
+                                  side: BorderSide(color: borderSubtle),
+                                  minimumSize: const Size(0, 42),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(21)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                ),
+                                icon: const Icon(Icons.person_search_rounded, size: 16),
+                                label: const Text(
+                                  'Personajes',
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedFilterIndex = 2; // Personajes
+                                  });
                                 },
                               ),
                             ),
@@ -1382,21 +1373,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
-              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+              const SliverToBoxAdapter(child: SizedBox(height: 14)),
 
-              // Mini Tarjeta de Métrica Diaria (Opción menor y discreta)
+              // Tarjeta de Métrica Diaria
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                     onTap: () => _openMetricsSheet(context, controller, isDark),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                       decoration: BoxDecoration(
                         color: bgCard,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: borderSubtle),
+                        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                        border: Border.all(color: borderSubtle, width: 1.0),
                         boxShadow: AppTheme.getSoftShadow(isDark),
                       ),
                       child: Row(
@@ -1405,11 +1396,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                              shape: BoxShape.circle,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Icon(Icons.insights_rounded, size: 16, color: textPrimary),
+                            child: Icon(Icons.insights_rounded, size: 18, color: textPrimary),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1418,9 +1409,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Meta diaria: ${controller.writerStats.wordsToday} / ${controller.writerStats.dailyGoalWords} pal.',
+                                      'Meta diaria: ${controller.writerStats.wordsToday} / ${controller.writerStats.dailyGoalWords} palabras',
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: 12.5,
                                         fontWeight: FontWeight.w700,
                                         color: textPrimary,
                                       ),
@@ -1428,7 +1419,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     Text(
                                       '${controller.writerStats.dailyPercentage}%',
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: 12.5,
                                         fontWeight: FontWeight.w800,
                                         color: textPrimary,
                                       ),
@@ -1448,7 +1439,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                           Icon(Icons.arrow_forward_ios_rounded, size: 12, color: textSecondary),
                         ],
                       ),
@@ -1469,7 +1460,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Text(
                         'Capítulos del Manuscrito',
                         style: TextStyle(
-                          fontSize: 17,
+                          fontSize: 18,
                           fontWeight: FontWeight.w800,
                           color: textPrimary,
                           letterSpacing: -0.3,
@@ -1481,60 +1472,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 10),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                             boxShadow: AppTheme.getSoftShadow(isDark),
                           ),
                           child: Material(
                             color: bgCard,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                               side: BorderSide(
                                 color: isSelected ? (isDark ? Colors.white : Colors.black) : borderSubtle,
                                 width: isSelected ? 1.5 : 1.0,
                               ),
                             ),
                             child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                            leading: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
-                                shape: BoxShape.circle,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              leading: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '${chapter.chapterNumber}',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: textPrimary,
+                                  ),
+                                ),
                               ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                '${chapter.chapterNumber}',
+                              title: Text(
+                                chapter.title,
                                 style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w700,
                                   color: textPrimary,
                                 ),
                               ),
-                            ),
-                            title: Text(
-                              chapter.title,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: textPrimary,
+                              subtitle: Text(
+                                '${chapter.wordCount} palabras • ${chapter.readingTimeMinutes} min lectura',
+                                style: TextStyle(fontSize: 12, color: textSecondary),
                               ),
+                              trailing: Icon(Icons.arrow_forward_ios_rounded, size: 13, color: textSecondary),
+                              onTap: () {
+                                controller.selectChapter(chapter);
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
+                                );
+                              },
                             ),
-                            subtitle: Text(
-                              '${chapter.wordCount} palabras • ${chapter.readingTimeMinutes} min lectura',
-                              style: TextStyle(fontSize: 12, color: textSecondary),
-                            ),
-                            trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: textSecondary),
-                            onTap: () {
-                              controller.selectChapter(chapter);
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
-                              );
-                            },
                           ),
-                        ),
-                      );
-                    }),
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -1613,11 +1604,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
-                    padding: const EdgeInsets.all(22),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: bgCard,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: borderSubtle, width: 1.5),
+                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                      border: Border.all(color: borderSubtle, width: 1.0),
                       boxShadow: AppTheme.getSoftShadow(isDark),
                     ),
                     child: Column(
@@ -1633,11 +1624,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 children: [
                                   Text(
                                     'Mapa Mental de Trama',
-                                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: textPrimary),
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textPrimary, letterSpacing: -0.3),
                                   ),
                                   Text(
                                     'Lienzo interactivo de nodos, actos y subtramas',
-                                    style: TextStyle(fontSize: 12, color: textSecondary),
+                                    style: TextStyle(fontSize: 12.5, color: textSecondary),
                                   ),
                                 ],
                               ),
@@ -1655,7 +1646,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             backgroundColor: isDark ? Colors.white : Colors.black,
                             foregroundColor: isDark ? Colors.black : Colors.white,
                             minimumSize: const Size(double.infinity, 48),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                             elevation: 0,
                           ),
                           icon: const Icon(Icons.hub_rounded),
@@ -1810,25 +1801,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: textPrimary,
                                 side: BorderSide(color: borderSubtle),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                               ),
-                              icon: const Icon(Icons.timer_outlined, size: 18),
-                              label: const Text('Sprint de Escritura'),
-                              onPressed: () => _openSprintDialog(context, isDark),
+                              icon: const Icon(Icons.auto_awesome_outlined, size: 17),
+                              label: const Text('Asistente Muse', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                              onPressed: () => _openMuseStudio(context, isDark),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: textPrimary,
                                 side: BorderSide(color: borderSubtle),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                               ),
-                              icon: const Icon(Icons.ios_share_rounded, size: 18),
-                              label: const Text('Exportar Libro'),
+                              icon: const Icon(Icons.menu_book_rounded, size: 17),
+                              label: const Text('Guía y Tutorial', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                              onPressed: () => _openTutorialSheet(context, isDark, controller),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: textPrimary,
+                                side: BorderSide(color: borderSubtle),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                              ),
+                              icon: const Icon(Icons.timer_outlined, size: 17),
+                              label: const Text('Sprint de Escritura', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                              onPressed: () => _openSprintDialog(context, isDark),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: textPrimary,
+                                side: BorderSide(color: borderSubtle),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                              ),
+                              icon: const Icon(Icons.ios_share_rounded, size: 17),
+                              label: const Text('Exportar Libro', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
                               onPressed: () => _openExportDialog(context, isDark),
                             ),
                           ),
@@ -1842,7 +1865,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         decoration: BoxDecoration(
                           color: bgCard,
                           borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                          border: Border.all(color: borderSubtle),
+                          border: Border.all(color: borderSubtle, width: 1.0),
                           boxShadow: AppTheme.getSoftShadow(isDark),
                         ),
                         child: Column(
@@ -1854,7 +1877,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
                                     color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                                    shape: BoxShape.circle,
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Icon(
                                     Icons.shield_outlined,
@@ -1906,7 +1929,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       backgroundColor: isDark ? Colors.white : Colors.black,
                                       foregroundColor: isDark ? Colors.black : Colors.white,
                                       padding: const EdgeInsets.symmetric(vertical: 13),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                                       elevation: 0,
                                     ),
                                     icon: const Icon(Icons.download_rounded, size: 17),
@@ -1921,7 +1944,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       foregroundColor: textPrimary,
                                       side: BorderSide(color: borderSubtle),
                                       padding: const EdgeInsets.symmetric(vertical: 13),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                                     ),
                                     icon: const Icon(Icons.settings_backup_restore_rounded, size: 17),
                                     label: const Text('Restaurar', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),

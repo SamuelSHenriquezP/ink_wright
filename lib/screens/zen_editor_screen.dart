@@ -18,6 +18,7 @@ import '../widgets/writing_sprint_dialog.dart';
 import '../widgets/chapter_metrics_view.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'dashboard_screen.dart';
+import 'plot_mind_map_screen.dart';
 
 class ZenEditorScreen extends StatefulWidget {
   const ZenEditorScreen({super.key});
@@ -276,11 +277,12 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
       behavior: HitTestBehavior.opaque,
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Text Label Pill
           Material(
             color: Colors.transparent,
-            elevation: 4,
+            elevation: 3,
             shadowColor: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15),
             borderRadius: BorderRadius.circular(12),
             child: Container(
@@ -288,12 +290,15 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
               decoration: BoxDecoration(
                 color: bgPill,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: borderSubtle, width: 0.8),
+                border: Border.all(color: borderSubtle, width: 0.9),
               ),
               child: Text(
                 label,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.visible,
                 style: TextStyle(
-                  fontSize: 13.5,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: textPrimary,
                   letterSpacing: -0.1,
@@ -301,13 +306,13 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
 
           // Circular Floating Action Button
           Material(
             color: Colors.transparent,
-            elevation: 5,
-            shadowColor: Colors.black.withValues(alpha: isDark ? 0.5 : 0.2),
+            elevation: 4,
+            shadowColor: Colors.black.withValues(alpha: isDark ? 0.45 : 0.2),
             shape: const CircleBorder(),
             child: Container(
               width: 44,
@@ -315,7 +320,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: bgPill,
-                border: Border.all(color: borderSubtle, width: 0.8),
+                border: Border.all(color: borderSubtle, width: 0.9),
               ),
               child: Icon(
                 icon,
@@ -331,7 +336,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
     )
         .animate()
         .fadeIn(duration: 160.ms, delay: Duration(milliseconds: delayMs))
-        .slideY(begin: 0.2, end: 0, duration: 160.ms, curve: Curves.easeOut);
+        .slideY(begin: 0.15, end: 0, duration: 160.ms, curve: Curves.easeOut);
   }
 
   void _toggleFindReplace() {
@@ -1559,20 +1564,35 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       if (_isFabExpanded) ...[
-                        // Option 3: Exportar (Top-most)
+                        // Option 4: Exportar (Top-most)
                         _buildFloatingOptionItem(
                           icon: Icons.file_download_outlined,
                           label: 'Exportar',
-                          delayMs: 80,
+                          delayMs: 120,
                           isDark: isDark,
                           onTap: () {
                             setState(() => _isFabExpanded = false);
                             _openExportDialog(context, isDark);
                           },
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
 
-                        // Option 2: Nuevo Libro (Middle)
+                        // Option 3: Mapa Mental
+                        _buildFloatingOptionItem(
+                          icon: Icons.hub_outlined,
+                          label: 'Mapa Mental',
+                          delayMs: 80,
+                          isDark: isDark,
+                          onTap: () {
+                            setState(() => _isFabExpanded = false);
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const PlotMindMapScreen()),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Option 2: Nuevo Libro
                         _buildFloatingOptionItem(
                           icon: Icons.auto_stories_outlined,
                           label: 'Nuevo Libro',
@@ -1583,7 +1603,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                             _showNewBookDialog(context, controller, isDark);
                           },
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
 
                         // Option 1: Nuevo Capítulo (Bottom-most above FAB)
                         _buildFloatingOptionItem(
@@ -1625,7 +1645,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> {
                       ),
                     ],
                   ),
-                ).animate().scale(duration: 150.ms, curve: Curves.easeOut),
+                ),
               ],
             ),
 

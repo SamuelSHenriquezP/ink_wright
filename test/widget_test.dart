@@ -101,7 +101,7 @@ void main() {
     expect(find.text('Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo'), findsOneWidget);
   });
 
-  testWidgets('Floating + button opens exactly 3 popup options: Nuevo Capitulo, Nuevo Libro, Exportar', (WidgetTester tester) async {
+  testWidgets('Floating + button opens popup options: Nuevo Capitulo, Nuevo Libro, Mapa Mental, Exportar', (WidgetTester tester) async {
     await tester.pumpWidget(const InkWrightApp());
     await tester.pumpAndSettle();
 
@@ -114,9 +114,10 @@ void main() {
     await tester.tap(fab);
     await tester.pumpAndSettle();
 
-    // Verify the 3 floating speed dial options are present
+    // Verify the 4 floating speed dial options are present
     expect(find.text('Nuevo Capítulo'), findsOneWidget);
     expect(find.text('Nuevo Libro'), findsOneWidget);
+    expect(find.text('Mapa Mental'), findsOneWidget);
     expect(find.text('Exportar'), findsOneWidget);
 
     // Tap "Nuevo Capítulo" option
