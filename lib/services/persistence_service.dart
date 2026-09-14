@@ -8,6 +8,8 @@ import '../models/codex_entry_model.dart';
 import '../models/mind_map_node_model.dart';
 import '../models/writer_stats_model.dart';
 import '../models/character_model.dart';
+import '../models/character_relationship_model.dart';
+import '../models/sprint_history_model.dart';
 
 class PersistenceService {
   static const String _keyBooks = 'ink_wright_books';
@@ -25,6 +27,8 @@ class PersistenceService {
   static const String _keyLineHeight = 'ink_wright_line_height';
   static const String _keyMaxEditorWidth = 'ink_wright_max_editor_width';
   static const String _keyTypewriterMode = 'ink_wright_typewriter_mode';
+  static const String _keySprintHistory = 'ink_wright_sprint_history';
+  static const String _keyRelationships = 'ink_wright_relationships';
 
   Timer? _saveDebounceTimer;
   Future<void> Function()? _pendingSaveAction;
@@ -121,6 +125,34 @@ class PersistenceService {
     }
   }
 
+  // Load Sprint History
+  Future<List<SprintHistoryModel>?> loadSprintHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString(_keySprintHistory);
+      if (jsonString == null || jsonString.isEmpty) return null;
+
+      final List<dynamic> list = jsonDecode(jsonString) as List<dynamic>;
+      return list.map((item) => SprintHistoryModel.fromMap(item as Map<String, dynamic>)).toList();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Load Character Relationships
+  Future<List<CharacterRelationshipModel>?> loadRelationships() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString(_keyRelationships);
+      if (jsonString == null || jsonString.isEmpty) return null;
+
+      final List<dynamic> list = jsonDecode(jsonString) as List<dynamic>;
+      return list.map((item) => CharacterRelationshipModel.fromJson(item as Map<String, dynamic>)).toList();
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Load Writer Stats
   Future<WriterStatsModel?> loadWriterStats() async {
     try {
@@ -170,6 +202,8 @@ class PersistenceService {
     required List<MindMapNodeModel> mindMapNodes,
     required List<CharacterModel> characters,
     required WriterStatsModel writerStats,
+    List<SprintHistoryModel>? sprintHistory,
+    List<CharacterRelationshipModel>? relationships,
     String? activeBookId,
     String? activeChapterId,
     bool? isDarkMode,
@@ -203,6 +237,12 @@ class PersistenceService {
         prefs.setString(_keyMindMap, mindMapJson),
         prefs.setString(_keyCharacters, charactersJson),
         prefs.setString(_keyWriterStats, statsJson),
+        if (sprintHistory != null)
+          prefs.setString(
+              _keySprintHistory, jsonEncode(sprintHistory.map((s) => s.toMap()).toList())),
+        if (relationships != null)
+          prefs.setString(
+              _keyRelationships, jsonEncode(relationships.map((r) => r.toJson()).toList())),
         if (activeBookId != null) prefs.setString(_keyActiveBookId, activeBookId),
         if (activeChapterId != null) prefs.setString(_keyActiveChapterId, activeChapterId),
         if (isDarkMode != null) prefs.setBool(_keyDarkMode, isDarkMode),
@@ -241,6 +281,8 @@ class PersistenceService {
     required List<MindMapNodeModel> mindMapNodes,
     required List<CharacterModel> characters,
     required WriterStatsModel writerStats,
+    List<SprintHistoryModel>? sprintHistory,
+    List<CharacterRelationshipModel>? relationships,
     String? activeBookId,
     String? activeChapterId,
     bool? isDarkMode,
@@ -261,6 +303,8 @@ class PersistenceService {
         mindMapNodes: mindMapNodes,
         characters: characters,
         writerStats: writerStats,
+        sprintHistory: sprintHistory,
+        relationships: relationships,
         activeBookId: activeBookId,
         activeChapterId: activeChapterId,
         isDarkMode: isDarkMode,

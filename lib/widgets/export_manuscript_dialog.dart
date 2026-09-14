@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 import '../theme/app_theme.dart';
 import '../controllers/editor_controller.dart';
 import '../services/export_service.dart';
@@ -71,9 +74,17 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
           codexEntries: codexEntries,
         );
         Navigator.of(context).pop();
-        await Printing.sharePdf(
-          bytes: Uint8List.fromList(docxBytes),
-          filename: '$baseFilename.docx',
+        final xFile = XFile.fromData(
+          Uint8List.fromList(docxBytes),
+          name: '$baseFilename.docx',
+          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        );
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [xFile],
+            fileNameOverrides: ['$baseFilename.docx'],
+            subject: book.title,
+          ),
         );
         return;
       }
@@ -86,9 +97,17 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
           codexEntries: codexEntries,
         );
         Navigator.of(context).pop();
-        await Printing.sharePdf(
-          bytes: Uint8List.fromList(epubBytes),
-          filename: '$baseFilename.epub',
+        final xFile = XFile.fromData(
+          Uint8List.fromList(epubBytes),
+          name: '$baseFilename.epub',
+          mimeType: 'application/epub+zip',
+        );
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [xFile],
+            fileNameOverrides: ['$baseFilename.epub'],
+            subject: book.title,
+          ),
         );
         return;
       }
@@ -464,6 +483,96 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                       ),
                       onPressed: () => _handleExport(context, controller),
                     ),
+
+                    const SizedBox(height: 28),
+
+                    // ─── Importar / Restaurar Section ──────────────────────
+                    Divider(height: 1, color: borderSubtle),
+                    const SizedBox(height: 20),
+
+                    Text(
+                      'Importar / Restaurar',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Warning text
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: widget.isDark ? 0.12 : 0.10),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.amber),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Esta acción reemplazará todos tus datos actuales. Se recomienda exportar un respaldo antes de importar.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: widget.isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: widget.isDark ? const Color(0xFF2A2A2E) : const Color(0xFFF0EFE9),
+                        foregroundColor: textPrimary,
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          side: BorderSide(color: borderSubtle),
+                        ),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.upload_file_rounded, size: 20),
+                      label: const Text(
+                        'Importar archivo .inkwright',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      onPressed: () async {
+                        final result = await FilePicker.platform.pickFiles(
+                          type: FileType.custom,
+                          allowedExtensions: ['inkwright', 'json'],
+                          withData: true,
+                        );
+                        if (!context.mounted) return;
+                        if (result != null && result.files.single.bytes != null) {
+                          final jsonStr = utf8.decode(result.files.single.bytes!);
+                          final success = controller.restoreFromBackupJson(jsonStr);
+                          if (!context.mounted) return;
+                          if (success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Backup restaurado correctamente'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            Navigator.of(context).pop();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('No se pudo leer el archivo. Verifica que sea un backup válido de Ink Wright.'),
+                                backgroundColor: Colors.redAccent,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+
                   ],
                 ),
               ),

@@ -16,6 +16,7 @@ import '../widgets/editor_options_sheet.dart';
 import '../widgets/export_manuscript_dialog.dart';
 import '../widgets/writing_sprint_dialog.dart';
 import '../widgets/chapter_metrics_view.dart';
+import '../widgets/revision_sidebar.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'dashboard_screen.dart';
 import 'plot_mind_map_screen.dart';
@@ -1325,77 +1326,114 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                     ),
                                   ],
 
-                                  // Read-Only Indicator Badge (if active)
-                                  if (_isReadOnly)
-                                    Container(
-                                      margin: const EdgeInsets.only(right: 6),
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.lock_outline_rounded, size: 12, color: textSecondary),
-                                          const SizedBox(width: 4),
-                                          Text('Lectura', style: TextStyle(fontSize: 11, color: textSecondary, fontWeight: FontWeight.bold)),
-                                        ],
-                                      ),
-                                    ),
+                                   // Read-Only Indicator Badge (if active)
+                                   if (_isReadOnly)
+                                     Container(
+                                       margin: const EdgeInsets.only(right: 6),
+                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                       decoration: BoxDecoration(
+                                         color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
+                                         borderRadius: BorderRadius.circular(12),
+                                       ),
+                                       child: Row(
+                                         mainAxisSize: MainAxisSize.min,
+                                         children: [
+                                           Icon(Icons.menu_book_rounded, size: 12, color: textSecondary),
+                                           const SizedBox(width: 4),
+                                           Text(
+                                             'Lectura (${controller.activeChapter.readingTimeMinutes} min)',
+                                             style: TextStyle(fontSize: 11, color: textSecondary, fontWeight: FontWeight.bold),
+                                           ),
+                                         ],
+                                       ),
+                                     ),
 
-                                  // Format Badge Pill [MD] / [MD*]
-                                  GestureDetector(
-                                    onTap: () {
-                                      controller.textEditingController.toggleHideMarkdownSymbols();
-                                      setState(() {});
-                                    },
-                                    child: Tooltip(
-                                      message: controller.textEditingController.hideMarkdownSymbols
-                                          ? 'Símbolos Markdown ocultos (pulsa para mostrar)'
-                                          : 'Símbolos Markdown visibles (pulsa para ocultar)',
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                        decoration: BoxDecoration(
-                                          color: controller.textEditingController.hideMarkdownSymbols
-                                              ? (isDark ? Colors.white12 : Colors.black)
-                                              : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
-                                          borderRadius: BorderRadius.circular(16),
-                                          border: Border.all(
-                                            color: controller.textEditingController.hideMarkdownSymbols
-                                              ? (isDark ? Colors.white54 : Colors.black)
-                                              : (isDark ? Colors.white24 : Colors.black12),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          controller.textEditingController.hideMarkdownSymbols ? 'MD' : 'MD*',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: 0.5,
-                                            color: controller.textEditingController.hideMarkdownSymbols
-                                                ? Colors.white
-                                                : textSecondary,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                   // Format Badge Pill [MD] / [MD*]
+                                   GestureDetector(
+                                     onTap: () {
+                                       controller.textEditingController.toggleHideMarkdownSymbols();
+                                       setState(() {});
+                                     },
+                                     child: Tooltip(
+                                       message: controller.textEditingController.hideMarkdownSymbols
+                                           ? 'Símbolos Markdown ocultos (pulsa para mostrar)'
+                                           : 'Símbolos Markdown visibles (pulsa para ocultar)',
+                                       child: Container(
+                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                         decoration: BoxDecoration(
+                                           color: controller.textEditingController.hideMarkdownSymbols
+                                               ? (isDark ? Colors.white12 : Colors.black)
+                                               : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
+                                           borderRadius: BorderRadius.circular(16),
+                                           border: Border.all(
+                                             color: controller.textEditingController.hideMarkdownSymbols
+                                               ? (isDark ? Colors.white54 : Colors.black)
+                                               : (isDark ? Colors.white24 : Colors.black12),
+                                           ),
+                                         ),
+                                         child: Text(
+                                           controller.textEditingController.hideMarkdownSymbols ? 'MD' : 'MD*',
+                                           style: TextStyle(
+                                             fontSize: 11,
+                                             fontWeight: FontWeight.w800,
+                                             letterSpacing: 0.5,
+                                             color: controller.textEditingController.hideMarkdownSymbols
+                                                 ? Colors.white
+                                                 : textSecondary,
+                                           ),
+                                         ),
+                                       ),
+                                     ),
+                                   ),
 
-                                  const SizedBox(width: 4),
+                                   const SizedBox(width: 2),
 
-                                  // [ ⋮ ] 2-Column Options Sheet Menu Button
-                                  IconButton(
-                                    icon: const Icon(Icons.more_vert_rounded, size: 22),
-                                    onPressed: () => _openEditorOptionsMenu(context, controller, themeController, isDark),
-                                    tooltip: 'Opciones del Editor',
-                                  ),
-                                ],
-                              ),
-                            ),
-                    ),
+                                   // Revision Mode Button
+                                   Builder(
+                                     builder: (ctx) {
+                                       final openComments = controller.activeChapterComments.where((c) => !c.isResolved).length;
+                                       return IconButton(
+                                         icon: Badge(
+                                           isLabelVisible: openComments > 0,
+                                           label: Text('$openComments'),
+                                           backgroundColor: isDark ? Colors.amberAccent : Colors.amber.shade800,
+                                           textColor: isDark ? Colors.black : Colors.white,
+                                           child: Icon(
+                                             controller.isRevisionMode ? Icons.rate_review_rounded : Icons.rate_review_outlined,
+                                             size: 21,
+                                             color: controller.isRevisionMode
+                                                 ? (isDark ? Colors.amberAccent : Colors.amber.shade800)
+                                                 : textSecondary,
+                                           ),
+                                         ),
+                                         tooltip: 'Panel de Revisión & Notas',
+                                         onPressed: () {
+                                           controller.toggleRevisionMode();
+                                           RevisionSidebar.show(context);
+                                         },
+                                       );
+                                     },
+                                   ),
 
-                    if (!isZen) Divider(height: 1, color: borderSubtle),
+                                   // [ ⋮ ] 2-Column Options Sheet Menu Button
+                                   IconButton(
+                                     icon: const Icon(Icons.more_vert_rounded, size: 22),
+                                     onPressed: () => _openEditorOptionsMenu(context, controller, themeController, isDark),
+                                     tooltip: 'Opciones del Editor',
+                                   ),
+                                 ],
+                               ),
+                             ),
+                     ),
+
+                     if (!isZen) Divider(height: 1, color: borderSubtle),
+
+                     if (_isReadOnly)
+                       LinearProgressIndicator(
+                         minHeight: 2.5,
+                         backgroundColor: Colors.transparent,
+                         valueColor: AlwaysStoppedAnimation<Color>(isDark ? Colors.white70 : Colors.black87),
+                       ),
 
                     // Floating Find & Replace Bar
                     if (_showFindReplace && !isZen)

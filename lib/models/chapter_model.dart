@@ -1,5 +1,6 @@
 import '../formatters/writer_text_formatter.dart';
 import 'chapter_snapshot_model.dart';
+import 'revision_comment_model.dart';
 
 class ChapterModel {
   final String id;
@@ -12,6 +13,7 @@ class ChapterModel {
   final String notes;
   final String povCharacter;
   final List<ChapterSnapshotModel> snapshots;
+  final List<RevisionCommentModel> comments;
 
   ChapterModel({
     required this.id,
@@ -24,6 +26,7 @@ class ChapterModel {
     this.notes = '',
     this.povCharacter = '',
     this.snapshots = const [],
+    this.comments = const [],
   });
 
   int get wordCount => WriterTextFormatter.countWords(content);
@@ -34,6 +37,8 @@ class ChapterModel {
     final minutes = (wordCount / 200).ceil();
     return minutes;
   }
+
+  int get openCommentsCount => comments.where((c) => !c.isResolved).length;
 
   ChapterModel copyWith({
     String? id,
@@ -46,6 +51,7 @@ class ChapterModel {
     String? notes,
     String? povCharacter,
     List<ChapterSnapshotModel>? snapshots,
+    List<RevisionCommentModel>? comments,
   }) {
     return ChapterModel(
       id: id ?? this.id,
@@ -58,6 +64,7 @@ class ChapterModel {
       notes: notes ?? this.notes,
       povCharacter: povCharacter ?? this.povCharacter,
       snapshots: snapshots ?? this.snapshots,
+      comments: comments ?? this.comments,
     );
   }
 
@@ -73,6 +80,7 @@ class ChapterModel {
       'notes': notes,
       'povCharacter': povCharacter,
       'snapshots': snapshots.map((s) => s.toMap()).toList(),
+      'comments': comments.map((c) => c.toMap()).toList(),
     };
   }
 
@@ -91,6 +99,10 @@ class ChapterModel {
       povCharacter: map['povCharacter'] as String? ?? '',
       snapshots: (map['snapshots'] as List<dynamic>?)
               ?.map((item) => ChapterSnapshotModel.fromMap(item as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      comments: (map['comments'] as List<dynamic>?)
+              ?.map((item) => RevisionCommentModel.fromMap(item as Map<String, dynamic>))
               .toList() ??
           const [],
     );

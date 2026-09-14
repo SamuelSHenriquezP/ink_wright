@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -14,9 +15,11 @@ import '../widgets/export_manuscript_dialog.dart';
 import '../models/idea_snippet_model.dart';
 import '../models/codex_entry_model.dart';
 import '../models/book_model.dart';
+import '../models/sprint_history_model.dart';
 import '../controllers/theme_controller.dart';
 import '../formatters/writer_text_formatter.dart';
 import '../widgets/progress_ring_card.dart';
+import '../widgets/global_search_sheet.dart';
 import 'zen_editor_screen.dart';
 import 'plot_mind_map_screen.dart';
 import 'characters_screen.dart';
@@ -1104,12 +1107,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final descCtrl = TextEditingController();
     final roleCtrl = TextEditingController();
     final traitsCtrl = TextEditingController();
-    CodexType category = CodexType.character;
+    CodexType category = CodexType.lore;
 
     final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final inputBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF6F6F8);
+
+    String selectedEmoji = '📜';
+
+    const availableEmojis = [
+      '📜', '🏰', '🌲', '🌋', '🏛️', '🌌', '🗝️', '🗡️', '💍', '🔮',
+      '👑', '🛡️', '🎭', '⚖️', '🧙‍♂️', '👁️', '🐉', '🌙', '⚓', '🧪'
+    ];
+
+    const suggestedCodexTraits = [
+      'Antiguo', 'Prohibido', 'Sagrado', 'Místico', 'Oculto',
+      'Legendario', 'Peligroso', 'Olvidado', 'Maldito', 'Secreto'
+    ];
 
     showModalBottomSheet(
       context: context,
@@ -1134,40 +1150,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
             return Padding(
               padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
               child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.90,
+                ),
                 decoration: BoxDecoration(
                   color: bgCard,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                   boxShadow: AppTheme.getSoftShadow(isDark),
                 ),
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Drag Handle
-                      Center(
-                        child: Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: textSecondary.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 12),
+                    // Drag Handle
+                    Center(
+                      child: Container(
+                        width: 38,
+                        height: 4.5,
+                        decoration: BoxDecoration(
+                          color: textSecondary.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(3),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                    ),
+                    const SizedBox(height: 14),
 
-                      // Header
-                      Row(
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            width: 44,
+                            height: 44,
+                            alignment: Alignment.center,
                             decoration: BoxDecoration(
                               color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: borderSubtle),
                             ),
-                            child: Icon(Icons.auto_stories_outlined, color: textPrimary, size: 22),
+                            child: Text(selectedEmoji, style: const TextStyle(fontSize: 22)),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -1185,9 +1207,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Para: ${controller.activeBook.title}',
+                                  '${controller.activeBook.title} • Lore & Construcción de Mundo',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w500,
                                     color: textSecondary,
                                   ),
@@ -1199,263 +1221,378 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.close_rounded),
+                            color: textSecondary,
                             onPressed: () => Navigator.of(ctx).pop(),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
+                    ),
+                    const SizedBox(height: 8),
+                    Divider(height: 1, color: borderSubtle),
 
-                      // Category Selector Chips
-                      Text(
-                        'TIPO DE ELEMENTO',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: textSecondary,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
+                    // Scrollable form body
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                         physics: const BouncingScrollPhysics(),
-                        child: Row(
-                          children: CodexType.values.map((c) {
-                            final isSelected = category == c;
-                            final emoji = defaultEmojiForCategory(c);
-                            String label;
-                            switch (c) {
-                              case CodexType.character:
-                                label = 'Personaje';
-                                break;
-                              case CodexType.location:
-                                label = 'Lugar';
-                                break;
-                              case CodexType.artifact:
-                                label = 'Objeto / Reliquia';
-                                break;
-                              case CodexType.lore:
-                                label = 'Códice / Lore';
-                                break;
-                            }
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: ChoiceChip(
-                                label: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(emoji, style: const TextStyle(fontSize: 13)),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      label,
-                                      style: TextStyle(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 1. Tipo de Elemento
+                            Text(
+                              'CATEGORÍA DEL ELEMENTO',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: textSecondary,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              child: Row(
+                                children: CodexType.values.map((c) {
+                                  final isSelected = category == c;
+                                  final emoji = defaultEmojiForCategory(c);
+                                  String label;
+                                  switch (c) {
+                                    case CodexType.character:
+                                      label = 'Personaje';
+                                      break;
+                                    case CodexType.location:
+                                      label = 'Lugar / Reino';
+                                      break;
+                                    case CodexType.artifact:
+                                      label = 'Objeto / Reliquia';
+                                      break;
+                                    case CodexType.lore:
+                                      label = 'Códice / Lore';
+                                      break;
+                                  }
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: ChoiceChip(
+                                      label: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(emoji, style: const TextStyle(fontSize: 13)),
+                                          const SizedBox(width: 6),
+                                          Text(label),
+                                        ],
+                                      ),
+                                      selected: isSelected,
+                                      selectedColor: isDark ? Colors.white : Colors.black,
+                                      backgroundColor: inputBg,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                        side: BorderSide(
+                                          color: isSelected ? Colors.transparent : borderSubtle,
+                                        ),
+                                      ),
+                                      labelStyle: TextStyle(
                                         fontSize: 12,
                                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                                         color: isSelected ? (isDark ? Colors.black : Colors.white) : textPrimary,
                                       ),
+                                      showCheckmark: false,
+                                      onSelected: (selected) {
+                                        if (selected) {
+                                          setState(() {
+                                            category = c;
+                                            selectedEmoji = defaultEmojiForCategory(c);
+                                          });
+                                        }
+                                      },
                                     ),
-                                  ],
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // 2. Icon / Emoji Selector
+                            Text(
+                              'ÍCONO / SÍMBOLO DEL ELEMENTO',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: textSecondary,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              child: Row(
+                                children: availableEmojis.map((e) {
+                                  final isChosen = e == selectedEmoji;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: InkWell(
+                                      onTap: () => setState(() => selectedEmoji = e),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        width: 38,
+                                        height: 38,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: isChosen
+                                              ? (isDark ? Colors.white24 : Colors.black12)
+                                              : (isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02)),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: isChosen
+                                                ? (isDark ? Colors.white : Colors.black)
+                                                : borderSubtle,
+                                            width: isChosen ? 1.5 : 1,
+                                          ),
+                                        ),
+                                        child: Text(e, style: const TextStyle(fontSize: 18)),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // 3. Name Field
+                            Text(
+                              'NOMBRE DEL ELEMENTO *',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: textSecondary,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: titleCtrl,
+                              autofocus: true,
+                              style: TextStyle(color: textPrimary, fontWeight: FontWeight.w700, fontSize: 14),
+                              decoration: InputDecoration(
+                                hintText: 'ej: Valle de las Sombras, La Orden del Fénix, El Orbe Solar',
+                                hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13, fontWeight: FontWeight.normal),
+                                prefixIcon: Icon(Icons.title_rounded, size: 20, color: textSecondary),
+                                filled: true,
+                                fillColor: inputBg,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: borderSubtle),
                                 ),
-                                selected: isSelected,
-                                selectedColor: isDark ? Colors.white : Colors.black,
-                                backgroundColor: isDark ? const Color(0xFF252525) : const Color(0xFFF4F3EF),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18),
-                                  side: BorderSide(
-                                    color: isSelected ? Colors.transparent : borderSubtle,
-                                  ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: borderSubtle),
                                 ),
-                                showCheckmark: false,
-                                onSelected: (selected) {
-                                  if (selected) setState(() => category = c);
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: isDark ? Colors.white : Colors.black, width: 1.5),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // 4. Role / Classification Field
+                            Text(
+                              'ROL O CLASIFICACIÓN',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: textSecondary,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: roleCtrl,
+                              style: TextStyle(color: textPrimary, fontSize: 13),
+                              decoration: InputDecoration(
+                                hintText: 'ej: Fortaleza Capital, Culto Fanático, Amuleto Ancestral',
+                                hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
+                                prefixIcon: Icon(Icons.category_outlined, size: 20, color: textSecondary),
+                                filled: true,
+                                fillColor: inputBg,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: borderSubtle),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: borderSubtle),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: isDark ? Colors.white : Colors.black, width: 1.5),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // 5. Description Field
+                            Text(
+                              'DESCRIPCIÓN Y LORE DEL MUNDO',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: textSecondary,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: descCtrl,
+                              maxLines: 4,
+                              style: TextStyle(color: textPrimary, fontSize: 13, height: 1.4),
+                              decoration: InputDecoration(
+                                hintText: 'Historia, atmósfera, reglas mágicas, leyendas o importancia en el argumento...',
+                                hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 12),
+                                filled: true,
+                                fillColor: inputBg,
+                                contentPadding: const EdgeInsets.all(16),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: borderSubtle),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: borderSubtle),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: isDark ? Colors.white : Colors.black, width: 1.5),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // 6. Traits Field & Quick Tags
+                            Text(
+                              'RASGOS DISTINTIVOS Y ETIQUETAS',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: textSecondary,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: traitsCtrl,
+                              style: TextStyle(color: textPrimary, fontSize: 13),
+                              decoration: InputDecoration(
+                                hintText: 'Separados por comas: Antiguo, Místico, Fortificado',
+                                hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
+                                prefixIcon: Icon(Icons.label_outline_rounded, size: 20, color: textSecondary),
+                                filled: true,
+                                fillColor: inputBg,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: borderSubtle),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: borderSubtle),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide(color: isDark ? Colors.white : Colors.black, width: 1.5),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              child: Row(
+                                children: suggestedCodexTraits.map((t) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: ActionChip(
+                                      avatar: const Icon(Icons.add_rounded, size: 14),
+                                      label: Text(t, style: const TextStyle(fontSize: 11)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      backgroundColor: inputBg,
+                                      onPressed: () {
+                                        final cur = traitsCtrl.text.trim();
+                                        if (cur.isEmpty) {
+                                          traitsCtrl.text = t;
+                                        } else if (!cur.toLowerCase().contains(t.toLowerCase())) {
+                                          traitsCtrl.text = '$cur, $t';
+                                        }
+                                      },
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Save Button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isDark ? Colors.white : Colors.black,
+                                  foregroundColor: isDark ? Colors.black : Colors.white,
+                                  elevation: 2,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                ),
+                                icon: const Icon(Icons.check_rounded, size: 20),
+                                label: const Text(
+                                  'Guardar Entrada en el Códice',
+                                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                                ),
+                                onPressed: () {
+                                  final title = titleCtrl.text.trim();
+                                  if (title.isEmpty) return;
+
+                                  final rawTraits = traitsCtrl.text.split(',');
+                                  final traitsList = rawTraits
+                                      .map((t) => t.trim())
+                                      .where((t) => t.isNotEmpty)
+                                      .toList();
+                                  if (traitsList.isEmpty) traitsList.add('Lore');
+
+                                  final role = roleCtrl.text.trim().isNotEmpty
+                                      ? roleCtrl.text.trim()
+                                      : 'Elemento de ${category.name}';
+
+                                  final newEntry = CodexEntryModel(
+                                    id: 'codex_${DateTime.now().millisecondsSinceEpoch}',
+                                    bookId: controller.activeBook.id,
+                                    name: title,
+                                    type: category,
+                                    role: role,
+                                    description: descCtrl.text.trim(),
+                                    traits: traitsList,
+                                    secrets: '',
+                                    avatarEmoji: selectedEmoji,
+                                    createdAt: DateTime.now(),
+                                  );
+                                  controller.addCodexEntry(newEntry);
+                                  Navigator.of(ctx).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('«$title» guardado en el códice.'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
                                 },
                               ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Name Field
-                      TextField(
-                        controller: titleCtrl,
-                        style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600, fontSize: 15),
-                        decoration: InputDecoration(
-                          labelText: 'Nombre del elemento',
-                          hintText: 'ej: Ciudad de Niebla o Lord Malakor',
-                          labelStyle: TextStyle(color: textSecondary, fontSize: 13),
-                          hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
-                          filled: true,
-                          fillColor: isDark ? const Color(0xFF18181A) : const Color(0xFFF9F9FB),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderSubtle),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderSubtle),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: textPrimary, width: 1.5),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Role / Classification Field
-                      TextField(
-                        controller: roleCtrl,
-                        style: TextStyle(color: textPrimary, fontSize: 14),
-                        decoration: InputDecoration(
-                          labelText: 'Rol o Clasificación',
-                          hintText: 'ej: Santuario Antiguo, Antagonista Principal',
-                          labelStyle: TextStyle(color: textSecondary, fontSize: 13),
-                          hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
-                          filled: true,
-                          fillColor: isDark ? const Color(0xFF18181A) : const Color(0xFFF9F9FB),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderSubtle),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderSubtle),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: textPrimary, width: 1.5),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Description Field
-                      TextField(
-                        controller: descCtrl,
-                        maxLines: 3,
-                        style: TextStyle(color: textPrimary, fontSize: 14, height: 1.4),
-                        decoration: InputDecoration(
-                          labelText: 'Descripción / Lore del mundo',
-                          hintText: 'Detalles, secretos, atmósfera o importancia narrativa...',
-                          alignLabelWithHint: true,
-                          labelStyle: TextStyle(color: textSecondary, fontSize: 13),
-                          hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
-                          filled: true,
-                          fillColor: isDark ? const Color(0xFF18181A) : const Color(0xFFF9F9FB),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderSubtle),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderSubtle),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: textPrimary, width: 1.5),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Traits Field
-                      TextField(
-                        controller: traitsCtrl,
-                        style: TextStyle(color: textPrimary, fontSize: 13),
-                        decoration: InputDecoration(
-                          labelText: 'Rasgos distintivos (opcionales)',
-                          hintText: 'Separados por comas: Antiguo, Prohibido, Místico',
-                          labelStyle: TextStyle(color: textSecondary, fontSize: 13),
-                          hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13),
-                          filled: true,
-                          fillColor: isDark ? const Color(0xFF18181A) : const Color(0xFFF9F9FB),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderSubtle),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: borderSubtle),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: textPrimary, width: 1.5),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-
-                      // Actions
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: textSecondary,
-                                side: BorderSide(color: borderSubtle),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                              ),
-                              onPressed: () => Navigator.of(ctx).pop(),
-                              child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600)),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 2,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isDark ? Colors.white : Colors.black,
-                                foregroundColor: isDark ? Colors.black : Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                              ),
-                              icon: const Icon(Icons.check_rounded, size: 18),
-                              label: const Text('Guardar en el Códice', style: TextStyle(fontWeight: FontWeight.w700)),
-                              onPressed: () {
-                                final title = titleCtrl.text.trim();
-                                if (title.isEmpty) return;
-
-                                final rawTraits = traitsCtrl.text.split(',');
-                                final traitsList = rawTraits
-                                    .map((t) => t.trim())
-                                    .where((t) => t.isNotEmpty)
-                                    .toList();
-                                if (traitsList.isEmpty) traitsList.add('Lore');
-
-                                final role = roleCtrl.text.trim().isNotEmpty
-                                    ? roleCtrl.text.trim()
-                                    : 'Elemento de ${category.name}';
-
-                                final newEntry = CodexEntryModel(
-                                  id: 'codex_${DateTime.now().millisecondsSinceEpoch}',
-                                  bookId: controller.activeBook.id,
-                                  name: title,
-                                  type: category,
-                                  role: role,
-                                  description: descCtrl.text.trim(),
-                                  traits: traitsList,
-                                  secrets: '',
-                                  avatarEmoji: defaultEmojiForCategory(category),
-                                  createdAt: DateTime.now(),
-                                );
-                                controller.addCodexEntry(newEntry);
-                                Navigator.of(ctx).pop();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Entrada guardada en el códice del libro'), behavior: SnackBarBehavior.floating),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -1811,17 +1948,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ],
                       ),
-                      IconButton(
-                        icon: Icon(
-                          isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                          size: 22,
-                          color: textSecondary,
-                        ),
-                        tooltip: isDark ? 'Modo Claro' : 'Modo Oscuro',
-                        onPressed: () {
-                          themeController.toggleThemeMode();
-                          controller.toggleThemeMode();
-                        },
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.search_rounded,
+                              size: 22,
+                              color: textSecondary,
+                            ),
+                            tooltip: 'Búsqueda Global',
+                            onPressed: () => GlobalSearchSheet.show(context),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                              size: 22,
+                              color: textSecondary,
+                            ),
+                            tooltip: isDark ? 'Modo Claro' : 'Modo Oscuro',
+                            onPressed: () {
+                              themeController.toggleThemeMode();
+                              controller.toggleThemeMode();
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -2214,17 +2365,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ],
                         ),
                       ),
-                      IconButton(
-                        icon: Icon(
-                          isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                          size: 22,
-                          color: textSecondary,
-                        ),
-                        tooltip: isDark ? 'Modo Claro' : 'Modo Oscuro',
-                        onPressed: () {
-                          themeController.toggleThemeMode();
-                          controller.toggleThemeMode();
-                        },
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.search_rounded,
+                              size: 22,
+                              color: textSecondary,
+                            ),
+                            tooltip: 'Búsqueda Global',
+                            onPressed: () => GlobalSearchSheet.show(context),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                              size: 22,
+                              color: textSecondary,
+                            ),
+                            tooltip: isDark ? 'Modo Claro' : 'Modo Oscuro',
+                            onPressed: () {
+                              themeController.toggleThemeMode();
+                              controller.toggleThemeMode();
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -2874,11 +3039,256 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         stats: controller.writerStats,
                         isDark: isDark,
                       ),
+
+                      // ─── Historial de Sprints ───────────────────────────
+                      const SizedBox(height: 28),
+
+                      Builder(builder: (ctx) {
+                        final allEntries = controller.sprintHistory;
+                        final displayEntries = allEntries.take(10).toList();
+                        final hasMore = allEntries.length > 10;
+                        final dateFormatter = DateFormat('dd MMM yyyy, HH:mm', 'es');
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Section header row
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Historial de Sprints',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: textPrimary,
+                                  ),
+                                ),
+                                if (allEntries.isNotEmpty)
+                                  TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: textSecondary,
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    icon: const Icon(Icons.delete_sweep_rounded, size: 15),
+                                    label: const Text(
+                                      'Limpiar',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                    onPressed: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (dialogCtx) => AlertDialog(
+                                          backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                                            side: BorderSide(color: isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle),
+                                          ),
+                                          title: Text(
+                                            'Limpiar historial',
+                                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: textPrimary),
+                                          ),
+                                          content: Text(
+                                            '¿Eliminar todos los sprints registrados de este libro?',
+                                            style: TextStyle(fontSize: 13, color: textSecondary),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.of(dialogCtx).pop(),
+                                              child: Text('Cancelar', style: TextStyle(color: textSecondary)),
+                                            ),
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: isDark ? Colors.white : Colors.black,
+                                                foregroundColor: isDark ? Colors.black : Colors.white,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                              ),
+                                              onPressed: () {
+                                                controller.clearSprintHistory();
+                                                Navigator.of(dialogCtx).pop();
+                                              },
+                                              child: const Text('Limpiar'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Empty state
+                            if (allEntries.isEmpty)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1C1C1F) : const Color(0xFFF7F6F2),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(Icons.timer_outlined, size: 36, color: textSecondary.withValues(alpha: 0.5)),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      'Aún no hay sprints registrados.',
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textSecondary),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Inicia un sprint para comenzar.',
+                                      style: TextStyle(fontSize: 12, color: textSecondary.withValues(alpha: 0.7)),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              // Sprint entry list
+                              Column(
+                                children: [
+                                  ...displayEntries.map((SprintHistoryModel entry) {
+                                    final dateStr = dateFormatter.format(entry.startTime);
+                                    final completionRate = entry.completionRate.clamp(0.0, 1.0);
+
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 10),
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF1E1E22) : Colors.white,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                entry.goalReached
+                                                    ? Icons.check_circle_rounded
+                                                    : Icons.access_time_rounded,
+                                                size: 16,
+                                                color: entry.goalReached
+                                                    ? const Color(0xFF38C793)
+                                                    : textSecondary.withValues(alpha: 0.6),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  entry.chapterTitle.isNotEmpty
+                                                      ? entry.chapterTitle
+                                                      : 'Sin capítulo',
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: textPrimary,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Text(
+                                                dateStr,
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: textSecondary,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              _sprintStatChip(
+                                                '${entry.durationMinutes} min',
+                                                Icons.timer_rounded,
+                                                textSecondary,
+                                                isDark,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              _sprintStatChip(
+                                                '${entry.wordsWritten} palabras',
+                                                Icons.edit_rounded,
+                                                textSecondary,
+                                                isDark,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              _sprintStatChip(
+                                                '${entry.wordsWritten}/${entry.targetWords}',
+                                                Icons.flag_rounded,
+                                                textSecondary,
+                                                isDark,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(4),
+                                            child: LinearProgressIndicator(
+                                              value: completionRate,
+                                              minHeight: 4,
+                                              backgroundColor: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
+                                              valueColor: AlwaysStoppedAnimation<Color>(
+                                                entry.goalReached
+                                                    ? const Color(0xFF38C793)
+                                                    : (isDark ? Colors.white54 : Colors.black38),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+
+                                  // "Ver todos" button if more than 10
+                                  if (hasMore)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: TextButton(
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: textSecondary,
+                                          minimumSize: const Size(double.infinity, 40),
+                                        ),
+                                        onPressed: () {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Total de sprints: ${allEntries.length}',
+                                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                              ),
+                                              behavior: SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                            ),
+                                          );
+                                        },
+                                        child: Text(
+                                          'Ver todos (${allEntries.length})',
+                                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                          ],
+                        );
+                      }),
+
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
               ),
             ],
+
 
             // SECCIÓN 6: HERRAMIENTAS & PRODUCTIVIDAD
             if (_selectedFilterIndex == 6) ...[
@@ -3194,6 +3604,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
             );
           }
         },
+      ),
+    );
+  }
+
+  Widget _sprintStatChip(
+    String label,
+    IconData icon,
+    Color textColor,
+    bool isDark,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: textColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
+          ),
+        ],
       ),
     );
   }

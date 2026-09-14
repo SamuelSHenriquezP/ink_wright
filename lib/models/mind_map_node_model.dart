@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
 enum PlotAct {
+  prologue,
   act1Exposition,
   act2RisingAction,
   midpoint,
   act3Climax,
+  act4Fallout,
+  act5Resolution,
   resolution,
+  epilogue,
+  custom,
 }
 
 enum PlotNodeType {
@@ -22,6 +27,7 @@ class MindMapNodeModel {
   final String title;
   final String description;
   final PlotAct act;
+  final String? customActName;
   final PlotNodeType type;
   final double dx;
   final double dy;
@@ -36,6 +42,7 @@ class MindMapNodeModel {
     required this.title,
     required this.description,
     required this.act,
+    this.customActName,
     required this.type,
     required this.dx,
     required this.dy,
@@ -45,7 +52,13 @@ class MindMapNodeModel {
     this.linkedChapterId,
   });
 
-  String get actLabel => act.label;
+  String get actLabel {
+    if (act == PlotAct.custom && customActName != null && customActName!.isNotEmpty) {
+      return customActName!;
+    }
+    return act.label;
+  }
+
   String get typeLabel => type.label;
 
   Color get nodeColor => Color(colorHex);
@@ -56,6 +69,8 @@ class MindMapNodeModel {
     String? title,
     String? description,
     PlotAct? act,
+    String? customActName,
+    bool clearCustomActName = false,
     PlotNodeType? type,
     double? dx,
     double? dy,
@@ -71,6 +86,7 @@ class MindMapNodeModel {
       title: title ?? this.title,
       description: description ?? this.description,
       act: act ?? this.act,
+      customActName: clearCustomActName ? null : (customActName ?? this.customActName),
       type: type ?? this.type,
       dx: dx ?? this.dx,
       dy: dy ?? this.dy,
@@ -88,6 +104,7 @@ class MindMapNodeModel {
       'title': title,
       'description': description,
       'act': act.name,
+      'customActName': customActName,
       'type': type.name,
       'dx': dx,
       'dy': dy,
@@ -108,6 +125,7 @@ class MindMapNodeModel {
         (a) => a.name == (map['act'] as String? ?? ''),
         orElse: () => PlotAct.act1Exposition,
       ),
+      customActName: map['customActName'] as String?,
       type: PlotNodeType.values.firstWhere(
         (t) => t.name == (map['type'] as String? ?? ''),
         orElse: () => PlotNodeType.mainPlot,
@@ -125,6 +143,8 @@ class MindMapNodeModel {
 extension PlotActExtension on PlotAct {
   String get label {
     switch (this) {
+      case PlotAct.prologue:
+        return 'Prólogo: Introducción';
       case PlotAct.act1Exposition:
         return 'Acto I: Planteamiento';
       case PlotAct.act2RisingAction:
@@ -133,8 +153,66 @@ extension PlotActExtension on PlotAct {
         return 'Punto Medio';
       case PlotAct.act3Climax:
         return 'Acto III: Clímax';
+      case PlotAct.act4Fallout:
+        return 'Acto IV: Revelación y Caída';
+      case PlotAct.act5Resolution:
+        return 'Acto V: Desenlace Final';
       case PlotAct.resolution:
         return 'Resolución';
+      case PlotAct.epilogue:
+        return 'Epílogo: Conclusión';
+      case PlotAct.custom:
+        return 'Acto Personalizado';
+    }
+  }
+
+  String get shortLabel {
+    switch (this) {
+      case PlotAct.prologue:
+        return 'Prólogo';
+      case PlotAct.act1Exposition:
+        return 'Acto I';
+      case PlotAct.act2RisingAction:
+        return 'Acto II';
+      case PlotAct.midpoint:
+        return 'Punto Medio';
+      case PlotAct.act3Climax:
+        return 'Acto III';
+      case PlotAct.act4Fallout:
+        return 'Acto IV';
+      case PlotAct.act5Resolution:
+        return 'Acto V';
+      case PlotAct.resolution:
+        return 'Resolución';
+      case PlotAct.epilogue:
+        return 'Epílogo';
+      case PlotAct.custom:
+        return 'Especial';
+    }
+  }
+
+  String get defaultEmoji {
+    switch (this) {
+      case PlotAct.prologue:
+        return '📜';
+      case PlotAct.act1Exposition:
+        return '📖';
+      case PlotAct.act2RisingAction:
+        return '⚡';
+      case PlotAct.midpoint:
+        return '🔄';
+      case PlotAct.act3Climax:
+        return '🔥';
+      case PlotAct.act4Fallout:
+        return '🌪️';
+      case PlotAct.act5Resolution:
+        return '🏆';
+      case PlotAct.resolution:
+        return '✨';
+      case PlotAct.epilogue:
+        return '🕊️';
+      case PlotAct.custom:
+        return '🎭';
     }
   }
 }
@@ -154,4 +232,74 @@ extension PlotNodeTypeExtension on PlotNodeType {
         return 'Punto de Giro';
     }
   }
+}
+
+class TimelineActItem {
+  final PlotAct act;
+  final String? customName;
+
+  const TimelineActItem(this.act, [this.customName]);
+
+  String get label {
+    if (act == PlotAct.custom && customName != null && customName!.trim().isNotEmpty) {
+      return customName!.trim();
+    }
+    return act.label;
+  }
+
+  String get shortLabel {
+    if (act == PlotAct.custom && customName != null && customName!.trim().isNotEmpty) {
+      return customName!.trim();
+    }
+    return act.shortLabel;
+  }
+
+  String get emoji {
+    if (act == PlotAct.custom) {
+      return '🎭';
+    }
+    return act.defaultEmoji;
+  }
+
+  String get id {
+    if (act == PlotAct.custom) {
+      return 'custom:${customName ?? 'Personalizado'}';
+    }
+    return act.name;
+  }
+
+  int get orderWeight {
+    switch (act) {
+      case PlotAct.prologue:
+        return 0;
+      case PlotAct.act1Exposition:
+        return 10;
+      case PlotAct.act2RisingAction:
+        return 20;
+      case PlotAct.midpoint:
+        return 30;
+      case PlotAct.act3Climax:
+        return 40;
+      case PlotAct.act4Fallout:
+        return 50;
+      case PlotAct.act5Resolution:
+      case PlotAct.resolution:
+        return 60;
+      case PlotAct.epilogue:
+        return 70;
+      case PlotAct.custom:
+        return 80;
+    }
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TimelineActItem &&
+          runtimeType == other.runtimeType &&
+          act == other.act &&
+          (customName ?? '').trim() == (other.customName ?? '').trim();
+
+  @override
+  int get hashCode => act.hashCode ^ ((customName ?? '').trim().hashCode);
 }

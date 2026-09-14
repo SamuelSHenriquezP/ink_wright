@@ -10,6 +10,9 @@ import '../models/codex_entry_model.dart';
 import '../models/writing_sprint_model.dart';
 import '../models/mind_map_node_model.dart';
 import '../models/character_model.dart';
+import '../models/character_relationship_model.dart';
+import '../models/sprint_history_model.dart';
+import '../models/revision_comment_model.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'markdown_editing_controller.dart';
 import '../services/persistence_service.dart';
@@ -38,6 +41,11 @@ class EditorController extends ChangeNotifier {
   double _lineHeight = 1.65;
   double _maxEditorWidth = 720.0;
   bool _isTypewriterMode = false;
+  bool _isRevisionMode = false;
+
+  // New: character relationships, sprint history
+  List<CharacterRelationshipModel> _relationships = [];
+  List<SprintHistoryModel> _sprintHistory = [];
 
   final MarkdownEditingController textEditingController = MarkdownEditingController();
   final FocusNode focusNode = FocusNode();
@@ -104,6 +112,20 @@ class EditorController extends ChangeNotifier {
   double get lineHeight => _lineHeight;
   double get maxEditorWidth => _maxEditorWidth;
   bool get isTypewriterMode => _isTypewriterMode;
+  bool get isRevisionMode => _isRevisionMode;
+
+  // Relationships filtered per active book
+  List<CharacterRelationshipModel> get relationships =>
+      _relationships.where((r) => r.bookId == _activeBook.id).toList();
+  List<CharacterRelationshipModel> get allRelationships => List.unmodifiable(_relationships);
+
+  // Sprint history filtered per active book
+  List<SprintHistoryModel> get sprintHistory =>
+      _sprintHistory.where((s) => s.bookId == _activeBook.id).toList();
+  List<SprintHistoryModel> get allSprintHistory => List.unmodifiable(_sprintHistory);
+
+  // Revision comments for active chapter
+  List<RevisionCommentModel> get activeChapterComments => _activeChapter.comments;
 
   EditorController() {
     _initializeInitialState();
@@ -423,6 +445,11 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       if (savedNodes != null) _mindMapNodes = savedNodes;
       if (savedCharacters != null) _characters = savedCharacters;
       if (savedStats != null) _writerStats = savedStats;
+
+      final savedSprintHistory = await _persistenceService.loadSprintHistory();
+      final savedRelationships = await _persistenceService.loadRelationships();
+      if (savedSprintHistory != null) _sprintHistory = savedSprintHistory;
+      if (savedRelationships != null) _relationships = savedRelationships;
 
       _isDarkMode = prefs['darkMode'] as bool? ?? _isDarkMode;
       textEditingController.isDarkMode = _isDarkMode;
@@ -1405,29 +1432,52 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
   }
 
   void autoArrangeMindMapNodes() {
-    // Map acts to column X coordinates
-    final Map<PlotAct, double> actX = {
-      PlotAct.act1Exposition: 80.0,
-      PlotAct.act2RisingAction: 480.0,
-      PlotAct.midpoint: 880.0,
-      PlotAct.act3Climax: 1280.0,
-      PlotAct.resolution: 1680.0,
-    };
+    final activeBookNodes = _mindMapNodes.where((n) => n.bookId == _activeBook.id).toList();
+    if (activeBookNodes.isEmpty) return;
 
-    final Map<PlotAct, int> actCounters = {
-      PlotAct.act1Exposition: 0,
-      PlotAct.act2RisingAction: 0,
-      PlotAct.midpoint: 0,
-      PlotAct.act3Climax: 0,
-      PlotAct.resolution: 0,
-    };
+    // Collect all distinct act / customName pairs present in the nodes
+    final presentItems = <TimelineActItem>[];
+    for (final node in activeBookNodes) {
+      final item = TimelineActItem(node.act, node.act == PlotAct.custom ? node.customActName : null);
+      if (!presentItems.any((i) => i.act == item.act && (i.customName ?? '').trim() == (item.customName ?? '').trim())) {
+        presentItems.add(item);
+      }
+    }
+
+    if (presentItems.isEmpty) {
+      presentItems.addAll([
+        const TimelineActItem(PlotAct.act1Exposition),
+        const TimelineActItem(PlotAct.act2RisingAction),
+        const TimelineActItem(PlotAct.midpoint),
+        const TimelineActItem(PlotAct.act3Climax),
+        const TimelineActItem(PlotAct.resolution),
+      ]);
+    } else {
+      presentItems.sort((a, b) {
+        final cmp = a.orderWeight.compareTo(b.orderWeight);
+        if (cmp != 0) return cmp;
+        return (a.customName ?? '').compareTo(b.customName ?? '');
+      });
+    }
+
+    // Map acts to column X coordinates
+    final Map<String, double> actX = {};
+    final Map<String, int> actCounters = {};
+    for (int i = 0; i < presentItems.length; i++) {
+      final key = presentItems[i].id;
+      actX[key] = 80.0 + (i * 400.0);
+      actCounters[key] = 0;
+    }
 
     // Auto-arrange only the nodes belonging to the active book
     _mindMapNodes = _mindMapNodes.map((node) {
       if (node.bookId == _activeBook.id) {
-        final count = actCounters[node.act] ?? 0;
-        actCounters[node.act] = count + 1;
-        final newX = actX[node.act] ?? 100.0;
+        final key = node.act == PlotAct.custom
+            ? 'custom:${node.customActName ?? 'Personalizado'}'
+            : node.act.name;
+        final count = actCounters[key] ?? 0;
+        actCounters[key] = count + 1;
+        final newX = actX[key] ?? 80.0;
         final newY = 120.0 + (count * 170.0);
         return node.copyWith(dx: newX, dy: newY);
       }
@@ -1446,6 +1496,122 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       }
       return n;
     }).toList();
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  // --- CHARACTER RELATIONSHIPS ---
+
+  void addRelationship(CharacterRelationshipModel relationship) {
+    final scoped = relationship.bookId.isEmpty
+        ? relationship.copyWith(bookId: _activeBook.id)
+        : relationship;
+    _relationships.insert(0, scoped);
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  void updateRelationship(CharacterRelationshipModel updated) {
+    _relationships = _relationships
+        .map((r) => r.id == updated.id ? updated : r)
+        .toList();
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  void deleteRelationship(String relationshipId) {
+    _relationships.removeWhere((r) => r.id == relationshipId);
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  List<CharacterRelationshipModel> relationshipsForCharacter(String characterId) {
+    return _relationships
+        .where((r) =>
+            r.bookId == _activeBook.id &&
+            (r.fromCharacterId == characterId || r.toCharacterId == characterId))
+        .toList();
+  }
+
+  // --- SPRINT HISTORY ---
+
+  void recordSprintHistory({
+    required int durationMinutes,
+    required int targetWords,
+    required int wordsWritten,
+    required DateTime startTime,
+    required bool completed,
+  }) {
+    final entry = SprintHistoryModel(
+      id: 'sprint_${DateTime.now().millisecondsSinceEpoch}',
+      bookId: _activeBook.id,
+      chapterId: _activeChapter.id,
+      chapterTitle: _activeChapter.title,
+      startTime: startTime,
+      endTime: DateTime.now(),
+      durationMinutes: durationMinutes,
+      targetWords: targetWords,
+      wordsWritten: wordsWritten,
+      completed: completed,
+    );
+    _sprintHistory.insert(0, entry);
+    if (_sprintHistory.length > 200) {
+      _sprintHistory = _sprintHistory.sublist(0, 200);
+    }
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  void clearSprintHistory() {
+    _sprintHistory.removeWhere((s) => s.bookId == _activeBook.id);
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  // --- REVISION MODE & COMMENTS ---
+
+  void toggleRevisionMode() {
+    _isRevisionMode = !_isRevisionMode;
+    notifyListeners();
+  }
+
+  void setRevisionMode(bool value) {
+    if (_isRevisionMode == value) return;
+    _isRevisionMode = value;
+    notifyListeners();
+  }
+
+  void addRevisionComment(RevisionCommentModel comment) {
+    final scoped = comment.chapterId.isEmpty
+        ? comment.copyWith(chapterId: _activeChapter.id)
+        : comment;
+    final updatedComments = List<RevisionCommentModel>.from(_activeChapter.comments)
+      ..insert(0, scoped);
+    _updateActiveChapterComments(updatedComments);
+  }
+
+  void toggleRevisionComment(String commentId) {
+    final updated = _activeChapter.comments.map((c) {
+      if (c.id == commentId) return c.copyWith(isResolved: !c.isResolved);
+      return c;
+    }).toList();
+    _updateActiveChapterComments(updated);
+  }
+
+  void deleteRevisionComment(String commentId) {
+    final updated = _activeChapter.comments
+        .where((c) => c.id != commentId)
+        .toList();
+    _updateActiveChapterComments(updated);
+  }
+
+  void _updateActiveChapterComments(List<RevisionCommentModel> comments) {
+    _activeChapter = _activeChapter.copyWith(comments: comments);
+    final updatedChapters = _activeBook.chapters
+        .map((c) => c.id == _activeChapter.id ? _activeChapter : c)
+        .toList();
+    _activeBook = _activeBook.copyWith(chapters: updatedChapters);
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
     _saveCurrentData(debounced: false);
     notifyListeners();
   }

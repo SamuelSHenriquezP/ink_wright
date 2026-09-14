@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../controllers/editor_controller.dart';
 import '../models/mind_map_node_model.dart';
@@ -14,14 +15,92 @@ class PlotMindMapScreen extends StatefulWidget {
 }
 
 class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
-  PlotAct? _selectedActFilter;
+  TimelineActItem? _selectedActFilter;
   late final TransformationController _transformationController;
   String? _connectingFromNodeId;
+  bool _isTimelineMode = false;
+  Set<String> _extraActIds = {};
 
   @override
   void initState() {
     super.initState();
     _transformationController = TransformationController();
+    _loadSavedExtraActs();
+  }
+
+  Future<void> _loadSavedExtraActs() async {
+    try {
+      final bookId = Provider.of<EditorController>(context, listen: false).activeBook.id;
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      final saved = prefs.getStringList('extra_acts_$bookId') ?? [];
+      setState(() {
+        _extraActIds = saved.toSet();
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _saveExtraActs() async {
+    try {
+      final bookId = Provider.of<EditorController>(context, listen: false).activeBook.id;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('extra_acts_$bookId', _extraActIds.toList());
+    } catch (_) {}
+  }
+
+  List<TimelineActItem> _getTimelineActs(EditorController controller) {
+    final items = <TimelineActItem>[
+      const TimelineActItem(PlotAct.act1Exposition),
+      const TimelineActItem(PlotAct.act2RisingAction),
+      const TimelineActItem(PlotAct.midpoint),
+      const TimelineActItem(PlotAct.act3Climax),
+      const TimelineActItem(PlotAct.resolution),
+    ];
+
+    void maybeAdd(TimelineActItem item) {
+      if (!items.any((i) => i.act == item.act && (i.customName ?? '').trim() == (item.customName ?? '').trim())) {
+        items.add(item);
+      }
+    }
+
+    // 1. Extra acts saved in preferences
+    for (final id in _extraActIds) {
+      if (id == PlotAct.prologue.name) {
+        maybeAdd(const TimelineActItem(PlotAct.prologue));
+      } else if (id == PlotAct.act4Fallout.name) {
+        maybeAdd(const TimelineActItem(PlotAct.act4Fallout));
+      } else if (id == PlotAct.act5Resolution.name) {
+        maybeAdd(const TimelineActItem(PlotAct.act5Resolution));
+      } else if (id == PlotAct.epilogue.name) {
+        maybeAdd(const TimelineActItem(PlotAct.epilogue));
+      } else if (id.startsWith('custom:')) {
+        final name = id.substring(7).trim();
+        if (name.isNotEmpty) {
+          maybeAdd(TimelineActItem(PlotAct.custom, name));
+        }
+      }
+    }
+
+    // 2. Add acts from all existing nodes for active book
+    for (final node in controller.mindMapNodes) {
+      if (node.bookId == controller.activeBook.id) {
+        if (node.act == PlotAct.custom) {
+          final name = (node.customActName ?? '').trim();
+          maybeAdd(TimelineActItem(PlotAct.custom, name.isNotEmpty ? name : 'Personalizado'));
+        } else {
+          maybeAdd(TimelineActItem(node.act));
+        }
+      }
+    }
+
+    // 3. Sort chronologically
+    items.sort((a, b) {
+      final cmp = a.orderWeight.compareTo(b.orderWeight);
+      if (cmp != 0) return cmp;
+      return (a.customName ?? '').compareTo(b.customName ?? '');
+    });
+
+    return items;
   }
 
   @override
@@ -125,218 +204,542 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     );
   }
 
-  void _showEditNodeDialog(BuildContext context, MindMapNodeModel node, EditorController controller) {
-    final titleCtrl = TextEditingController(text: node.title);
-    final descCtrl = TextEditingController(text: node.description);
-    PlotAct selectedAct = node.act;
-    PlotNodeType selectedType = node.type;
-    String selectedEmoji = node.iconEmoji;
-    int selectedColor = node.colorHex;
-    String? selectedChapterId = node.linkedChapterId;
+  void _showNodeFormModal(
+    BuildContext context,
+    EditorController controller, {
+    MindMapNodeModel? existingNode,
+    TimelineActItem? preselectedActItem,
+    PlotAct? preselectedAct,
+  }) {
+    final isEditing = existingNode != null;
+    final isDark = controller.isDarkMode;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
+    final inputBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF6F6F8);
+
+    final titleCtrl = TextEditingController(text: existingNode?.title ?? '');
+    final descCtrl = TextEditingController(text: existingNode?.description ?? '');
+    final customActCtrl = TextEditingController(
+      text: existingNode?.customActName ?? preselectedActItem?.customName ?? '',
+    );
+
+    TimelineActItem selectedActItem;
+    if (existingNode != null) {
+      selectedActItem = TimelineActItem(existingNode.act, existingNode.customActName);
+    } else if (preselectedActItem != null) {
+      selectedActItem = preselectedActItem;
+    } else if (preselectedAct != null) {
+      selectedActItem = TimelineActItem(preselectedAct);
+    } else {
+      selectedActItem = const TimelineActItem(PlotAct.act1Exposition);
+    }
+
+    PlotNodeType selectedType = existingNode?.type ?? PlotNodeType.mainPlot;
+    String selectedEmoji = existingNode?.iconEmoji ?? '📌';
+    int selectedColor = existingNode?.colorHex ?? 0xFF18181B;
+    String? selectedChapterId = existingNode?.linkedChapterId;
 
     const availableEmojis = [
-      '📌', '🧭', '⚔️', '📜', '⚡', '🗝️', '🏰', '👤', '💡', '🔥', '💀', '🌫️', '🏛️', '👁️', '🎭', '🛡️', '👑', '✨'
-    ];
-    const availableColors = [
-      0xFF18181B, // Onyx
-      0xFF27272A, // Charcoal
-      0xFF3F3F46, // Graphite
-      0xFF52525B, // Slate
-      0xFF71717A, // Steel
-      0xFFA1A1AA, // Ash
+      '📌', '🎬', '⚡', '🔍', '⚔️', '💔', '👑', '💡', '🗝️', '💥',
+      '🩸', '🕊️', '🏰', '🎭', '🌙', '👁️', '📜', '🧭', '🛡️', '✨'
     ];
 
-    showDialog(
+    const availableColors = [
+      0xFF18181B, // Onyx
+      0xFF3F3F46, // Graphite
+      0xFF71717A, // Steel
+      0xFFB91C1C, // Crimson
+      0xFFB45309, // Amber
+      0xFF047857, // Emerald
+      0xFF1D4ED8, // Sapphire
+      0xFF6D28D9, // Violet
+    ];
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Row(
-                children: [
-                  Text(selectedEmoji, style: const TextStyle(fontSize: 22)),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Editar Contenido del Nodo',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
-                    ),
-                  ),
-                ],
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
               ),
-              content: SingleChildScrollView(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.90,
+                ),
+                decoration: BoxDecoration(
+                  color: bgCard,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: AppTheme.getSoftShadow(isDark),
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextField(
-                      controller: titleCtrl,
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Título del Nodo',
-                        hintText: 'Texto o suceso principal',
-                        prefixIcon: Icon(Icons.title_rounded, size: 20),
-                      ),
-                    ),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: descCtrl,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                        labelText: 'Texto Interior / Notas',
-                        hintText: 'Escribe lo que contiene o pasa en este nodo...',
-                        alignLabelWithHint: true,
-                        prefixIcon: Icon(Icons.notes_rounded, size: 20),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<PlotAct>(
-                      initialValue: selectedAct,
-                      decoration: const InputDecoration(labelText: 'Acto Narrativo'),
-                      items: PlotAct.values.map((act) {
-                        final dummy = MindMapNodeModel(
-                          id: '', bookId: '', title: '', description: '', act: act,
-                          type: PlotNodeType.mainPlot, dx: 0, dy: 0, connectedToIds: [],
-                          colorHex: 0, iconEmoji: '',
-                        );
-                        return DropdownMenuItem(value: act, child: Text(dummy.actLabel));
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => selectedAct = val);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<PlotNodeType>(
-                      initialValue: selectedType,
-                      decoration: const InputDecoration(labelText: 'Tipo de Elemento'),
-                      items: PlotNodeType.values.map((type) {
-                        final dummy = MindMapNodeModel(
-                          id: '', bookId: '', title: '', description: '', act: PlotAct.act1Exposition,
-                          type: type, dx: 0, dy: 0, connectedToIds: [], colorHex: 0, iconEmoji: '',
-                        );
-                        return DropdownMenuItem(value: type, child: Text(dummy.typeLabel));
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => selectedType = val);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String?>(
-                      initialValue: selectedChapterId,
-                      decoration: const InputDecoration(
-                        labelText: 'Capítulo Vinculado (Opcional)',
-                        prefixIcon: Icon(Icons.menu_book_rounded, size: 20),
-                      ),
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('Ninguno (No vinculado)'),
+                    // Drag Handle
+                    Center(
+                      child: Container(
+                        width: 38,
+                        height: 4.5,
+                        decoration: BoxDecoration(
+                          color: textSecondary.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(3),
                         ),
-                        ...controller.activeBook.chapters.map((ch) {
-                          return DropdownMenuItem<String?>(
-                            value: ch.id,
-                            child: Text(
-                              'Capítulo ${ch.chapterNumber}: ${ch.title}',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }),
-                      ],
-                      onChanged: (val) {
-                        setState(() => selectedChapterId = val);
-                      },
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    const Text('Icono / Emoji:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      children: availableEmojis.map((e) {
-                        final isChosen = e == selectedEmoji;
-                        return InkWell(
-                          onTap: () => setState(() => selectedEmoji = e),
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
+                    const SizedBox(height: 14),
+
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: isChosen ? Colors.black12 : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: isChosen ? Colors.black : Colors.transparent),
+                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: borderSubtle),
                             ),
-                            child: Text(e, style: const TextStyle(fontSize: 20)),
+                            child: Text(selectedEmoji, style: const TextStyle(fontSize: 22)),
                           ),
-                        );
-                      }).toList(),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isEditing ? 'Editar Punto de Trama' : 'Nuevo Punto de Trama',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: textPrimary,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                Text(
+                                  '${controller.activeBook.title} • ${selectedActItem.label}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            color: textSecondary,
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    const Text('Color de Acento:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      children: availableColors.map((c) {
-                        final isChosen = c == selectedColor;
-                        return InkWell(
-                          onTap: () => setState(() => selectedColor = c),
-                          child: Container(
-                            width: 28,
-                            height: 28,
-                            decoration: BoxDecoration(
-                              color: Color(c),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isChosen ? Colors.black : Colors.white,
-                                width: isChosen ? 3 : 1,
+                    Divider(height: 1, color: borderSubtle),
+
+                    // Body
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 1. Selector de Emoji
+                            Text(
+                              'ÍCONO / SÍMBOLO NARRATIVO',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: textSecondary),
+                            ),
+                            const SizedBox(height: 8),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              child: Row(
+                                children: availableEmojis.map((e) {
+                                  final isChosen = e == selectedEmoji;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: InkWell(
+                                      onTap: () => setModalState(() => selectedEmoji = e),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        width: 38,
+                                        height: 38,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: isChosen
+                                              ? (isDark ? Colors.white24 : Colors.black12)
+                                              : (isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02)),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: isChosen
+                                                ? (isDark ? Colors.white : Colors.black)
+                                                : borderSubtle,
+                                            width: isChosen ? 1.5 : 1,
+                                          ),
+                                        ),
+                                        child: Text(e, style: const TextStyle(fontSize: 18)),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                            const SizedBox(height: 16),
+
+                            // 2. Title Field
+                            Text(
+                              'TÍTULO DEL PUNTO DE TRAMA *',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: textSecondary),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: titleCtrl,
+                              autofocus: !isEditing,
+                              style: TextStyle(color: textPrimary, fontWeight: FontWeight.w700, fontSize: 14),
+                              decoration: InputDecoration(
+                                hintText: 'Ej. Incidente Incitador: El robo del manuscrito',
+                                hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 13, fontWeight: FontWeight.normal),
+                                prefixIcon: Icon(Icons.edit_road_rounded, size: 20, color: textSecondary),
+                                filled: true,
+                                fillColor: inputBg,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: borderSubtle)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: borderSubtle)),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: isDark ? Colors.white : Colors.black, width: 1.5)),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // 3. Act Narrative Choice Chips
+                            Text(
+                              'ACTO NARRATIVO',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: textSecondary),
+                            ),
+                            const SizedBox(height: 8),
+                            Builder(
+                              builder: (context) {
+                                final availableActItems = _getTimelineActs(controller);
+                                return SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  child: Row(
+                                    children: [
+                                      ...availableActItems.map((actItem) {
+                                        final isSelected = selectedActItem == actItem;
+                                        return Padding(
+                                          padding: const EdgeInsets.only(right: 8),
+                                          child: ChoiceChip(
+                                            label: Text(actItem.shortLabel),
+                                            selected: isSelected,
+                                            selectedColor: isDark ? Colors.white : Colors.black,
+                                            backgroundColor: inputBg,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(20),
+                                              side: BorderSide(color: isSelected ? Colors.transparent : borderSubtle),
+                                            ),
+                                            labelStyle: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                              color: isSelected ? (isDark ? Colors.black : Colors.white) : textSecondary,
+                                            ),
+                                            showCheckmark: false,
+                                            onSelected: (selected) {
+                                              if (selected) {
+                                                setModalState(() => selectedActItem = actItem);
+                                              }
+                                            },
+                                          ),
+                                        );
+                                      }),
+                                      Padding(
+                                        padding: const EdgeInsets.only(right: 8),
+                                        child: ActionChip(
+                                          avatar: Icon(Icons.add_rounded, size: 16, color: textSecondary),
+                                          label: Text(
+                                            'Más Actos',
+                                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textSecondary),
+                                          ),
+                                          backgroundColor: inputBg,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                          side: BorderSide(color: borderSubtle),
+                                          onPressed: () {
+                                            _showAddActDialog(context, controller);
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                            if (selectedActItem.act == PlotAct.custom) ...[
+                              const SizedBox(height: 10),
+                              TextField(
+                                controller: customActCtrl,
+                                style: TextStyle(color: textPrimary, fontSize: 13),
+                                decoration: InputDecoration(
+                                  labelText: 'Nombre del Acto Personalizado',
+                                  labelStyle: TextStyle(color: textSecondary, fontSize: 12),
+                                  hintText: 'Ej. Interludio, Flashback, Acto II-B...',
+                                  hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 12),
+                                  filled: true,
+                                  fillColor: inputBg,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderSubtle)),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderSubtle)),
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? Colors.white : Colors.black, width: 1.5)),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 16),
+
+                            // 4. Element Type Choice Chips
+                            Text(
+                              'TIPO DE ELEMENTO',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: textSecondary),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: PlotNodeType.values.map((type) {
+                                final isSelected = selectedType == type;
+                                return ChoiceChip(
+                                  label: Text(type.label),
+                                  selected: isSelected,
+                                  selectedColor: isDark ? Colors.white : Colors.black,
+                                  backgroundColor: inputBg,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                    side: BorderSide(color: isSelected ? Colors.transparent : borderSubtle),
+                                  ),
+                                  labelStyle: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                    color: isSelected ? (isDark ? Colors.black : Colors.white) : textSecondary,
+                                  ),
+                                  showCheckmark: false,
+                                  onSelected: (selected) {
+                                    if (selected) setModalState(() => selectedType = type);
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // 5. Linked Chapter Dropdown
+                            Text(
+                              'CAPÍTULO VINCULADO (OPCIONAL)',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: textSecondary),
+                            ),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String?>(
+                              initialValue: selectedChapterId,
+                              dropdownColor: bgCard,
+                              style: TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                              decoration: InputDecoration(
+                                prefixIcon: Icon(Icons.menu_book_rounded, size: 20, color: textSecondary),
+                                filled: true,
+                                fillColor: inputBg,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: borderSubtle)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: borderSubtle)),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: isDark ? Colors.white : Colors.black, width: 1.5)),
+                              ),
+                              items: [
+                                const DropdownMenuItem<String?>(
+                                  value: null,
+                                  child: Text('Ninguno (No vinculado)'),
+                                ),
+                                ...controller.activeBook.chapters.map((ch) {
+                                  return DropdownMenuItem<String?>(
+                                    value: ch.id,
+                                    child: Text(
+                                      'Capítulo ${ch.chapterNumber}: ${ch.title}',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  );
+                                }),
+                              ],
+                              onChanged: (val) {
+                                setModalState(() => selectedChapterId = val);
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // 6. Description Field
+                            Text(
+                              'DESCRIPCIÓN / SUCESOS CLAVE',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: textSecondary),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: descCtrl,
+                              maxLines: 4,
+                              style: TextStyle(color: textPrimary, fontSize: 13, height: 1.4),
+                              decoration: InputDecoration(
+                                hintText: '¿Qué ocurre en este hito? Consecuencias para los personajes, revelaciones o decisiones tomadas...',
+                                hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.4), fontSize: 12),
+                                filled: true,
+                                fillColor: inputBg,
+                                contentPadding: const EdgeInsets.all(16),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: borderSubtle)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: borderSubtle)),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: isDark ? Colors.white : Colors.black, width: 1.5)),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // 7. Color Palette
+                            Text(
+                              'COLOR DE ACENTO',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: textSecondary),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 10,
+                              children: availableColors.map((c) {
+                                final isChosen = c == selectedColor;
+                                return InkWell(
+                                  onTap: () => setModalState(() => selectedColor = c),
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: Color(c),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isChosen ? (isDark ? Colors.white : Colors.black) : Colors.transparent,
+                                        width: 2.5,
+                                      ),
+                                    ),
+                                    child: isChosen
+                                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                                        : null,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Save Button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isDark ? Colors.white : Colors.black,
+                                  foregroundColor: isDark ? Colors.black : Colors.white,
+                                  elevation: 2,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                ),
+                                icon: Icon(isEditing ? Icons.save_rounded : Icons.add_rounded, size: 20),
+                                label: Text(
+                                  isEditing ? 'Guardar Cambios' : 'Crear Punto de Trama',
+                                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                                ),
+                                onPressed: () {
+                                  final title = titleCtrl.text.trim();
+                                  if (title.isEmpty) return;
+
+                                  final customName = selectedActItem.act == PlotAct.custom
+                                      ? (customActCtrl.text.trim().isNotEmpty
+                                          ? customActCtrl.text.trim()
+                                          : (selectedActItem.customName ?? 'Personalizado'))
+                                      : null;
+
+                                  if (selectedActItem.act == PlotAct.custom && customName != null && customName.isNotEmpty) {
+                                    _extraActIds.add('custom:$customName');
+                                    _saveExtraActs();
+                                  }
+
+                                  if (isEditing) {
+                                    final updated = existingNode.copyWith(
+                                      title: title,
+                                      description: descCtrl.text.trim(),
+                                      act: selectedActItem.act,
+                                      customActName: customName,
+                                      clearCustomActName: selectedActItem.act != PlotAct.custom,
+                                      type: selectedType,
+                                      iconEmoji: selectedEmoji,
+                                      colorHex: selectedColor,
+                                      linkedChapterId: selectedChapterId,
+                                      clearLinkedChapter: selectedChapterId == null,
+                                    );
+                                    controller.updateMindMapNode(updated);
+                                    Navigator.of(sheetContext).pop();
+                                    _showAestheticNotification(
+                                      context,
+                                      'Nodo «$title» actualizado.',
+                                      icon: Icons.check_circle_outline_rounded,
+                                      isDark: isDark,
+                                    );
+                                  } else {
+                                    final newNode = MindMapNodeModel(
+                                      id: 'node_${DateTime.now().millisecondsSinceEpoch}',
+                                      bookId: controller.activeBook.id,
+                                      title: title,
+                                      description: descCtrl.text.trim(),
+                                      act: selectedActItem.act,
+                                      customActName: customName,
+                                      type: selectedType,
+                                      dx: 350 + (controller.mindMapNodes.length * 40),
+                                      dy: 200 + (controller.mindMapNodes.length * 30),
+                                      connectedToIds: [],
+                                      colorHex: selectedColor,
+                                      iconEmoji: selectedEmoji,
+                                      linkedChapterId: selectedChapterId,
+                                    );
+                                    controller.addMindMapNode(newNode);
+                                    Navigator.of(sheetContext).pop();
+                                    _showAestheticNotification(
+                                      context,
+                                      'Punto «$title» creado en ${selectedActItem.label}.',
+                                      icon: Icons.add_task_rounded,
+                                      isDark: isDark,
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  ),
-                  onPressed: () {
-                    final title = titleCtrl.text.trim();
-                    if (title.isNotEmpty) {
-                      final updated = node.copyWith(
-                        title: title,
-                        description: descCtrl.text.trim(),
-                        act: selectedAct,
-                        type: selectedType,
-                        iconEmoji: selectedEmoji,
-                        colorHex: selectedColor,
-                        linkedChapterId: selectedChapterId,
-                        clearLinkedChapter: selectedChapterId == null,
-                      );
-                      controller.updateMindMapNode(updated);
-                      Navigator.of(context).pop();
-                      _showAestheticNotification(
-                        context,
-                        'Nodo «$title» actualizado.',
-                        icon: Icons.check_circle_outline_rounded,
-                        isDark: controller.isDarkMode,
-                      );
-                    }
-                  },
-                  child: const Text('Guardar'),
-                ),
-              ],
             );
           },
         );
       },
     );
+  }
+
+  void _showEditNodeDialog(BuildContext context, MindMapNodeModel node, EditorController controller) {
+    _showNodeFormModal(context, controller, existingNode: node);
+  }
+
+  void _showAddNodeDialog(BuildContext context, EditorController controller) {
+    _showNodeFormModal(context, controller);
+  }
+
+  /// Opens the add-node dialog with a specific act already pre-selected.
+  void _showAddNodeDialogWithAct(BuildContext context, EditorController controller, TimelineActItem preselectedActItem) {
+    _showNodeFormModal(context, controller, preselectedActItem: preselectedActItem);
   }
 
   void _showConnectDialog(BuildContext context, MindMapNodeModel node, EditorController controller, VoidCallback onUpdate) {
@@ -384,136 +787,375 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     );
   }
 
-  void _showAddNodeDialog(BuildContext context, EditorController controller) {
-    final titleCtrl = TextEditingController();
-    final descCtrl = TextEditingController();
-    PlotAct selectedAct = PlotAct.act1Exposition;
-    PlotNodeType selectedType = PlotNodeType.mainPlot;
-    String? selectedChapterId;
+  void _showAddActDialog(BuildContext context, EditorController controller) {
+    final isDark = controller.isDarkMode;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
+    final inputBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF6F6F8);
+    final customNameCtrl = TextEditingController();
 
-    showDialog(
+    final standardOptions = [
+      (PlotAct.prologue, 'Prólogo: Introducción', '📜', 'Establece el trasfondo o la premisa inicial antes del Acto I'),
+      (PlotAct.act4Fallout, 'Acto IV: Revelación y Caída', '🌪️', 'Consecuencias del clímax, caída de máscaras y giros inesperados'),
+      (PlotAct.act5Resolution, 'Acto V: Desenlace Final', '🏆', 'Estructura clásica en 5 actos: resolución épica o catarsis'),
+      (PlotAct.epilogue, 'Epílogo: Conclusión', '🕊️', 'Cierre emocional o vistazo al futuro de los personajes tras la historia'),
+    ];
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
         return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text(
-                'Nuevo Punto de Trama',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+          builder: (context, setModalState) {
+            final currentTimelineActs = _getTimelineActs(controller);
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
               ),
-              content: SingleChildScrollView(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
+                decoration: BoxDecoration(
+                  color: bgCard,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: AppTheme.getSoftShadow(isDark),
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextField(
-                      controller: titleCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Título del Punto de Trama',
-                        hintText: 'Ej. Incidente Incitador: El Descubrimiento',
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<PlotAct>(
-                      initialValue: selectedAct,
-                      decoration: const InputDecoration(labelText: 'Acto Narrativo'),
-                      items: PlotAct.values.map((act) {
-                        return DropdownMenuItem(
-                          value: act,
-                          child: Text(act.label),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => selectedAct = val);
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<PlotNodeType>(
-                      initialValue: selectedType,
-                      decoration: const InputDecoration(labelText: 'Tipo de Elemento'),
-                      items: PlotNodeType.values.map((type) {
-                        return DropdownMenuItem(
-                          value: type,
-                          child: Text(type.label),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => selectedType = val);
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String?>(
-                      initialValue: selectedChapterId,
-                      decoration: const InputDecoration(
-                        labelText: 'Capítulo Vinculado (Opcional)',
-                        prefixIcon: Icon(Icons.menu_book_rounded, size: 20),
-                      ),
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('Ninguno (No vinculado)'),
+                    const SizedBox(height: 12),
+                    // Drag handle
+                    Center(
+                      child: Container(
+                        width: 38,
+                        height: 4.5,
+                        decoration: BoxDecoration(
+                          color: textSecondary.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(3),
                         ),
-                        ...controller.activeBook.chapters.map((ch) {
-                          return DropdownMenuItem<String?>(
-                            value: ch.id,
-                            child: Text(
-                              'Capítulo ${ch.chapterNumber}: ${ch.title}',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }),
-                      ],
-                      onChanged: (val) {
-                        setState(() => selectedChapterId = val);
-                      },
+                      ),
                     ),
                     const SizedBox(height: 14),
-                    TextField(
-                      controller: descCtrl,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Descripción / Notas de la Escena',
-                        hintText: 'Detalles clave sobre la trama o personaje...',
+
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: borderSubtle),
+                            ),
+                            child: const Text('📑', style: TextStyle(fontSize: 22)),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Gestionar Actos Narrativos',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: textPrimary,
+                                  ),
+                                ),
+                                Text(
+                                  'Personaliza la estructura y línea de tiempo de tu novela',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.close_rounded, color: textSecondary),
+                            onPressed: () => Navigator.of(sheetCtx).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Divider(height: 1, color: borderSubtle),
+
+                    // Scrollable content
+                    Flexible(
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        children: [
+                          Text(
+                            'ACTOS CANÓNICOS ADICIONALES',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                              color: textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          ...standardOptions.map((opt) {
+                            final act = opt.$1;
+                            final title = opt.$2;
+                            final emoji = opt.$3;
+                            final desc = opt.$4;
+                            final isEnabled = currentTimelineActs.any((a) => a.act == act);
+                            final nodeCount = controller.mindMapNodes
+                                .where((n) => n.bookId == controller.activeBook.id && n.act == act)
+                                .length;
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isEnabled
+                                    ? (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03))
+                                    : inputBg,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: isEnabled ? (isDark ? Colors.white24 : Colors.black26) : borderSubtle,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(emoji, style: const TextStyle(fontSize: 22)),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          title,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          desc,
+                                          style: TextStyle(fontSize: 11, color: textSecondary),
+                                        ),
+                                        if (nodeCount > 0) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '$nodeCount nodos asignados',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: textPrimary,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Switch(
+                                    value: isEnabled,
+                                    activeThumbColor: isDark ? Colors.white : Colors.black,
+                                    onChanged: (val) {
+                                      if (!val && nodeCount > 0) {
+                                        _showAestheticNotification(
+                                          context,
+                                          'No puedes desactivar $title porque contiene $nodeCount nodos.',
+                                          icon: Icons.warning_amber_rounded,
+                                          isDark: isDark,
+                                        );
+                                        return;
+                                      }
+                                      setModalState(() {
+                                        if (val) {
+                                          _extraActIds.add(act.name);
+                                        } else {
+                                          _extraActIds.remove(act.name);
+                                        }
+                                      });
+                                      setState(() {});
+                                      _saveExtraActs();
+                                    },
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+
+                          const SizedBox(height: 16),
+                          Text(
+                            'CREAR ACTO PERSONALIZADO',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                              color: textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: customNameCtrl,
+                                  style: TextStyle(color: textPrimary, fontSize: 13),
+                                  decoration: InputDecoration(
+                                    hintText: 'Ej. Interludio, Acto II-B, Flashback...',
+                                    hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.5), fontSize: 12),
+                                    filled: true,
+                                    fillColor: inputBg,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: borderSubtle),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: borderSubtle),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: isDark ? Colors.white : Colors.black, width: 1.5),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isDark ? Colors.white : Colors.black,
+                                  foregroundColor: isDark ? Colors.black : Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                icon: const Icon(Icons.add_rounded, size: 18),
+                                label: const Text('Añadir', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                                onPressed: () {
+                                  final name = customNameCtrl.text.trim();
+                                  if (name.isEmpty) return;
+                                  setModalState(() {
+                                    _extraActIds.add('custom:$name');
+                                  });
+                                  setState(() {});
+                                  _saveExtraActs();
+                                  customNameCtrl.clear();
+                                  _showAestheticNotification(
+                                    context,
+                                    'Acto «$name» añadido.',
+                                    icon: Icons.check_circle_outline_rounded,
+                                    isDark: isDark,
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+
+                          // List of existing custom acts
+                          Builder(
+                            builder: (context) {
+                              final customActs = currentTimelineActs.where((a) => a.act == PlotAct.custom).toList();
+                              if (customActs.isEmpty) return const SizedBox.shrink();
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'ACTOS PERSONALIZADOS ACTIVOS',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.8,
+                                      color: textSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...customActs.map((item) {
+                                    final nodeCount = controller.mindMapNodes.where(
+                                      (n) => n.bookId == controller.activeBook.id && n.act == PlotAct.custom && (n.customActName ?? '').trim() == (item.customName ?? '').trim(),
+                                    ).length;
+
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 6),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: inputBg,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: borderSubtle),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Text(item.emoji, style: const TextStyle(fontSize: 16)),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              item.label,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                          Text(
+                                            '$nodeCount nodos',
+                                            style: TextStyle(fontSize: 10, color: textSecondary),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          IconButton(
+                                            icon: Icon(Icons.delete_outline_rounded, size: 18, color: textSecondary),
+                                            tooltip: 'Eliminar acto',
+                                            onPressed: () {
+                                              if (nodeCount > 0) {
+                                                _showAestheticNotification(
+                                                  context,
+                                                  'Mueve o elimina los $nodeCount nodos antes de quitar «${item.label}».',
+                                                  icon: Icons.warning_amber_rounded,
+                                                  isDark: isDark,
+                                                );
+                                                return;
+                                              }
+                                              setModalState(() {
+                                                _extraActIds.remove('custom:${item.customName}');
+                                              });
+                                              setState(() {});
+                                              _saveExtraActs();
+                                              _showAestheticNotification(
+                                                context,
+                                                'Acto «${item.label}» eliminado.',
+                                                icon: Icons.delete_sweep_outlined,
+                                                isDark: isDark,
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  ),
-                  onPressed: () {
-                    final title = titleCtrl.text.trim();
-                    if (title.isNotEmpty) {
-                      final newNode = MindMapNodeModel(
-                        id: 'node_${DateTime.now().millisecondsSinceEpoch}',
-                        bookId: controller.activeBook.id,
-                        title: title,
-                        description: descCtrl.text.trim(),
-                        act: selectedAct,
-                        type: selectedType,
-                        dx: 350 + (controller.mindMapNodes.length * 40),
-                        dy: 200 + (controller.mindMapNodes.length * 30),
-                        connectedToIds: [],
-                        colorHex: 0xFF18181B,
-                        iconEmoji: '📌',
-                        linkedChapterId: selectedChapterId,
-                      );
-                      controller.addMindMapNode(newNode);
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: const Text('Crear Nodo'),
-                ),
-              ],
             );
           },
         );
@@ -521,8 +1163,517 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     );
   }
 
+  // ─────────────────────────────────────────────
+  //  TIMELINE (LÍNEA DE TIEMPO) VIEW
+  // ─────────────────────────────────────────────
+
+  Widget _buildTimelineView(
+    BuildContext context,
+    EditorController controller,
+    bool isDark,
+  ) {
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderColor = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final cardBg = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
+    final bgPrimary = isDark ? AppTheme.darkBgPrimary : AppTheme.lightBgPrimary;
+
+    final nodes = controller.mindMapNodes.where((n) => n.bookId == controller.activeBook.id).toList();
+    final timelineActs = _getTimelineActs(controller);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...timelineActs.map((actItem) {
+            final actNodes = nodes.where((n) {
+              if (actItem.act == PlotAct.custom) {
+                return n.act == PlotAct.custom &&
+                    (n.customActName ?? '').trim() == (actItem.customName ?? '').trim();
+              }
+              return n.act == actItem.act;
+            }).toList();
+
+            return _buildTimelineColumn(
+              context: context,
+              controller: controller,
+              actItem: actItem,
+              actNodes: actNodes,
+              isDark: isDark,
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
+              borderColor: borderColor,
+              cardBg: cardBg,
+              bgPrimary: bgPrimary,
+            );
+          }),
+          _buildAddActTimelineCard(context, controller, isDark, textSecondary, borderColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddActTimelineCard(
+    BuildContext context,
+    EditorController controller,
+    bool isDark,
+    Color textSecondary,
+    Color borderColor,
+  ) {
+    return GestureDetector(
+      onTap: () => _showAddActDialog(context, controller),
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 12, top: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? Colors.white12 : Colors.black12,
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.add_rounded, size: 24, color: textSecondary),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Agregar Acto',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Prólogo, Acto IV, Personalizado...',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: textSecondary.withValues(alpha: 0.7)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimelineColumn({
+    required BuildContext context,
+    required EditorController controller,
+    required TimelineActItem actItem,
+    required List<MindMapNodeModel> actNodes,
+    required bool isDark,
+    required Color textPrimary,
+    required Color textSecondary,
+    required Color borderColor,
+    required Color cardBg,
+    required Color bgPrimary,
+  }) {
+    const double columnWidth = 280.0;
+    final headerBg = isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5);
+
+    final isRemovable = actNodes.isEmpty &&
+        actItem.act != PlotAct.act1Exposition &&
+        actItem.act != PlotAct.act2RisingAction &&
+        actItem.act != PlotAct.act3Climax;
+
+    return DragTarget<MindMapNodeModel>(
+      onWillAcceptWithDetails: (details) {
+        final node = details.data;
+        if (actItem.act == PlotAct.custom) {
+          return node.act != PlotAct.custom ||
+              (node.customActName ?? '').trim() != (actItem.customName ?? '').trim();
+        }
+        return node.act != actItem.act;
+      },
+      onAcceptWithDetails: (details) {
+        final node = details.data;
+        final updated = node.copyWith(
+          act: actItem.act,
+          customActName: actItem.act == PlotAct.custom ? actItem.customName : null,
+          clearCustomActName: actItem.act != PlotAct.custom,
+        );
+        controller.updateMindMapNode(updated);
+        _showAestheticNotification(
+          context,
+          '«${node.title}» movido a ${actItem.label}.',
+          icon: Icons.swap_horiz_rounded,
+          isDark: isDark,
+        );
+      },
+      builder: (context, candidateData, rejectedData) {
+        final isHovered = candidateData.isNotEmpty;
+        return Container(
+          width: columnWidth,
+          margin: const EdgeInsets.only(right: 12),
+          decoration: BoxDecoration(
+            color: isHovered
+                ? (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03))
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isHovered ? (isDark ? Colors.white30 : Colors.black26) : Colors.transparent,
+              width: 2,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Act Header ──────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: headerBg,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  children: [
+                    Text(actItem.emoji, style: const TextStyle(fontSize: 18)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        actItem.label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: textPrimary,
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Node count badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white : Colors.black,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${actNodes.length}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.black : Colors.white,
+                        ),
+                      ),
+                    ),
+                    if (isRemovable) ...[
+                      const SizedBox(width: 4),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            if (actItem.act == PlotAct.custom) {
+                              _extraActIds.remove('custom:${actItem.customName}');
+                            } else {
+                              _extraActIds.remove(actItem.act.name);
+                            }
+                          });
+                          _saveExtraActs();
+                          _showAestheticNotification(
+                            context,
+                            'Acto «${actItem.label}» removido.',
+                            icon: Icons.remove_circle_outline_rounded,
+                            isDark: isDark,
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                            color: textSecondary.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // ── Node Cards ──────────────────────────────────────────
+              ...actNodes.map((node) => _buildTimelineCard(
+                    context: context,
+                    node: node,
+                    controller: controller,
+                    isDark: isDark,
+                    textPrimary: textPrimary,
+                    textSecondary: textSecondary,
+                    borderColor: borderColor,
+                    cardBg: cardBg,
+                  )),
+
+              // ── Add button at bottom of column ──────────────────────
+              const SizedBox(height: 4),
+              GestureDetector(
+                onTap: () => _showAddNodeDialogWithAct(context, controller, actItem),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark ? Colors.white12 : Colors.black12,
+                      style: BorderStyle.solid,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_rounded, size: 16, color: textSecondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Añadir nodo',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTimelineCard({
+    required BuildContext context,
+    required MindMapNodeModel node,
+    required EditorController controller,
+    required bool isDark,
+    required Color textPrimary,
+    required Color textSecondary,
+    required Color borderColor,
+    required Color cardBg,
+  }) {
+    return LongPressDraggable<MindMapNodeModel>(
+      data: node,
+      delay: const Duration(milliseconds: 250),
+      feedback: Material(
+        color: Colors.transparent,
+        child: Opacity(
+          opacity: 0.88,
+          child: Container(
+            width: 260,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? Colors.white38 : Colors.black26,
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Text(node.iconEmoji, style: const TextStyle(fontSize: 20)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    node.title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.3,
+        child: _buildTimelineCardContent(
+          node: node,
+          controller: controller,
+          isDark: isDark,
+          textPrimary: textPrimary,
+          textSecondary: textSecondary,
+          borderColor: borderColor,
+          cardBg: cardBg,
+        ),
+      ),
+      child: GestureDetector(
+        onLongPress: () => _showEditNodeDialog(context, node, controller),
+        child: _buildTimelineCardContent(
+          node: node,
+          controller: controller,
+          isDark: isDark,
+          textPrimary: textPrimary,
+          textSecondary: textSecondary,
+          borderColor: borderColor,
+          cardBg: cardBg,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimelineCardContent({
+    required MindMapNodeModel node,
+    required EditorController controller,
+    required bool isDark,
+    required Color textPrimary,
+    required Color textSecondary,
+    required Color borderColor,
+    required Color cardBg,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: AppTheme.getSoftShadow(isDark),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Row 1: emoji + type badge ──────────────────────────────
+          Row(
+            children: [
+              Text(node.iconEmoji, style: const TextStyle(fontSize: 17)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Text(
+                  node.typeLabel.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                    color: textPrimary,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              // Drag hint icon
+              Icon(Icons.drag_indicator_rounded, size: 14, color: textSecondary.withValues(alpha: 0.5)),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          // ── Row 2: Title ──────────────────────────────────────────
+          Text(
+            node.title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: textPrimary,
+              letterSpacing: -0.1,
+              height: 1.2,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+
+          // ── Row 3: Description ────────────────────────────────────
+          if (node.description.isNotEmpty) ...[
+            const SizedBox(height: 5),
+            Text(
+              node.description,
+              style: TextStyle(fontSize: 11, color: textSecondary, height: 1.3),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+
+          // ── Row 4: Linked chapter badge ───────────────────────────
+          if (node.linkedChapterId != null) ...[
+            () {
+              final linkedCh = controller.activeBook.chapters
+                  .where((c) => c.id == node.linkedChapterId)
+                  .firstOrNull;
+              if (linkedCh == null) return const SizedBox.shrink();
+              return Container(
+                margin: const EdgeInsets.only(top: 7),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.menu_book_rounded, size: 10, color: textPrimary),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'Cap. ${linkedCh.chapterNumber}: ${linkedCh.title}',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }(),
+          ],
+
+          // ── Row 5: Footer hint ────────────────────────────────────
+          const SizedBox(height: 7),
+          Text(
+            'Mantén presionado para editar • Arrastra para mover',
+            style: TextStyle(
+              fontSize: 9,
+              color: textSecondary.withValues(alpha: 0.5),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+
     final controller = Provider.of<EditorController>(context);
     final isDark = controller.isDarkMode;
     final bgPrimary = isDark ? AppTheme.darkBgPrimary : AppTheme.lightBgPrimary;
@@ -532,10 +1683,17 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
     final cardBg = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
     final borderColor = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
 
-    final nodes = controller.mindMapNodes;
+    final nodes = controller.mindMapNodes.where((n) => n.bookId == controller.activeBook.id).toList();
+    final timelineActs = _getTimelineActs(controller);
     final filteredNodes = _selectedActFilter == null
         ? nodes
-        : nodes.where((n) => n.act == _selectedActFilter).toList();
+        : nodes.where((n) {
+            if (_selectedActFilter!.act == PlotAct.custom) {
+              return n.act == PlotAct.custom &&
+                  (n.customActName ?? '').trim() == (_selectedActFilter!.customName ?? '').trim();
+            }
+            return n.act == _selectedActFilter!.act;
+          }).toList();
 
     return Scaffold(
       backgroundColor: bgPrimary,
@@ -550,7 +1708,7 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Mapa Mental de Trama',
+              _isTimelineMode ? 'Línea de Tiempo' : 'Mapa Mental de Trama',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textPrimary),
             ),
             Text(
@@ -560,16 +1718,57 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.auto_awesome_mosaic_outlined, color: textPrimary),
-            onPressed: () => _autoArrange(controller),
-            tooltip: 'Organizar Cronológicamente por Actos',
+          // ── View toggle button ──────────────────────────────────────
+          Tooltip(
+            message: _isTimelineMode ? 'Cambiar a Mapa Mental' : 'Cambiar a Línea de Tiempo',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => setState(() => _isTimelineMode = !_isTimelineMode),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _isTimelineMode ? Icons.account_tree_outlined : Icons.view_week_outlined,
+                        size: 15,
+                        color: textPrimary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _isTimelineMode ? 'Mapa' : 'Timeline',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-          IconButton(
-            icon: Icon(Icons.center_focus_strong_outlined, color: textPrimary),
-            onPressed: _resetView,
-            tooltip: 'Centrar Lienzo',
-          ),
+          // ── Map-only actions ─────────────────────────────────────────
+          if (!_isTimelineMode) ...[
+            IconButton(
+              icon: Icon(Icons.auto_awesome_mosaic_outlined, color: textPrimary),
+              onPressed: () => _autoArrange(controller),
+              tooltip: 'Organizar Cronológicamente por Actos',
+            ),
+            IconButton(
+              icon: Icon(Icons.center_focus_strong_outlined, color: textPrimary),
+              onPressed: _resetView,
+              tooltip: 'Centrar Lienzo',
+            ),
+          ],
           IconButton(
             icon: Icon(Icons.add_circle_outline_rounded, color: textPrimary),
             onPressed: () => _showAddNodeDialog(context, controller),
@@ -577,7 +1776,15 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: _isTimelineMode
+          // ══════════════════════════════════════════════════════════════════
+          //  TIMELINE VIEW (Kanban / Línea de Tiempo)
+          // ══════════════════════════════════════════════════════════════════
+          ? _buildTimelineView(context, controller, isDark)
+          // ══════════════════════════════════════════════════════════════════
+          //  MIND MAP CANVAS VIEW
+          // ══════════════════════════════════════════════════════════════════
+          : Column(
         children: [
           // Filter Pills for Story Acts
           SizedBox(
@@ -587,11 +1794,27 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 _buildActFilterChip('Todos los Actos', null, textPrimary, textSecondary, accentColor, isDark),
-                _buildActFilterChip('Acto I', PlotAct.act1Exposition, textPrimary, textSecondary, accentColor, isDark),
-                _buildActFilterChip('Acto II', PlotAct.act2RisingAction, textPrimary, textSecondary, accentColor, isDark),
-                _buildActFilterChip('Punto Medio', PlotAct.midpoint, textPrimary, textSecondary, accentColor, isDark),
-                _buildActFilterChip('Acto III', PlotAct.act3Climax, textPrimary, textSecondary, accentColor, isDark),
-                _buildActFilterChip('Resolución', PlotAct.resolution, textPrimary, textSecondary, accentColor, isDark),
+                ...timelineActs.map((actItem) {
+                  return _buildActFilterChip(
+                    actItem.shortLabel,
+                    actItem,
+                    textPrimary,
+                    textSecondary,
+                    accentColor,
+                    isDark,
+                  );
+                }),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    avatar: Icon(Icons.add_rounded, size: 16, color: textSecondary),
+                    label: Text('Acto', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textSecondary)),
+                    backgroundColor: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    side: BorderSide(color: isDark ? Colors.white12 : Colors.black12),
+                    onPressed: () => _showAddActDialog(context, controller),
+                  ),
+                ),
               ],
             ),
           ),
@@ -989,9 +2212,9 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                   ),
                                 ),
                               ),
-                            ),
-                          );
-                          }),
+                              ),
+                            );
+                            }),
                         ],
                       ),
                     ),
@@ -1053,19 +2276,19 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                     ),
                   ),
 
-                // Floating Canvas Controls Toolbar (Zoom, Fit, Arrange)
+                // Floating Canvas Controls Toolbar (Zoom, Fit, Arrange) - Vertical Pill Dock
                 Positioned(
                   bottom: 24,
-                  left: 20,
+                  left: 16,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                     decoration: BoxDecoration(
                       color: cardBg.withValues(alpha: 0.94),
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(24),
                       border: Border.all(color: borderColor),
                       boxShadow: AppTheme.getSoftShadow(isDark),
                     ),
-                    child: Row(
+                    child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
@@ -1083,9 +2306,9 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                           visualDensity: VisualDensity.compact,
                         ),
                         Container(
-                          width: 1,
-                          height: 20,
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: 20,
+                          height: 1,
+                          margin: const EdgeInsets.symmetric(vertical: 4),
                           color: borderColor,
                         ),
                         IconButton(
@@ -1116,9 +2339,9 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
         foregroundColor: isDark ? Colors.black : Colors.white,
         elevation: 2,
         icon: const Icon(Icons.add_rounded),
-        label: const Text(
-          'Punto de Trama',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        label: Text(
+          _isTimelineMode ? 'Nuevo Nodo' : 'Punto de Trama',
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
         ),
         onPressed: () => _showAddNodeDialog(context, controller),
       ),
@@ -1127,13 +2350,13 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
 
   Widget _buildActFilterChip(
     String label,
-    PlotAct? act,
+    TimelineActItem? actItem,
     Color textPrimary,
     Color textSecondary,
     Color accentColor,
     bool isDark,
   ) {
-    final isSelected = _selectedActFilter == act;
+    final isSelected = _selectedActFilter == actItem;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
@@ -1151,7 +2374,7 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
         ),
         onSelected: (selected) {
           setState(() {
-            _selectedActFilter = act;
+            _selectedActFilter = selected ? actItem : null;
           });
         },
       ),

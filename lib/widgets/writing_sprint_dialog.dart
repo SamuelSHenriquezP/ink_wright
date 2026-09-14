@@ -19,6 +19,7 @@ class WritingSprintDialog extends StatefulWidget {
 class _WritingSprintDialogState extends State<WritingSprintDialog> {
   int _selectedDuration = 25;
   final TextEditingController _targetWordsCtrl = TextEditingController(text: '500');
+  bool _completionRecorded = false;
 
   @override
   void dispose() {
@@ -39,6 +40,21 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
 
     final sprint = sprintController.activeSprint;
     final isSprintActive = sprintController.isSprintActive;
+
+    // Detect auto-completion (timer ran out): sprint exists, not active, isCompleted=true
+    if (sprint != null && !isSprintActive && sprint.isCompleted && !_completionRecorded) {
+      _completionRecorded = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        editorController.recordSprintHistory(
+          durationMinutes: sprint.durationMinutes,
+          targetWords: sprint.targetWords,
+          wordsWritten: sprint.wordsWritten,
+          startTime: sprint.startTime,
+          completed: true, // timer ran out automatically
+        );
+      });
+    }
 
     return Dialog(
       backgroundColor: bgCard,
@@ -155,9 +171,73 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                 icon: const Icon(Icons.stop_circle_rounded),
                 label: const Text('Detener Sprint Actual', style: TextStyle(fontWeight: FontWeight.w700)),
                 onPressed: () {
+                  // Capture sprint data BEFORE stopping (stop clears isActive)
+                  final sprintData = sprintController.activeSprint;
                   sprintController.stopSprint();
                   editorController.stopSprint();
+                  // Record sprint history for manual stop
+                  if (sprintData != null) {
+                    editorController.recordSprintHistory(
+                      durationMinutes: sprintData.durationMinutes,
+                      targetWords: sprintData.targetWords,
+                      wordsWritten: sprintData.wordsWritten,
+                      startTime: sprintData.startTime,
+                      completed: false, // manually stopped, not time-completed
+                    );
+                  }
                 },
+              ),
+            ] else if (sprint != null && sprint.isCompleted) ...[
+              // Auto-completed sprint — show completion summary
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: borderSubtle),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      sprint.wordsWritten >= sprint.targetWords
+                          ? Icons.emoji_events_rounded
+                          : Icons.timer_off_rounded,
+                      size: 40,
+                      color: sprint.wordsWritten >= sprint.targetWords
+                          ? const Color(0xFF38C793)
+                          : textSecondary,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      sprint.wordsWritten >= sprint.targetWords
+                          ? '¡Sprint completado!'
+                          : 'Tiempo agotado',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${sprint.wordsWritten} palabras en ${sprint.durationMinutes} min',
+                      style: TextStyle(fontSize: 13, color: textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  foregroundColor: widget.isDark ? Colors.black : Colors.white,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Cerrar', style: TextStyle(fontWeight: FontWeight.w700)),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ] else ...[
               // Setup New Sprint Interface
