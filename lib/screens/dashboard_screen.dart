@@ -12,6 +12,7 @@ import '../widgets/codex_card.dart';
 import '../widgets/muse_assistant_sheet.dart';
 import '../widgets/writing_sprint_dialog.dart';
 import '../widgets/export_manuscript_dialog.dart';
+import '../widgets/import_manuscript_dialog.dart';
 import '../models/idea_snippet_model.dart';
 import '../models/codex_entry_model.dart';
 import '../models/book_model.dart';
@@ -694,6 +695,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Objetivo de Palabras'),
                 ),
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    final isDark = Provider.of<ThemeController>(context, listen: false).isDarkMode;
+                    ImportManuscriptDialog.show(context, isDark: isDark);
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.file_download_outlined, size: 16, color: Colors.blueAccent),
+                        const SizedBox(width: 6),
+                        const Flexible(
+                          child: Text(
+                            'O importar desde archivo (.docx, .epub, .md, .txt)',
+                            style: TextStyle(fontSize: 12, color: Colors.blueAccent, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -748,6 +775,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.of(ctx).pop();
                 controller.switchBook(book.id);
                 _openExportDialog(context, isDark);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.file_download_outlined),
+              title: const Text('Importar Capítulos a este Libro', style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: const Text('Añadir contenido desde .docx, .epub, .md o .txt'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                ImportManuscriptDialog.show(
+                  context,
+                  isDark: isDark,
+                  targetBookId: book.id,
+                  forceChaptersMode: true,
+                );
               },
             ),
             if (controller.allBooks.length > 1)
@@ -1997,17 +2038,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: textPrimary,
                         ),
                       ),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isDark ? Colors.white : Colors.black,
-                          foregroundColor: isDark ? Colors.black : Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          elevation: 0,
-                        ),
-                        icon: const Icon(Icons.add_rounded, size: 18),
-                        label: const Text('Nuevo Libro', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                        onPressed: () => _showCreateBookDialog(context, controller),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: textPrimary,
+                              side: BorderSide(color: borderSubtle),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            ),
+                            icon: const Icon(Icons.file_download_outlined, size: 16),
+                            label: const Text('Importar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                            onPressed: () => ImportManuscriptDialog.show(context, isDark: isDark),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isDark ? Colors.white : Colors.black,
+                              foregroundColor: isDark ? Colors.black : Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.add_rounded, size: 18),
+                            label: const Text('Nuevo Libro', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                            onPressed: () => _showCreateBookDialog(context, controller),
+                          ),
+                        ],
                       ),
                     ],
                   ),

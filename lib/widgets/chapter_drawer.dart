@@ -5,6 +5,7 @@ import '../models/chapter_model.dart';
 import '../models/book_model.dart';
 import '../controllers/editor_controller.dart';
 import '../formatters/writer_text_formatter.dart';
+import 'import_manuscript_dialog.dart';
 
 class ChapterDrawer extends StatelessWidget {
   final EditorController controller;
@@ -167,24 +168,57 @@ class ChapterDrawer extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  // New Chapter Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 40,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accentColor,
-                        foregroundColor: isDark ? Colors.black : Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  // New Chapter & Import Chapter Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 40,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: accentColor,
+                              foregroundColor: isDark ? Colors.black : Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            icon: const Icon(Icons.add_rounded, size: 18),
+                            label: const Text(
+                              'Nuevo Capítulo',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            ),
+                            onPressed: () => _showNewChapterDialog(context),
+                          ),
+                        ),
                       ),
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text(
-                        'Nuevo Capítulo',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: 'Importar capítulo (.docx, .epub, .md, .txt)',
+                        child: InkWell(
+                          onTap: () {
+                            if (Scaffold.maybeOf(context)?.isDrawerOpen == true ||
+                                Scaffold.maybeOf(context)?.isEndDrawerOpen == true) {
+                              Navigator.of(context).pop();
+                            }
+                            ImportManuscriptDialog.show(
+                              context,
+                              isDark: isDark,
+                              forceChaptersMode: true,
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: borderSubtle),
+                            ),
+                            child: Icon(Icons.file_download_outlined, size: 20, color: textPrimary),
+                          ),
+                        ),
                       ),
-                      onPressed: () => _showNewChapterDialog(context),
-                    ),
+                    ],
                   ),
                 ],
               ),

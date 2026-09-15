@@ -16,6 +16,7 @@ import '../models/revision_comment_model.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'markdown_editing_controller.dart';
 import '../services/persistence_service.dart';
+import '../services/import_service.dart';
 
 class EditorController extends ChangeNotifier {
   final PersistenceService _persistenceService = PersistenceService();
@@ -876,6 +877,101 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     _mindMapNodes.add(starterNode);
 
     selectBook(newBook);
+  }
+
+  /// Importa un libro completo con sus capítulos detectados
+  void importNewBook(ImportedBookData data) {
+    final bookId = 'b_${DateTime.now().millisecondsSinceEpoch}';
+    final chapters = <ChapterModel>[];
+
+    for (int i = 0; i < data.chapters.length; i++) {
+      final chData = data.chapters[i];
+      chapters.add(ChapterModel(
+        id: 'ch_${DateTime.now().millisecondsSinceEpoch}_$i',
+        bookId: bookId,
+        chapterNumber: i + 1,
+        title: chData.title,
+        content: chData.content,
+        lastEdited: DateTime.now(),
+        notes: '',
+        povCharacter: '',
+      ));
+    }
+
+    final targetWords = data.totalWords > 0 ? (data.totalWords * 1.2).round() : 80000;
+
+    final newBook = BookModel(
+      id: bookId,
+      title: data.title,
+      subtitle: data.subtitle.isNotEmpty ? data.subtitle : (data.author.isNotEmpty ? 'Por ${data.author}' : ''),
+      genre: data.genre.isNotEmpty ? data.genre : 'Ficción',
+      targetWordCount: targetWords,
+      status: BookStatus.drafting,
+      chapters: chapters,
+      lastEdited: DateTime.now(),
+      coverEmoji: '📚',
+      coverColorHex: 0xFF18181B,
+      tags: [data.genre.isNotEmpty ? data.genre : 'Ficción', 'Importado'],
+      synopsis: data.synopsis,
+    );
+
+    _allBooks.insert(0, newBook);
+
+    // Nodo inicial del mapa mental
+    final starterNode = MindMapNodeModel(
+      id: 'node_${DateTime.now().millisecondsSinceEpoch}',
+      bookId: newBook.id,
+      title: 'Premisa: ${newBook.title}',
+      description: data.synopsis.isNotEmpty
+          ? data.synopsis
+          : 'Manuscrito importado con ${chapters.length} capítulos.',
+      act: PlotAct.act1Exposition,
+      type: PlotNodeType.turningPoint,
+      dx: 80,
+      dy: 120,
+      connectedToIds: [],
+      colorHex: 0xFF18181B,
+      iconEmoji: '📚',
+    );
+    _mindMapNodes.add(starterNode);
+
+    selectBook(newBook);
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  /// Importa capítulos dentro del libro activo actual
+  void importChaptersIntoActiveBook(List<ImportedChapterData> importedChapters) {
+    if (importedChapters.isEmpty) return;
+
+    final currentCount = _activeBook.chapters.length;
+    final newChapters = <ChapterModel>[];
+
+    for (int i = 0; i < importedChapters.length; i++) {
+      final chData = importedChapters[i];
+      newChapters.add(ChapterModel(
+        id: 'ch_${DateTime.now().millisecondsSinceEpoch}_$i',
+        bookId: _activeBook.id,
+        chapterNumber: currentCount + i + 1,
+        title: chData.title,
+        content: chData.content,
+        lastEdited: DateTime.now(),
+        notes: '',
+        povCharacter: '',
+      ));
+    }
+
+    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters)..addAll(newChapters);
+    _activeBook = _activeBook.copyWith(
+      chapters: updatedChapters,
+      lastEdited: DateTime.now(),
+    );
+
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+    selectChapter(newChapters.first);
+    _saveCurrentData(debounced: false);
+    notifyListeners();
   }
 
   void toggleChapterCompletion(String chapterId) {

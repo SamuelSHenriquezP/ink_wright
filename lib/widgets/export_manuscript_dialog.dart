@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../theme/app_theme.dart';
 import '../controllers/editor_controller.dart';
 import '../services/export_service.dart';
+import 'import_manuscript_dialog.dart';
 
 class ExportManuscriptDialog extends StatefulWidget {
   final bool isDark;
@@ -570,6 +571,28 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                             );
                           }
                         }
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: textPrimary,
+                        minimumSize: const Size(double.infinity, 48),
+                        side: BorderSide(color: borderSubtle),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      icon: const Icon(Icons.file_download_outlined, size: 20),
+                      label: const Text(
+                        'Importar Manuscrito (.docx, .epub, .md, .txt)',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        ImportManuscriptDialog.show(context, isDark: widget.isDark);
                       },
                     ),
 

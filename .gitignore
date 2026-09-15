@@ -96,7 +96,5 @@ desktop.ini
 .gemini/
 .antigravity/
 .agents/
-AGENTS.md
-GEMINI.md
 *.log
 *.tmp
