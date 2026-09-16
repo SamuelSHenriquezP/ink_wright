@@ -18,6 +18,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
   final VoidCallback onTypography;
   final VoidCallback onStats;
   final VoidCallback onGoToDashboard;
+  final VoidCallback? onContinuousReader;
   final VoidCallback? onNextChapter;
   final VoidCallback? onPreviousChapter;
   final VoidCallback? onNewChapter;
@@ -43,6 +44,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     required this.onTypography,
     required this.onStats,
     required this.onGoToDashboard,
+    this.onContinuousReader,
     this.onNextChapter,
     this.onPreviousChapter,
     this.onNewChapter,
@@ -69,6 +71,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     required VoidCallback onTypography,
     required VoidCallback onStats,
     required VoidCallback onGoToDashboard,
+    VoidCallback? onContinuousReader,
     VoidCallback? onNextChapter,
     VoidCallback? onPreviousChapter,
     VoidCallback? onNewChapter,
@@ -97,6 +100,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
         onTypography: onTypography,
         onStats: onStats,
         onGoToDashboard: onGoToDashboard,
+        onContinuousReader: onContinuousReader,
         onNextChapter: onNextChapter,
         onPreviousChapter: onPreviousChapter,
         onNewChapter: onNewChapter,
@@ -234,6 +238,16 @@ class EditorOptionsMenuSheet extends StatelessWidget {
           onToggleReadOnly();
         },
       ),
+      if (onContinuousReader != null)
+        _MenuItem(
+          icon: Icons.auto_stories_rounded,
+          title: 'Lector Continuo',
+          subtitle: 'Leer la obra completa en cascada',
+          onTap: () {
+            Navigator.of(context).pop();
+            onContinuousReader!();
+          },
+        ),
       _MenuItem(
         icon: Icons.keyboard_outlined,
         title: 'Máquina de Escribir',

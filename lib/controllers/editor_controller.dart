@@ -17,6 +17,9 @@ import '../formatters/writer_text_formatter.dart';
 import 'markdown_editing_controller.dart';
 import '../services/persistence_service.dart';
 import '../services/import_service.dart';
+import '../services/initial_sample_data_service.dart';
+import '../services/chapter_operations_service.dart';
+import '../services/mind_map_layout_service.dart';
 
 class EditorController extends ChangeNotifier {
   final PersistenceService _persistenceService = PersistenceService();
@@ -59,7 +62,9 @@ class EditorController extends ChangeNotifier {
 
   // Debounce for text change auto-save
   Timer? _textChangeDebounceTimer;
+  Timer? _autoBackupTimer;
   DateTime? _lastSavedTime;
+  DateTime? _lastAutoBackupTime;
   bool _isSaving = false;
 
   // Getters
@@ -69,6 +74,7 @@ class EditorController extends ChangeNotifier {
   bool get isLiveMarkdownEnabled => textEditingController.isLiveMarkdownEnabled;
   bool get isSaving => _isSaving;
   DateTime? get lastSavedTime => _lastSavedTime;
+  DateTime? get lastAutoBackupTime => _lastAutoBackupTime;
 
   bool get canUndo => _undoStack.isNotEmpty;
   bool get canRedo => _redoStack.isNotEmpty;
@@ -131,256 +137,23 @@ class EditorController extends ChangeNotifier {
   EditorController() {
     _initializeInitialState();
     _loadPersistedData();
+    _startAutoBackupTimer();
   }
 
   void _initializeInitialState() {
-    // 1. Starter Tutorial Manuscript (Unico libro inicial de bienvenida)
-    final ch1 = ChapterModel(
-      id: 'ch_tut_1',
-      bookId: 'b_tutorial',
-      chapterNumber: 1,
-      title: 'Capítulo 1: Bienvenido a tu Estudio & Markdown en Vivo',
-      content: '''# Bienvenido a Ink & Wright
-
-Este es tu nuevo santuario de escritura: un espacio minimalista en blanco y negro pensado para que las distracciones desaparezcan y tus palabras cobren vida.
-
-## Escribir con Markdown en Vivo
-
-Mientras escribes en este lienzo, el formato se renderiza en tiempo real:
-
-- Las palabras entre asteriscos dobles se convierten en **negrita editorial**.
-- Las palabras entre asteriscos simples adquieren un *tono íntimo en cursiva*.
-- Puedes tachar ideas descartadas usando ~~texto tachado~~.
-- Escribe fragmentos técnicos o notas de estilo entre comillas invertidas: `escena_climax_01`.
-
-> "Escribir no es añadir adornos, sino retirar la niebla hasta que la historia respire por sí sola."
-
-### Diálogos y Narrativa
-
-Para los diálogos en español, utiliza la raya literaria:
-
-— La tinta guarda secretos que la memoria prefiere olvidar —susurró el archivista mientras cerraba el tomo de cuero.
-
-— Entonces no abras el candado de la biblioteca —respondió ella con calma.
-
-### Tu Lista de Tareas Creativas
-
-- [x] Conocer el editor y probar el Markdown dinámico.
-- [ ] Explorar la sección de Personajes en el menú principal.
-- [ ] Abrir el Mapa Mental para trazar el arco de tu historia.
-- [ ] Probar el modo Pantalla Completa para máxima concentración.
-
-***
-
-Pulsa el icono superior para abrir el panel lateral o vuelve al panel de inicio para comenzar a forjar tu propio manuscrito.''',
-      lastEdited: DateTime.now(),
-      isCompleted: true,
-      notes: 'Capítulo introductorio que enseña las funciones básicas del editor.',
-      povCharacter: 'Evelyn Vance',
-    );
-
-    final ch2 = ChapterModel(
-      id: 'ch_tut_2',
-      bookId: 'b_tutorial',
-      chapterNumber: 2,
-      title: 'Capítulo 2: El Arte de Crear Personajes',
-      content: '''# Diseñar Personajes con Alma
-
-En la sección de **Personajes**, cada criatura de tu historia tiene su propia ficha narrativa con psicología, deseos y su biografía escrita.
-
-## Los Tres Pilares de un Buen Personaje
-
-1. **El Deseo Consciente:** Lo que el personaje cree que quiere (el objetivo externo).
-2. **La Necesidad Inconsciente:** La lección o maduración que debe experimentar para sanar.
-3. **El Fantasma o Herida:** Aquello que le ocurrió en el pasado y condiciona sus miedos.
-
-> "Un personaje sin conflicto interno es solo una marioneta con buen vestuario."
-
-### Cómo Usar las Fichas
-
-Puedes consultar tus personajes en cualquier momento, editar su biografía escrita e incluso insertarlos directamente en tu capítulo pulsando "Insertar en Manuscrito".''',
-      lastEdited: DateTime.now(),
-      isCompleted: false,
-      notes: 'Capítulo tutorial sobre la creación y gestión de personajes.',
-      povCharacter: 'Evelyn Vance',
-    );
-
-    final ch3 = ChapterModel(
-      id: 'ch_tut_3',
-      bookId: 'b_tutorial',
-      chapterNumber: 3,
-      title: 'Capítulo 3: Estructuración y Mapa Mental de la Trama',
-      content: '''# El Mapa Mental de la Trama
-
-Cada libro en Ink & Wright tiene su propio **Mapa Mental independiente**. Lo que traces para una novela nunca se mezclará con tus otros proyectos.
-
-## Los Actos Narrativos
-
-- **Acto I (Planteamiento):** Presenta el mundo ordinario y el incidente incitador que rompe el equilibrio.
-- **Acto II (Nudo y Complicaciones):** El punto medio donde las consecuencias se vuelven irreversibles.
-- **Acto III (Clímax y Resolución):** El enfrentamiento decisivo donde el protagonista cambia para siempre.
-
-### Modos del Lienzo
-
-- **Mover y Explorar:** Arrastra el lienzo en cualquier dirección con libertad total.
-- **Conectar Nodos:** Toca el botón de conectar en cualquier tarjeta y selecciona el nodo destino para enlazar causas y consecuencias.
-- **Auto-Organizar:** Usa el botón de organización automática para ordenar tus ideas en columnas por actos narrativos.''',
-      lastEdited: DateTime.now(),
-      isCompleted: false,
-      notes: 'Capítulo tutorial sobre el mapa mental.',
-      povCharacter: 'Evelyn Vance',
-    );
-
-    final tutorialBook = BookModel(
-      id: 'b_tutorial',
-      title: 'Manual del Escritor — Guía de Ink & Wright',
-      subtitle: 'Tu espacio de escritura, personajes y mapas de trama',
-      genre: 'Guía / Tutorial',
-      targetWordCount: 25000,
-      status: BookStatus.drafting,
-      chapters: [ch1, ch2, ch3],
-      lastEdited: DateTime.now(),
-      coverEmoji: '🖋️',
-      coverColorHex: 0xFF18181B,
-      tags: ['Tutorial', 'Guía', 'Escritura Creativa'],
-      synopsis:
-          'Una guía viva diseñada para mostrarte cómo escribir con Markdown en tiempo real, dar vida a personajes inolvidables y estructurar tramas visuales.',
-    );
-
-    _allBooks = [tutorialBook];
-    _activeBook = tutorialBook;
-    _activeChapter = ch1;
+    final initial = InitialSampleDataService.create();
+    _allBooks = initial.allBooks;
+    _activeBook = initial.activeBook;
+    _activeChapter = initial.activeChapter;
+    _ideas = initial.ideas;
+    _codexEntries = initial.codexEntries;
+    _mindMapNodes = initial.mindMapNodes;
+    _characters = initial.characters;
+    _writerStats = initial.writerStats;
 
     textEditingController.text = _activeChapter.content;
     _lastRecordedText = _activeChapter.content;
     textEditingController.addListener(_onTextChanged);
-
-    // Initial Sample Ideas (relacionadas al tutorial y narrativa)
-    _ideas = [
-      IdeaSnippetModel(
-        id: 'i_1',
-        bookId: 'b_tutorial',
-        title: 'Consejo: El Gancho Inicial',
-        content: 'Empieza siempre in media res o con una imagen que revele el tono antes que la trama.',
-        category: IdeaCategory.general,
-        colorHex: 0xFF18181B,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        tags: ['Técnica', 'Inicio'],
-        isPinned: true,
-      ),
-      IdeaSnippetModel(
-        id: 'i_2',
-        bookId: 'b_tutorial',
-        title: 'Atmósfera y Sentidos',
-        content: 'Describe al menos dos sentidos que no sean la vista en cada cambio de escena importante.',
-        category: IdeaCategory.character,
-        colorHex: 0xFF27272A,
-        createdAt: DateTime.now(),
-        tags: ['Inmersión', 'Estilo'],
-        isPinned: true,
-      ),
-    ];
-
-    // Initial Codex Entries
-    _codexEntries = [
-      CodexEntryModel(
-        id: 'codex_tut_1',
-        bookId: 'b_tutorial',
-        name: 'El Estudio de Ink & Wright',
-        type: CodexType.location,
-        role: 'Santuario Creativo',
-        description: 'Un refugio atemporal donde el autor puede concentrarse exclusivamente en su manuscrito.',
-        traits: ['Silencioso', 'Minimalista', 'Monocromático'],
-        secrets: 'Diseñado para escritores que buscan la pureza de la palabra.',
-        avatarEmoji: '🏛️',
-        createdAt: DateTime.now(),
-        isPinned: true,
-      ),
-    ];
-
-    // Initial Mind Map Nodes (Individual para el libro tutorial 'b_tutorial')
-    _mindMapNodes = [
-      MindMapNodeModel(
-        id: 'node_tut_1',
-        bookId: 'b_tutorial',
-        title: 'Acto I: Conoce tu Espacio de Escritura',
-        description: 'Aprende a usar el editor con Markdown en vivo, las tipografías y el modo de pantalla completa.',
-        act: PlotAct.act1Exposition,
-        type: PlotNodeType.turningPoint,
-        dx: 80,
-        dy: 120,
-        connectedToIds: ['node_tut_2'],
-        colorHex: 0xFF18181B,
-        iconEmoji: '🖋️',
-      ),
-      MindMapNodeModel(
-        id: 'node_tut_2',
-        bookId: 'b_tutorial',
-        title: 'Acto II: Diseña tus Personajes y Fichas',
-        description: 'Crea personajes con psicología, deseos y su biografía narrativa completa.',
-        act: PlotAct.midpoint,
-        type: PlotNodeType.characterArc,
-        dx: 480,
-        dy: 120,
-        connectedToIds: ['node_tut_3'],
-        colorHex: 0xFF27272A,
-        iconEmoji: '👤',
-      ),
-      MindMapNodeModel(
-        id: 'node_tut_3',
-        bookId: 'b_tutorial',
-        title: 'Acto III: Escribe y Estructura tu Trama',
-        description: 'Traza causas y consecuencias en el lienzo infinito y exporta tu manuscrito.',
-        act: PlotAct.act3Climax,
-        type: PlotNodeType.mainPlot,
-        dx: 880,
-        dy: 120,
-        connectedToIds: [],
-        colorHex: 0xFF18181B,
-        iconEmoji: '📖',
-      ),
-    ];
-
-    // Initial Characters (Individual para el libro tutorial 'b_tutorial')
-    _characters = [
-      CharacterModel(
-        id: 'char_tut_1',
-        bookId: 'b_tutorial',
-        name: 'Evelyn Vance',
-        role: 'Protagonista',
-        archetype: 'La Investigadora Renuente',
-        traits: ['Observadora', 'Metódica', 'Intuitiva'],
-        physicalAppearance: 'Mirada atenta de ojos grises, gabardina oscura con marcas de tinta en los puños y un reloj de bolsillo antiguo.',
-        motivation: 'Descifrar los manuscritos olvidados de la antigua biblioteca de Blackwood.',
-        flawOrGhost: 'Teme equivocarse y repetir el error que le costó el puesto a su mentor.',
-        characterArc: 'Pasa de dudar de sus instintos a liderar la investigación con determinación inquebrantable.',
-        writtenBiography: '''Evelyn nació en una familia de encuadernadores y archivistas. Creció entre olor a cuero viejo, papel secante y tinta ferrogálica. Posee una memoria prodigiosa para las palabras no dichas y los márgenes de los textos antiguos, donde los escritores solían anotar sus verdades más peligrosas.
-
-A los veintiocho años, heredó el taller de su abuelo junto con un baúl de notas que nadie había logrado descifrar. Su vida cambió el día que encontró un pliego con el sello intacto del Gremio.''',
-        quote: '«Los márgenes de los libros siempre revelan más que los textos impresos.»',
-        avatarEmoji: '🕵️‍♀️',
-        createdAt: DateTime.now(),
-      ),
-    ];
-
-    _writerStats = WriterStatsModel(
-      wordsToday: 850,
-      dailyGoalWords: 2000,
-      streakDays: 3,
-      totalWordsWritten: 12500,
-      writingTimeTodayMinutes: 35,
-      wordsPerMinuteAvg: 30,
-      focusScore: 95,
-      weeklyProgress: {
-        'Lun': 1200,
-        'Mar': 1500,
-        'Mié': 850,
-        'Jue': 1100,
-        'Vie': 1400,
-        'Sáb': 900,
-        'Dom': 850,
-      },
-    );
   }
 
   // Session & Data Persistence
@@ -826,16 +599,12 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
-    final List<ChapterModel> reordered = List.from(_activeBook.chapters);
-    final ChapterModel moved = reordered.removeAt(oldIndex);
-    reordered.insert(newIndex, moved);
+    moveChapter(oldIndex, newIndex);
+  }
 
-    // Re-assign chapter numbers sequentially
-    final updatedList = <ChapterModel>[];
-    for (int i = 0; i < reordered.length; i++) {
-      updatedList.add(reordered[i].copyWith(chapterNumber: i + 1));
-    }
-
+  void moveChapter(int oldIndex, int newIndex) {
+    if (oldIndex == newIndex || oldIndex < 0 || oldIndex >= _activeBook.chapters.length) return;
+    final updatedList = ChapterOperationsService.moveChapter(_activeBook.chapters, oldIndex, newIndex);
     _activeBook = _activeBook.copyWith(chapters: updatedList);
     _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
     _saveCurrentData(debounced: false);
@@ -996,15 +765,7 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       return false;
     }
 
-    final updatedChapters = _activeBook.chapters
-        .where((ch) => ch.id != chapterId)
-        .toList();
-
-    final reindexed = <ChapterModel>[];
-    for (int i = 0; i < updatedChapters.length; i++) {
-      reindexed.add(updatedChapters[i].copyWith(chapterNumber: i + 1));
-    }
-
+    final reindexed = ChapterOperationsService.removeAndReindex(_activeBook.chapters, chapterId);
     _activeBook = _activeBook.copyWith(chapters: reindexed);
     _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
 
@@ -1019,55 +780,28 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
 
   /// Splits the specified chapter at [splitPosition] into two chapters.
   ChapterModel? splitChapter(String chapterId, int splitPosition, {String? newChapterTitle}) {
-    final chapterIndex = _activeBook.chapters.indexWhere((ch) => ch.id == chapterId);
-    if (chapterIndex == -1) return null;
-
-    final targetChapter = _activeBook.chapters[chapterIndex];
-    final fullText = targetChapter.id == _activeChapter.id
+    final currentText = chapterId == _activeChapter.id
         ? textEditingController.text
-        : targetChapter.content;
+        : _activeBook.chapters.firstWhere((ch) => ch.id == chapterId, orElse: () => _activeChapter).content;
 
-    final clampedPos = splitPosition.clamp(0, fullText.length);
-    final part1 = fullText.substring(0, clampedPos).trimRight();
-    final part2 = fullText.substring(clampedPos).trimLeft();
-
-    final updatedOriginal = targetChapter.copyWith(
-      content: part1,
-      lastEdited: DateTime.now(),
-    );
-
-    final newChapterNum = chapterIndex + 2;
-    final fallbackTitle = '${targetChapter.title} (Parte 2)';
-    final newChapter = ChapterModel(
-      id: 'ch_${DateTime.now().millisecondsSinceEpoch}',
+    final result = ChapterOperationsService.splitChapter(
+      chapters: _activeBook.chapters,
       bookId: _activeBook.id,
-      chapterNumber: newChapterNum,
-      title: (newChapterTitle != null && newChapterTitle.trim().isNotEmpty)
-          ? newChapterTitle.trim()
-          : fallbackTitle,
-      content: part2,
-      lastEdited: DateTime.now(),
-      notes: '',
-      povCharacter: targetChapter.povCharacter,
+      chapterId: chapterId,
+      splitPosition: splitPosition,
+      currentContent: currentText,
+      newChapterTitle: newChapterTitle,
     );
+    if (result == null) return null;
 
-    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
-    updatedChapters[chapterIndex] = updatedOriginal;
-    updatedChapters.insert(chapterIndex + 1, newChapter);
-
-    final reindexed = <ChapterModel>[];
-    for (int i = 0; i < updatedChapters.length; i++) {
-      reindexed.add(updatedChapters[i].copyWith(chapterNumber: i + 1));
-    }
-
-    _activeBook = _activeBook.copyWith(chapters: reindexed);
+    _activeBook = _activeBook.copyWith(chapters: result.updatedChapters);
     _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
 
     if (_activeChapter.id == chapterId) {
-      _activeChapter = reindexed[chapterIndex];
+      _activeChapter = result.updatedOriginal;
       textEditingController.removeListener(_onTextChanged);
-      textEditingController.text = part1;
-      _lastRecordedText = part1;
+      textEditingController.text = result.updatedOriginal.content;
+      _lastRecordedText = result.updatedOriginal.content;
       _undoStack.clear();
       _redoStack.clear();
       textEditingController.addListener(_onTextChanged);
@@ -1075,7 +809,7 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
 
     _saveCurrentData(debounced: false);
     notifyListeners();
-    return reindexed[chapterIndex + 1];
+    return result.newChapter;
   }
 
   /// Merges the chapter with [chapterId] and the subsequent chapter in the book.
@@ -1095,38 +829,29 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
         ? textEditingController.text
         : next.content;
 
-    final separator = (currentContent.isEmpty || nextContent.isEmpty) ? '' : '\n\n';
-    final mergedContent = '$currentContent$separator$nextContent';
-
-    final mergedChapter = current.copyWith(
-      content: mergedContent,
-      lastEdited: DateTime.now(),
+    final result = ChapterOperationsService.mergeChapterWithNext(
+      chapters: _activeBook.chapters,
+      chapterId: chapterId,
+      currentChapterContent: currentContent,
+      nextChapterContent: nextContent,
     );
+    if (result == null) return false;
 
-    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
-    updatedChapters[chapterIndex] = mergedChapter;
-    updatedChapters.removeAt(chapterIndex + 1);
-
-    final reindexed = <ChapterModel>[];
-    for (int i = 0; i < updatedChapters.length; i++) {
-      reindexed.add(updatedChapters[i].copyWith(chapterNumber: i + 1));
-    }
-
-    _activeBook = _activeBook.copyWith(chapters: reindexed);
+    _activeBook = _activeBook.copyWith(chapters: result.updatedChapters);
     _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
 
     _mindMapNodes = _mindMapNodes.map((node) {
-      if (node.linkedChapterId == next.id) {
-        return node.copyWith(linkedChapterId: current.id);
+      if (node.linkedChapterId == result.deletedChapterId) {
+        return node.copyWith(linkedChapterId: result.mergedChapter.id);
       }
       return node;
     }).toList();
 
     if (_activeChapter.id == current.id || _activeChapter.id == next.id) {
-      _activeChapter = reindexed[chapterIndex];
+      _activeChapter = result.mergedChapter;
       textEditingController.removeListener(_onTextChanged);
-      textEditingController.text = mergedContent;
-      _lastRecordedText = mergedContent;
+      textEditingController.text = result.mergedContent;
+      _lastRecordedText = result.mergedContent;
       _undoStack.clear();
       _redoStack.clear();
       textEditingController.addListener(_onTextChanged);
@@ -1152,15 +877,10 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
             ? textEditingController.text
             : targetChapter.content);
 
-    final now = DateTime.now();
-    final defaultLabel = 'Versión del ${WriterTextFormatter.formatSpanishDate(now)}';
-    final snapshot = ChapterSnapshotModel(
-      id: 'snap_${now.millisecondsSinceEpoch}',
-      chapterId: chapterId,
-      label: (label != null && label.trim().isNotEmpty) ? label.trim() : defaultLabel,
+    final snapshot = ChapterOperationsService.createSnapshot(
+      targetChapter: targetChapter,
       content: snapshotContent,
-      createdAt: now,
-      wordCount: WriterTextFormatter.countWords(snapshotContent),
+      label: label,
     );
 
     final updatedSnapshots = List<ChapterSnapshotModel>.from(targetChapter.snapshots)
@@ -1168,7 +888,7 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
 
     final updatedChapter = targetChapter.copyWith(
       snapshots: updatedSnapshots,
-      lastEdited: now,
+      lastEdited: snapshot.createdAt,
     );
 
     final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
@@ -1187,49 +907,25 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
 
   /// Restores a snapshot into the chapter, creating an automatic safety snapshot of the current state before replacing
   bool restoreChapterSnapshot(String chapterId, String snapshotId) {
-    final index = _activeBook.chapters.indexWhere((c) => c.id == chapterId);
-    if (index == -1) return false;
-
-    final targetChapter = _activeBook.chapters[index];
-    final snapshotIndex = targetChapter.snapshots.indexWhere((s) => s.id == snapshotId);
-    if (snapshotIndex == -1) return false;
-
-    final targetSnapshot = targetChapter.snapshots[snapshotIndex];
-    final currentText = targetChapter.id == _activeChapter.id
+    final currentText = _activeChapter.id == chapterId
         ? textEditingController.text
-        : targetChapter.content;
+        : _activeBook.chapters.firstWhere((c) => c.id == chapterId, orElse: () => _activeChapter).content;
 
-    // Auto-create a safety backup of current text before restoring
-    final now = DateTime.now();
-    final safetyLabel = 'Respaldo previo a restaurar: ${targetSnapshot.label}';
-    final safetySnapshot = ChapterSnapshotModel(
-      id: 'snap_auto_${now.millisecondsSinceEpoch}',
+    final result = ChapterOperationsService.restoreSnapshot(
+      chapters: _activeBook.chapters,
       chapterId: chapterId,
-      label: safetyLabel,
-      content: currentText,
-      createdAt: now,
-      wordCount: WriterTextFormatter.countWords(currentText),
+      snapshotId: snapshotId,
+      currentContent: currentText,
     );
+    if (result == null) return false;
 
-    final updatedSnapshots = List<ChapterSnapshotModel>.from(targetChapter.snapshots)
-      ..insert(0, safetySnapshot);
-
-    final restoredChapter = targetChapter.copyWith(
-      content: targetSnapshot.content,
-      lastEdited: now,
-      snapshots: updatedSnapshots,
-    );
-
-    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
-    updatedChapters[index] = restoredChapter;
-
-    _activeBook = _activeBook.copyWith(chapters: updatedChapters);
+    _activeBook = _activeBook.copyWith(chapters: result.updatedChapters);
     if (_activeChapter.id == chapterId) {
-      _activeChapter = restoredChapter;
+      _activeChapter = result.restoredChapter;
       textEditingController.removeListener(_onTextChanged);
       _undoStack.add(textEditingController.text);
-      textEditingController.text = targetSnapshot.content;
-      _lastRecordedText = targetSnapshot.content;
+      textEditingController.text = result.restoredChapter.content;
+      _lastRecordedText = result.restoredChapter.content;
       textEditingController.addListener(_onTextChanged);
     }
     _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
@@ -1245,9 +941,10 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     if (index == -1) return false;
 
     final targetChapter = _activeBook.chapters[index];
-    final updatedSnapshots = targetChapter.snapshots
-        .where((s) => s.id != snapshotId)
-        .toList();
+    final updatedSnapshots = ChapterOperationsService.deleteSnapshot(
+      chapter: targetChapter,
+      snapshotId: snapshotId,
+    );
 
     final updatedChapter = targetChapter.copyWith(snapshots: updatedSnapshots);
     final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
@@ -1488,110 +1185,36 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
   }
 
   void connectMindMapNodes(String fromId, String toId) {
-    if (fromId == toId) return;
-    _mindMapNodes = _mindMapNodes.map((n) {
-      if (n.id == fromId && !n.connectedToIds.contains(toId)) {
-        final updated = List<String>.from(n.connectedToIds)..add(toId);
-        return n.copyWith(connectedToIds: updated);
-      }
-      return n;
-    }).toList();
+    _mindMapNodes = MindMapLayoutService.connectNodes(_mindMapNodes, fromId, toId);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void disconnectMindMapNodes(String fromId, String toId) {
-    _mindMapNodes = _mindMapNodes.map((n) {
-      if (n.id == fromId) {
-        n.connectedToIds.remove(toId);
-      }
-      return n;
-    }).toList();
+    _mindMapNodes = MindMapLayoutService.disconnectNodes(_mindMapNodes, fromId, toId);
     notifyListeners();
   }
 
   void duplicateMindMapNode(String nodeId) {
     final index = _mindMapNodes.indexWhere((n) => n.id == nodeId);
     if (index != -1) {
-      final original = _mindMapNodes[index];
-      final clone = original.copyWith(
-        id: 'node_${DateTime.now().millisecondsSinceEpoch}',
-        bookId: original.bookId,
-        title: '${original.title} (Copia)',
-        dx: original.dx + 40,
-        dy: original.dy + 40,
-        connectedToIds: [],
-      );
+      final clone = MindMapLayoutService.duplicateNode(_mindMapNodes[index]);
       _mindMapNodes.add(clone);
       notifyListeners();
     }
   }
 
   void autoArrangeMindMapNodes() {
-    final activeBookNodes = _mindMapNodes.where((n) => n.bookId == _activeBook.id).toList();
-    if (activeBookNodes.isEmpty) return;
-
-    // Collect all distinct act / customName pairs present in the nodes
-    final presentItems = <TimelineActItem>[];
-    for (final node in activeBookNodes) {
-      final item = TimelineActItem(node.act, node.act == PlotAct.custom ? node.customActName : null);
-      if (!presentItems.any((i) => i.act == item.act && (i.customName ?? '').trim() == (item.customName ?? '').trim())) {
-        presentItems.add(item);
-      }
-    }
-
-    if (presentItems.isEmpty) {
-      presentItems.addAll([
-        const TimelineActItem(PlotAct.act1Exposition),
-        const TimelineActItem(PlotAct.act2RisingAction),
-        const TimelineActItem(PlotAct.midpoint),
-        const TimelineActItem(PlotAct.act3Climax),
-        const TimelineActItem(PlotAct.resolution),
-      ]);
-    } else {
-      presentItems.sort((a, b) {
-        final cmp = a.orderWeight.compareTo(b.orderWeight);
-        if (cmp != 0) return cmp;
-        return (a.customName ?? '').compareTo(b.customName ?? '');
-      });
-    }
-
-    // Map acts to column X coordinates
-    final Map<String, double> actX = {};
-    final Map<String, int> actCounters = {};
-    for (int i = 0; i < presentItems.length; i++) {
-      final key = presentItems[i].id;
-      actX[key] = 80.0 + (i * 400.0);
-      actCounters[key] = 0;
-    }
-
-    // Auto-arrange only the nodes belonging to the active book
-    _mindMapNodes = _mindMapNodes.map((node) {
-      if (node.bookId == _activeBook.id) {
-        final key = node.act == PlotAct.custom
-            ? 'custom:${node.customActName ?? 'Personalizado'}'
-            : node.act.name;
-        final count = actCounters[key] ?? 0;
-        actCounters[key] = count + 1;
-        final newX = actX[key] ?? 80.0;
-        final newY = 120.0 + (count * 170.0);
-        return node.copyWith(dx: newX, dy: newY);
-      }
-      return node;
-    }).toList();
+    _mindMapNodes = MindMapLayoutService.autoArrangeNodes(
+      allNodes: _mindMapNodes,
+      activeBookId: _activeBook.id,
+    );
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void deleteMindMapNode(String nodeId) {
-    _mindMapNodes.removeWhere((n) => n.id == nodeId);
-    _mindMapNodes = _mindMapNodes.map((n) {
-      if (n.connectedToIds.contains(nodeId)) {
-        final updated = List<String>.from(n.connectedToIds)..remove(nodeId);
-        return n.copyWith(connectedToIds: updated);
-      }
-      return n;
-    }).toList();
+    _mindMapNodes = MindMapLayoutService.deleteNode(_mindMapNodes, nodeId);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -1712,8 +1335,27 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     notifyListeners();
   }
 
+  void _startAutoBackupTimer() {
+    _autoBackupTimer?.cancel();
+    _autoBackupTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      performSilentAutoBackup();
+    });
+  }
+
+  Future<void> performSilentAutoBackup() async {
+    try {
+      final backupJson = exportBackupJson();
+      await _persistenceService.saveSilentAutoBackup(backupJson);
+      _lastAutoBackupTime = DateTime.now();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error en auto-respaldo silencioso: $e');
+    }
+  }
+
   @override
   void dispose() {
+    _autoBackupTimer?.cancel();
     _textChangeDebounceTimer?.cancel();
     _persistenceService.dispose();
     textEditingController.dispose();

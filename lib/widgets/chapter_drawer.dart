@@ -191,10 +191,13 @@ class ChapterDrawer extends StatelessWidget {
                         style: TextStyle(color: textSecondary),
                       ),
                     )
-                  : ListView.separated(
+                  : ReorderableListView.builder(
+                      buildDefaultDragHandles: false,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       itemCount: chapters.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 8),
+                      onReorderItem: (oldIndex, newIndex) {
+                        controller.moveChapter(oldIndex, newIndex);
+                      },
                       itemBuilder: (context, index) {
                         final ch = chapters[index];
                         final isActive = ch.id == activeChapter.id;
@@ -215,125 +218,140 @@ class ChapterDrawer extends StatelessWidget {
                         if (snippet.isEmpty) snippet = 'Capítulo vacío...';
                         if (snippet.length > 80) snippet = '${snippet.substring(0, 80)}...';
 
-                        return Material(
-                          color: isActive
-                              ? (isDark ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.06))
-                              : bgCard,
-                          borderRadius: BorderRadius.circular(14),
-                          child: InkWell(
+                        return Container(
+                          key: ValueKey(ch.id),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: Material(
+                            color: isActive
+                                ? (isDark ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.06))
+                                : bgCard,
                             borderRadius: BorderRadius.circular(14),
-                            onTap: () {
-                              if (!isActive) {
-                                controller.selectChapter(ch);
-                              }
-                              if (Scaffold.maybeOf(context)?.isDrawerOpen == true ||
-                                  Scaffold.maybeOf(context)?.isEndDrawerOpen == true) {
-                                Navigator.of(context).pop();
-                              } else {
-                                onSelectChapter?.call();
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: isActive
-                                      ? (isDark ? Colors.white54 : Colors.black)
-                                      : borderSubtle,
-                                  width: isActive ? 1.5 : 1.0,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: () {
+                                if (!isActive) {
+                                  controller.selectChapter(ch);
+                                }
+                                if (Scaffold.maybeOf(context)?.isDrawerOpen == true ||
+                                    Scaffold.maybeOf(context)?.isEndDrawerOpen == true) {
+                                  Navigator.of(context).pop();
+                                } else {
+                                  onSelectChapter?.call();
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isActive
+                                        ? (isDark ? Colors.white54 : Colors.black)
+                                        : borderSubtle,
+                                    width: isActive ? 1.5 : 1.0,
+                                  ),
                                 ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      // Active dot indicator
-                                      if (isActive)
-                                        Container(
-                                          width: 8,
-                                          height: 8,
-                                          margin: const EdgeInsets.only(right: 8),
-                                          decoration: BoxDecoration(
-                                            color: isDark ? Colors.white : Colors.black,
-                                            shape: BoxShape.circle,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        // Active dot indicator
+                                        if (isActive)
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            margin: const EdgeInsets.only(right: 8),
+                                            decoration: BoxDecoration(
+                                              color: isDark ? Colors.white : Colors.black,
+                                              shape: BoxShape.circle,
+                                            ),
                                           ),
-                                        ),
-                                      Expanded(
-                                        child: Text(
-                                          ch.title,
-                                          style: TextStyle(
-                                            color: textPrimary,
-                                            fontSize: 14,
-                                            fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        _formatDate(ch.lastEdited),
-                                        style: TextStyle(
-                                          color: textSecondary,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    snippet,
-                                    style: TextStyle(
-                                      color: textSecondary,
-                                      fontSize: 12,
-                                      height: 1.35,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: isDark
-                                              ? Colors.white.withValues(alpha: 0.08)
-                                              : Colors.black.withValues(alpha: 0.05),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          '$words palabras',
-                                          style: TextStyle(
-                                            color: textPrimary,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      if (ch.isCompleted)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: const Text(
-                                            'Terminado',
+                                        Expanded(
+                                          child: Text(
+                                            ch.title,
                                             style: TextStyle(
-                                              color: Colors.green,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
+                                              color: textPrimary,
+                                              fontSize: 14,
+                                              fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          _formatDate(ch.lastEdited),
+                                          style: TextStyle(
+                                            color: textSecondary,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                        ),
+                                        ReorderableDragStartListener(
+                                          index: index,
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(left: 6),
+                                            child: Icon(
+                                              Icons.drag_indicator_rounded,
+                                              size: 18,
+                                              color: textSecondary.withValues(alpha: 0.6),
                                             ),
                                           ),
                                         ),
-                                    ],
-                                  ),
-                                ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      snippet,
+                                      style: TextStyle(
+                                        color: textSecondary,
+                                        fontSize: 12,
+                                        height: 1.35,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: isDark
+                                                ? Colors.white.withValues(alpha: 0.08)
+                                                : Colors.black.withValues(alpha: 0.05),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            '$words palabras',
+                                            style: TextStyle(
+                                              color: textPrimary,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        if (ch.isCompleted)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green.withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: const Text(
+                                              'Terminado',
+                                              style: TextStyle(
+                                                color: Colors.green,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),

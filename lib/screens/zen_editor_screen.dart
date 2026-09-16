@@ -6,8 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/theme_controller.dart';
-import '../models/idea_snippet_model.dart';
-import '../models/codex_entry_model.dart';
 import '../widgets/keyboard_accessory_bar.dart';
 import '../widgets/context_drawer_sheet.dart';
 import '../widgets/chapter_history_sheet.dart';
@@ -18,9 +16,14 @@ import '../widgets/writing_sprint_dialog.dart';
 import '../widgets/chapter_metrics_view.dart';
 import '../widgets/revision_sidebar.dart';
 import '../widgets/chapters/new_chapter_modal.dart';
+import '../widgets/editor/zen_typography_sheet.dart';
+import '../widgets/editor/zen_find_replace_bar.dart';
+import '../widgets/editor/zen_selection_note_sheet.dart';
+import '../widgets/editor/zen_speed_dial_fab.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'dashboard_screen.dart';
 import 'plot_mind_map_screen.dart';
+import 'manuscript_reader_screen.dart';
 
 class ZenEditorScreen extends StatefulWidget {
   const ZenEditorScreen({super.key});
@@ -244,84 +247,6 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
     );
   }
 
-  Widget _buildFloatingOptionItem({
-    required IconData icon,
-    required String label,
-    required int delayMs,
-    required bool isDark,
-    required VoidCallback onTap,
-  }) {
-    final bgPill = isDark ? const Color(0xFF222225) : Colors.white;
-    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
-    final borderSubtle = isDark ? const Color(0xFF38383C) : const Color(0xFFE2E0D8);
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Text Label Pill
-          Material(
-            color: Colors.transparent,
-            elevation: 3,
-            shadowColor: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: bgPill,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: borderSubtle, width: 0.9),
-              ),
-              child: Text(
-                label,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.visible,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: textPrimary,
-                  letterSpacing: -0.1,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-
-          // Circular Floating Action Button
-          Material(
-            color: Colors.transparent,
-            elevation: 4,
-            shadowColor: Colors.black.withValues(alpha: isDark ? 0.45 : 0.2),
-            shape: const CircleBorder(),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: bgPill,
-                border: Border.all(color: borderSubtle, width: 0.9),
-              ),
-              child: Icon(
-                icon,
-                size: 20,
-                color: textPrimary,
-              ),
-            ),
-          ),
-          // Align with center of 56px FAB ((56 - 44) / 2 = 6px)
-          const SizedBox(width: 6),
-        ],
-      ),
-    )
-        .animate()
-        .fadeIn(duration: 160.ms, delay: Duration(milliseconds: delayMs))
-        .slideY(begin: 0.15, end: 0, duration: 160.ms, curve: Curves.easeOut);
-  }
-
   void _toggleFindReplace() {
     setState(() {
       _showFindReplace = !_showFindReplace;
@@ -425,240 +350,11 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
   }
 
   void _openTypographySheet(BuildContext context, EditorController controller, bool isDark) {
-    final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
-    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
-    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
-
-    const fontFamilies = ['Lora', 'Merriweather', 'Playfair Display', 'JetBrains Mono'];
-    const lineHeights = [1.4, 1.65, 1.9, 2.2];
-    const columnWidths = [560.0, 720.0, 900.0, double.infinity];
-
-    showModalBottomSheet(
+    ZenTypographySheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: bgCard,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: textSecondary.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Ajustes Tipométricos y de Edición',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: textPrimary),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded, size: 20),
-                        onPressed: () => Navigator.of(ctx).pop(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Modo Máquina de Escribir', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textPrimary)),
-                    subtitle: Text('Mantiene la línea del cursor centrada verticalmente', style: TextStyle(fontSize: 12, color: textSecondary)),
-                    value: controller.isTypewriterMode,
-                    activeTrackColor: isDark ? Colors.white : Colors.black,
-                    onChanged: (val) {
-                      controller.toggleTypewriterMode();
-                      setSheetState(() {});
-                      setState(() {});
-                    },
-                  ),
-                  const Divider(height: 20),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Tamaño de Fuente', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary)),
-                      Text('${controller.fontSize.toStringAsFixed(1)} px', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textSecondary)),
-                    ],
-                  ),
-                  Slider(
-                    value: controller.fontSize,
-                    min: 13.0,
-                    max: 24.0,
-                    divisions: 22,
-                    activeColor: isDark ? Colors.white : Colors.black,
-                    inactiveColor: borderSubtle,
-                    onChanged: (val) {
-                      controller.setFontSize(val);
-                      setSheetState(() {});
-                      setState(() {});
-                    },
-                  ),
-
-                  const SizedBox(height: 8),
-                  Text('Interlineado', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: lineHeights.map((lh) {
-                      final isSelected = (controller.lineHeight - lh).abs() < 0.05;
-                      return ChoiceChip(
-                        label: Text('${lh}x'),
-                        selected: isSelected,
-                        selectedColor: isDark ? Colors.white : Colors.black,
-                        backgroundColor: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-                        labelStyle: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isSelected ? (isDark ? Colors.black : Colors.white) : textSecondary,
-                        ),
-                        onSelected: (_) {
-                          controller.setLineHeight(lh);
-                          setSheetState(() {});
-                          setState(() {});
-                        },
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 14),
-                  Text('Ancho de Columna', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: columnWidths.map((w) {
-                      final isSelected = controller.maxEditorWidth == w;
-                      final label = w == double.infinity ? '100% Pantalla' : '${w.toInt()}px';
-                      return ChoiceChip(
-                        label: Text(label),
-                        selected: isSelected,
-                        selectedColor: isDark ? Colors.white : Colors.black,
-                        backgroundColor: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-                        labelStyle: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isSelected ? (isDark ? Colors.black : Colors.white) : textSecondary,
-                        ),
-                        onSelected: (_) {
-                          controller.setMaxEditorWidth(w);
-                          setSheetState(() {});
-                          setState(() {});
-                        },
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 14),
-                  Text('Familia Tipográfica', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: fontFamilies.map((font) {
-                      final isSelected = controller.selectedFontFamily == font;
-                      return ChoiceChip(
-                        label: Text(font),
-                        selected: isSelected,
-                        selectedColor: isDark ? Colors.white : Colors.black,
-                        backgroundColor: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-                        labelStyle: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isSelected ? (isDark ? Colors.black : Colors.white) : textSecondary,
-                        ),
-                        onSelected: (_) {
-                          controller.setFontFamily(font);
-                          setSheetState(() {});
-                          setState(() {});
-                        },
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 20),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: textPrimary,
-                      side: BorderSide(color: borderSubtle),
-                      minimumSize: const Size(double.infinity, 44),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    ),
-                    icon: const Icon(Icons.call_split_rounded, size: 18),
-                    label: const Text('Dividir capítulo en el cursor actual', style: TextStyle(fontWeight: FontWeight.w700)),
-                    onPressed: () {
-                      Navigator.of(ctx).pop();
-                      _splitChapterAtCursor(context, controller);
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _splitChapterAtCursor(BuildContext context, EditorController controller) {
-    final text = controller.textEditingController.text;
-    final pos = controller.textEditingController.selection.baseOffset;
-    if (pos <= 0 || pos >= text.length) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Coloca el cursor dentro del texto para dividir el capítulo.')),
-      );
-      return;
-    }
-
-    final titleCtrl = TextEditingController(text: '${controller.activeChapter.title} (Parte 2)');
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Dividir Capítulo Aquí'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Se dividirá el texto en la posición del cursor (carácter $pos).'),
-            const SizedBox(height: 14),
-            TextField(
-              controller: titleCtrl,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: 'Título del nuevo capítulo'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white),
-            onPressed: () {
-              final newChapter = controller.splitChapter(controller.activeChapter.id, pos, newChapterTitle: titleCtrl.text.trim());
-              Navigator.of(ctx).pop();
-              if (newChapter != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Capítulo dividido con éxito: "${newChapter.title}" creado.')),
-                );
-              }
-            },
-            child: const Text('Dividir'),
-          ),
-        ],
-      ),
+      controller: controller,
+      isDark: isDark,
+      onSettingsChanged: () => setState(() {}),
     );
   }
 
@@ -675,119 +371,6 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
       default:
         return GoogleFonts.lora(fontSize: fontSize, height: lineHeight, color: color);
     }
-  }
-
-  Widget _buildFindReplaceBar(EditorController controller, bool isDark, Color textPrimary, Color textSecondary, Color borderSubtle, Color bgCard) {
-    final matchCount = _findMatches.length;
-    final currentMatchLabel = matchCount == 0
-        ? 'Sin coincidencias'
-        : '${_currentMatchIndex + 1} de $matchCount';
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderSubtle, width: 1.2),
-        boxShadow: AppTheme.getSoftShadow(isDark),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.search_rounded, size: 18, color: textSecondary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _findController,
-                  focusNode: _findFocusNode,
-                  style: TextStyle(fontSize: 13, color: textPrimary),
-                  decoration: const InputDecoration(
-                    hintText: 'Buscar en el capítulo...',
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 8),
-                    border: InputBorder.none,
-                  ),
-                  onChanged: (val) => _onFindChanged(val, controller),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  currentMatchLabel,
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: textSecondary),
-                ),
-              ),
-              const SizedBox(width: 4),
-              IconButton(
-                icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 20),
-                visualDensity: VisualDensity.compact,
-                tooltip: 'Coincidencia anterior',
-                color: textPrimary,
-                onPressed: () => _prevMatch(controller),
-              ),
-              IconButton(
-                icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
-                visualDensity: VisualDensity.compact,
-                tooltip: 'Siguiente coincidencia',
-                color: textPrimary,
-                onPressed: () => _nextMatch(controller),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close_rounded, size: 18),
-                visualDensity: VisualDensity.compact,
-                tooltip: 'Cerrar buscador (Esc)',
-                color: textSecondary,
-                onPressed: _toggleFindReplace,
-              ),
-            ],
-          ),
-          const Divider(height: 8),
-          Row(
-            children: [
-              Icon(Icons.find_replace_rounded, size: 18, color: textSecondary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _replaceController,
-                  style: TextStyle(fontSize: 13, color: textPrimary),
-                  decoration: const InputDecoration(
-                    hintText: 'Reemplazar con...',
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 8),
-                    border: InputBorder.none,
-                  ),
-                ),
-              ),
-              TextButton(
-                style: TextButton.styleFrom(
-                  foregroundColor: textPrimary,
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                ),
-                onPressed: () => _replaceCurrent(controller),
-                child: const Text('Reemplazar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-              ),
-              TextButton(
-                style: TextButton.styleFrom(
-                  foregroundColor: textPrimary,
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                ),
-                onPressed: () => _replaceAll(controller),
-                child: const Text('Todo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ).animate().fadeIn(duration: 150.ms);
   }
 
   void _annotateSelection(BuildContext context, EditorController controller, bool isDark) {
@@ -807,196 +390,13 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
     final selectedText = text.substring(selection.start, selection.end).trim();
     if (selectedText.isEmpty) return;
 
-    showModalBottomSheet(
+    ZenSelectionNoteSheet.show(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final bgCard = isDark ? const Color(0xFF1E1E22) : Colors.white;
-        final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
-        final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: bgCard,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Anotar Selección',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPrimary),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '«$selectedText»',
-                    style: TextStyle(
-                      fontStyle: FontStyle.italic,
-                      fontSize: 13,
-                      color: textSecondary,
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.lightbulb_outline_rounded),
-                  title: Text('Guardar como Idea / Nota', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600)),
-                  subtitle: Text('Añade este fragmento al banco de ideas del proyecto', style: TextStyle(color: textSecondary, fontSize: 12)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    controller.addIdea(IdeaSnippetModel(
-                      id: 'idea_${DateTime.now().millisecondsSinceEpoch}',
-                      title: selectedText.length > 30 ? '${selectedText.substring(0, 30)}...' : selectedText,
-                      content: selectedText,
-                      category: IdeaCategory.general,
-                      colorHex: 0xFF18181B,
-                      createdAt: DateTime.now(),
-                      tags: ['Idea', 'Nota'],
-                    ));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Guardado en Ideas con éxito.'), behavior: SnackBarBehavior.floating),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.auto_stories_outlined),
-                  title: Text('Guardar en Códice del Mundo (Lore)', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600)),
-                  subtitle: Text('Registra este concepto en la enciclopedia de la historia', style: TextStyle(color: textSecondary, fontSize: 12)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _showAddCodexDialog(context, controller, isDark, selectedText);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.comment_outlined),
-                  title: Text('Insertar como Nota de Autor', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600)),
-                  subtitle: Text('Envuelve el texto entre marcas Markdown <!-- [Nota]: ... -->', style: TextStyle(color: textSecondary, fontSize: 12)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    final wrapped = '<!-- [Nota]: $selectedText -->';
-                    final newText = text.replaceRange(selection.start, selection.end, wrapped);
-                    controller.textEditingController.value = TextEditingValue(
-                      text: newText,
-                      selection: TextSelection.collapsed(offset: selection.start + wrapped.length),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showAddCodexDialog(BuildContext context, EditorController controller, bool isDark, String initialContent) {
-    final titleCtrl = TextEditingController(
-      text: initialContent.length > 30 ? '${initialContent.substring(0, 30)}...' : initialContent,
-    );
-    String selectedCategory = 'Lore';
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDlgState) => AlertDialog(
-          backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
-          title: Text(
-            'Nueva Entrada del Códice',
-            style: TextStyle(
-              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleCtrl,
-                autofocus: true,
-                style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
-                decoration: InputDecoration(
-                  labelText: 'Título del concepto / entrada',
-                  labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                ),
-              ),
-              const SizedBox(height: 14),
-              DropdownButtonFormField<String>(
-                initialValue: selectedCategory,
-                dropdownColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
-                style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
-                decoration: InputDecoration(
-                  labelText: 'Categoría',
-                  labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-                ),
-                items: ['Lore', 'Ubicaciones', 'Objetos', 'Magia / Leyes', 'Facciones']
-                    .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
-                    .toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    setDlgState(() => selectedCategory = val);
-                  }
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text('Cancelar', style: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDark ? Colors.white : Colors.black,
-                foregroundColor: isDark ? Colors.black : Colors.white,
-              ),
-              onPressed: () {
-                final title = titleCtrl.text.trim();
-                if (title.isNotEmpty) {
-                  CodexType codexType = CodexType.lore;
-                  if (selectedCategory == 'Ubicaciones') codexType = CodexType.location;
-                  if (selectedCategory == 'Objetos') codexType = CodexType.artifact;
-
-                  controller.addCodexEntry(CodexEntryModel(
-                    id: 'codex_${DateTime.now().millisecondsSinceEpoch}',
-                    bookId: controller.activeBook.id,
-                    name: title,
-                    type: codexType,
-                    role: selectedCategory,
-                    description: initialContent,
-                    traits: [selectedCategory],
-                    secrets: '',
-                    avatarEmoji: codexType == CodexType.location
-                        ? '🏰'
-                        : (codexType == CodexType.artifact ? '🗝️' : '📜'),
-                    createdAt: DateTime.now(),
-                  ));
-                  Navigator.of(ctx).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Entrada añadida al Códice con éxito.'), behavior: SnackBarBehavior.floating),
-                  );
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      ),
+      controller: controller,
+      isDark: isDark,
+      selectedText: selectedText,
+      selection: selection,
+      fullText: text,
     );
   }
 
@@ -1069,6 +469,15 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
             curve: Curves.easeInOut,
           );
         }
+      },
+      onContinuousReader: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ManuscriptReaderScreen(
+              initialChapterIndex: controller.activeChapterIndex,
+            ),
+          ),
+        );
       },
       onGoToDashboard: () {
         controller.saveCurrentSession();
@@ -1146,7 +555,6 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
     final isZen = themeController.isZenMode;
 
     final bgPrimary = isDark ? AppTheme.darkBgPrimary : AppTheme.lightBgPrimary;
-    final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
@@ -1377,6 +785,21 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                      },
                                    ),
 
+                                   // Manuscript Reader Mode Button
+                                   IconButton(
+                                     icon: const Icon(Icons.auto_stories_outlined, size: 21),
+                                     tooltip: 'Lector del Manuscrito Completo',
+                                     onPressed: () {
+                                       Navigator.of(context).push(
+                                         MaterialPageRoute(
+                                           builder: (_) => ManuscriptReaderScreen(
+                                             initialChapterIndex: controller.activeChapterIndex,
+                                           ),
+                                         ),
+                                       );
+                                     },
+                                   ),
+
                                    // [ ⋮ ] 2-Column Options Sheet Menu Button
                                    IconButton(
                                      icon: const Icon(Icons.more_vert_rounded, size: 22),
@@ -1399,7 +822,21 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
 
                     // Floating Find & Replace Bar
                     if (_showFindReplace && !isZen)
-                      _buildFindReplaceBar(controller, isDark, textPrimary, textSecondary, borderSubtle, bgCard),
+                      ZenFindReplaceBar(
+                        controller: controller,
+                        isDark: isDark,
+                        findController: _findController,
+                        replaceController: _replaceController,
+                        findFocusNode: _findFocusNode,
+                        findMatches: _findMatches,
+                        currentMatchIndex: _currentMatchIndex,
+                        onFindChanged: (val) => _onFindChanged(val, controller),
+                        onPrevMatch: () => _prevMatch(controller),
+                        onNextMatch: () => _nextMatch(controller),
+                        onClose: _toggleFindReplace,
+                        onReplaceCurrent: () => _replaceCurrent(controller),
+                        onReplaceAll: () => _replaceAll(controller),
+                      ),
 
                     // Zen Canvas Paper Text Area
                     Expanded(
@@ -1580,91 +1017,32 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                 Positioned(
                   bottom: 24,
                   right: 20,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (_isFabExpanded) ...[
-                        // Option 4: Exportar (Top-most)
-                        _buildFloatingOptionItem(
-                          icon: Icons.file_download_outlined,
-                          label: 'Exportar',
-                          delayMs: 120,
-                          isDark: isDark,
-                          onTap: () {
-                            setState(() => _isFabExpanded = false);
-                            _openExportDialog(context, isDark);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Option 3: Mapa Mental
-                        _buildFloatingOptionItem(
-                          icon: Icons.hub_outlined,
-                          label: 'Mapa Mental',
-                          delayMs: 80,
-                          isDark: isDark,
-                          onTap: () {
-                            setState(() => _isFabExpanded = false);
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const PlotMindMapScreen()),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Option 2: Nuevo Libro
-                        _buildFloatingOptionItem(
-                          icon: Icons.auto_stories_outlined,
-                          label: 'Nuevo Libro',
-                          delayMs: 40,
-                          isDark: isDark,
-                          onTap: () {
-                            setState(() => _isFabExpanded = false);
-                            _showNewBookDialog(context, controller, isDark);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Option 1: Nuevo Capítulo (Bottom-most above FAB)
-                        _buildFloatingOptionItem(
-                          icon: Icons.post_add_rounded,
-                          label: 'Nuevo Capítulo',
-                          delayMs: 0,
-                          isDark: isDark,
-                          onTap: () {
-                            setState(() => _isFabExpanded = false);
-                            _showNewChapterDialog(context, controller, isDark);
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // Main FAB Toggle (+ / X)
-                      FloatingActionButton(
-                        heroTag: 'editor_fab_options',
-                        backgroundColor: _isFabExpanded
-                            ? (isDark ? const Color(0xFF2C2C2E) : const Color(0xFF1E1E20))
-                            : accentColor,
-                        foregroundColor: _isFabExpanded
-                            ? Colors.white
-                            : (isDark ? Colors.black : Colors.white),
-                        elevation: 5,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                        tooltip: _isFabExpanded ? 'Cerrar' : 'Acciones Rápidas (+)',
-                        onPressed: () {
-                          setState(() {
-                            _isFabExpanded = !_isFabExpanded;
-                          });
-                        },
-                        child: AnimatedRotation(
-                          turns: _isFabExpanded ? 0.125 : 0.0,
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeOut,
-                          child: const Icon(Icons.add_rounded, size: 28),
-                        ),
-                      ),
-                    ],
+                  child: ZenSpeedDialFab(
+                    isExpanded: _isFabExpanded,
+                    isDark: isDark,
+                    onToggle: () {
+                      setState(() {
+                        _isFabExpanded = !_isFabExpanded;
+                      });
+                    },
+                    onNewChapter: () {
+                      setState(() => _isFabExpanded = false);
+                      _showNewChapterDialog(context, controller, isDark);
+                    },
+                    onNewBook: () {
+                      setState(() => _isFabExpanded = false);
+                      _showNewBookDialog(context, controller, isDark);
+                    },
+                    onMindMap: () {
+                      setState(() => _isFabExpanded = false);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const PlotMindMapScreen()),
+                      );
+                    },
+                    onExport: () {
+                      setState(() => _isFabExpanded = false);
+                      _openExportDialog(context, isDark);
+                    },
                   ),
                 ),
               ],

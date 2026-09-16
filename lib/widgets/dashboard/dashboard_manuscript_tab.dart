@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../controllers/editor_controller.dart';
 import '../../screens/plot_mind_map_screen.dart';
 import '../../screens/zen_editor_screen.dart';
+import '../../screens/manuscript_reader_screen.dart';
 import '../../theme/app_theme.dart';
 import '../chapters/new_chapter_modal.dart';
 
@@ -255,14 +256,35 @@ class DashboardManuscriptTab extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Lista de Capítulos del Manuscrito Activo
-            Text(
-              'Capítulos del Manuscrito',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: textPrimary,
-                letterSpacing: -0.3,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Capítulos del Manuscrito',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: textPrimary,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: textPrimary,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  ),
+                  icon: const Icon(Icons.auto_stories_outlined, size: 16),
+                  label: const Text(
+                    'Modo Lectura',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ManuscriptReaderScreen()),
+                    );
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             ...controller.activeBook.chapters.map((chapter) {

@@ -29,6 +29,8 @@ class PersistenceService {
   static const String _keyTypewriterMode = 'ink_wright_typewriter_mode';
   static const String _keySprintHistory = 'ink_wright_sprint_history';
   static const String _keyRelationships = 'ink_wright_relationships';
+  static const String _keyAutoBackup = 'ink_wright_auto_backup_json';
+  static const String _keyAutoBackupTimestamp = 'ink_wright_auto_backup_timestamp';
 
   Timer? _saveDebounceTimer;
   Future<void> Function()? _pendingSaveAction;
@@ -406,6 +408,36 @@ class PersistenceService {
         'writerStats': stats,
         'preferences': prefs,
       };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> saveSilentAutoBackup(String backupJson) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyAutoBackup, backupJson);
+      await prefs.setString(_keyAutoBackupTimestamp, DateTime.now().toIso8601String());
+    } catch (e) {
+      debugPrint('Error saving auto backup: $e');
+    }
+  }
+
+  Future<String?> loadSilentAutoBackup() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_keyAutoBackup);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<DateTime?> getSilentAutoBackupTimestamp() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final str = prefs.getString(_keyAutoBackupTimestamp);
+      if (str != null) return DateTime.tryParse(str);
+      return null;
     } catch (e) {
       return null;
     }
