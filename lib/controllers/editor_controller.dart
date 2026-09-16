@@ -768,7 +768,7 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
     notifyListeners();
   }
 
-  void addNewChapter(String title) {
+  void addNewChapter(String title, {String povCharacter = '', String notes = ''}) {
     final newChapterNum = _activeBook.chapters.length + 1;
     final newChapter = ChapterModel(
       id: 'ch_${DateTime.now().millisecondsSinceEpoch}',
@@ -777,8 +777,8 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       title: title.trim().isEmpty ? 'Capítulo $newChapterNum' : title.trim(),
       content: '',
       lastEdited: DateTime.now(),
-      notes: '',
-      povCharacter: '',
+      notes: notes.trim(),
+      povCharacter: povCharacter.trim(),
     );
 
     final updatedChapters = List<ChapterModel>.from(_activeBook.chapters)..add(newChapter);

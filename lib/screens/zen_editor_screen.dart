@@ -17,6 +17,7 @@ import '../widgets/export_manuscript_dialog.dart';
 import '../widgets/writing_sprint_dialog.dart';
 import '../widgets/chapter_metrics_view.dart';
 import '../widgets/revision_sidebar.dart';
+import '../widgets/chapters/new_chapter_modal.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'dashboard_screen.dart';
 import 'plot_mind_map_screen.dart';
@@ -144,55 +145,16 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
   }
 
   void _showNewChapterDialog(BuildContext context, EditorController controller, bool isDark) {
-    final newNum = controller.activeBook.chapters.length + 1;
-    final titleCtrl = TextEditingController(text: 'Capítulo $newNum');
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Nuevo Capítulo',
-          style: TextStyle(
-            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: TextField(
-          controller: titleCtrl,
-          autofocus: true,
-          style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
-          decoration: InputDecoration(
-            labelText: 'Título del capítulo',
-            labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancelar', style: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDark ? Colors.white : Colors.black,
-              foregroundColor: isDark ? Colors.black : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              final t = titleCtrl.text.trim();
-              controller.addNewChapter(t.isEmpty ? 'Capítulo $newNum' : t);
-              _syncTitleController(controller);
-              Navigator.of(ctx).pop();
-              if (_scrollController.hasClients) {
-                _scrollController.jumpTo(0);
-              }
-              controller.focusNode.requestFocus();
-            },
-            child: const Text('Crear Capítulo', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    NewChapterModal.show(
+      context,
+      isDark: isDark,
+      onChapterCreated: () {
+        _syncTitleController(controller);
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(0);
+        }
+        controller.focusNode.requestFocus();
+      },
     );
   }
 

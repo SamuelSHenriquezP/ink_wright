@@ -6,6 +6,7 @@ import '../models/book_model.dart';
 import '../controllers/editor_controller.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'import_manuscript_dialog.dart';
+import 'chapters/new_chapter_modal.dart';
 
 class ChapterDrawer extends StatelessWidget {
   final EditorController controller;
@@ -35,60 +36,17 @@ class ChapterDrawer extends StatelessWidget {
   }
 
   void _showNewChapterDialog(BuildContext context) {
-    final titleCtrl = TextEditingController(
-      text: 'Capítulo ${controller.activeBook.chapters.length + 1}',
-    );
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
-        title: Text(
-          'Nuevo Capítulo',
-          style: TextStyle(
-            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: TextField(
-          controller: titleCtrl,
-          autofocus: true,
-          style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
-          decoration: InputDecoration(
-            labelText: 'Título del capítulo',
-            labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Cancelar',
-              style: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDark ? Colors.white : Colors.black,
-              foregroundColor: isDark ? Colors.black : Colors.white,
-            ),
-            onPressed: () {
-              final title = titleCtrl.text.trim();
-              if (title.isNotEmpty) {
-                controller.addNewChapter(title);
-              }
-              Navigator.of(ctx).pop();
-              if (Scaffold.maybeOf(context)?.isDrawerOpen == true ||
-                  Scaffold.maybeOf(context)?.isEndDrawerOpen == true) {
-                Navigator.of(context).pop();
-              } else {
-                onSelectChapter?.call();
-              }
-            },
-            child: const Text('Crear'),
-          ),
-        ],
-      ),
+    NewChapterModal.show(
+      context,
+      isDark: isDark,
+      onChapterCreated: () {
+        if (Scaffold.maybeOf(context)?.isDrawerOpen == true ||
+            Scaffold.maybeOf(context)?.isEndDrawerOpen == true) {
+          Navigator.of(context).pop();
+        } else {
+          onSelectChapter?.call();
+        }
+      },
     );
   }
 
