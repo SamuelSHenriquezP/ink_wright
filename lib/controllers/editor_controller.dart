@@ -990,6 +990,46 @@ class EditorController extends ChangeNotifier {
     return true;
   }
 
+  /// Replaces all occurrences of [query] with [replacement] across ALL chapters of the active book.
+  /// Returns the total number of occurrences replaced.
+  int replaceAllInBook(String query, String replacement, {bool caseSensitive = false}) {
+    if (query.isEmpty) return 0;
+    flushPendingSave();
+
+    final currentText = textEditingController.text;
+    final regex = RegExp(RegExp.escape(query), caseSensitive: caseSensitive);
+
+    int totalReplaced = 0;
+    final updatedChapters = _activeBook.chapters.map((ch) {
+      final baseContent = ch.id == _activeChapter.id ? currentText : ch.content;
+      final matchCount = regex.allMatches(baseContent).length;
+      if (matchCount > 0) {
+        totalReplaced += matchCount;
+        final newContent = baseContent.replaceAll(regex, replacement);
+        return ch.copyWith(content: newContent, lastEdited: DateTime.now());
+      }
+      return ch;
+    }).toList();
+
+    if (totalReplaced > 0) {
+      _activeBook = _activeBook.copyWith(chapters: updatedChapters);
+      final activeIdx = updatedChapters.indexWhere((c) => c.id == _activeChapter.id);
+      if (activeIdx != -1) {
+        _activeChapter = updatedChapters[activeIdx];
+        textEditingController.removeListener(_onTextChanged);
+        _undoStack.add(textEditingController.text);
+        textEditingController.text = _activeChapter.content;
+        _lastRecordedText = _activeChapter.content;
+        textEditingController.addListener(_onTextChanged);
+      }
+      _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+      _saveCurrentData(debounced: false);
+      notifyListeners();
+    }
+
+    return totalReplaced;
+  }
+
   bool deleteBook(String bookId) {
     if (_allBooks.length <= 1) {
       return false;

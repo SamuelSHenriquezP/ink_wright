@@ -47,6 +47,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
 
   // Find & Replace state
   bool _showFindReplace = false;
+  bool _isCaseSensitive = false;
   final TextEditingController _findController = TextEditingController();
   final TextEditingController _replaceController = TextEditingController();
   final FocusNode _findFocusNode = FocusNode();
@@ -327,15 +328,26 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
     }
 
     final text = controller.textEditingController.text;
-    final lowerText = text.toLowerCase();
-    final lowerQuery = query.toLowerCase();
     final matches = <int>[];
-    int start = 0;
-    while (true) {
-      final index = lowerText.indexOf(lowerQuery, start);
-      if (index == -1) break;
-      matches.add(index);
-      start = index + lowerQuery.length;
+
+    if (_isCaseSensitive) {
+      int start = 0;
+      while (true) {
+        final index = text.indexOf(query, start);
+        if (index == -1) break;
+        matches.add(index);
+        start = index + query.length;
+      }
+    } else {
+      final lowerText = text.toLowerCase();
+      final lowerQuery = query.toLowerCase();
+      int start = 0;
+      while (true) {
+        final index = lowerText.indexOf(lowerQuery, start);
+        if (index == -1) break;
+        matches.add(index);
+        start = index + lowerQuery.length;
+      }
     }
 
     setState(() {
@@ -348,6 +360,13 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
     if (matches.isNotEmpty) {
       _highlightCurrentMatch(controller);
     }
+  }
+
+  void _toggleCaseSensitive(EditorController controller) {
+    setState(() {
+      _isCaseSensitive = !_isCaseSensitive;
+    });
+    _onFindChanged(_findController.text, controller);
   }
 
   void _highlightCurrentMatch(EditorController controller) {
@@ -400,9 +419,38 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
     final query = _findController.text;
     final replacement = _replaceController.text;
     final text = controller.textEditingController.text;
-    final newText = text.replaceAll(RegExp(RegExp.escape(query), caseSensitive: false), replacement);
+    final newText = text.replaceAll(
+      RegExp(RegExp.escape(query), caseSensitive: _isCaseSensitive),
+      replacement,
+    );
     controller.textEditingController.text = newText;
     _onFindChanged(query, controller);
+  }
+
+  void _replaceAllInBook(EditorController controller) {
+    final query = _findController.text.trim();
+    final replacement = _replaceController.text;
+    if (query.isEmpty) return;
+
+    final count = controller.replaceAllInBook(
+      query,
+      replacement,
+      caseSensitive: _isCaseSensitive,
+    );
+
+    _onFindChanged(query, controller);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          count > 0
+              ? 'Se reemplazaron $count coincidencias de "$query" en todo el libro.'
+              : 'No se encontraron coincidencias de "$query" en el libro.',
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   void _openTypographySheet(BuildContext context, EditorController controller, bool isDark) {
@@ -851,6 +899,22 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                      },
                                    ),
 
+                                   // Find & Replace Toggle Button
+                                   IconButton(
+                                     visualDensity: VisualDensity.compact,
+                                     padding: EdgeInsets.zero,
+                                     constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                                     icon: Icon(
+                                       _showFindReplace ? Icons.find_replace_rounded : Icons.search_rounded,
+                                       size: 20,
+                                       color: _showFindReplace
+                                           ? (isDark ? Colors.white : Colors.black)
+                                           : textSecondary,
+                                     ),
+                                     tooltip: 'Buscar y Reemplazar (Ctrl+F)',
+                                     onPressed: _toggleFindReplace,
+                                   ),
+
                                    // Manuscript Reader Mode Button
                                    IconButton(
                                      visualDensity: VisualDensity.compact,
@@ -903,12 +967,15 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                         findFocusNode: _findFocusNode,
                         findMatches: _findMatches,
                         currentMatchIndex: _currentMatchIndex,
+                        isCaseSensitive: _isCaseSensitive,
                         onFindChanged: (val) => _onFindChanged(val, controller),
                         onPrevMatch: () => _prevMatch(controller),
                         onNextMatch: () => _nextMatch(controller),
                         onClose: _toggleFindReplace,
                         onReplaceCurrent: () => _replaceCurrent(controller),
                         onReplaceAll: () => _replaceAll(controller),
+                        onToggleCaseSensitive: () => _toggleCaseSensitive(controller),
+                        onReplaceAllInBook: () => _replaceAllInBook(controller),
                       ),
 
                     // Zen Canvas Paper Text Area
@@ -989,6 +1056,36 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                                 const SizedBox(width: 5),
                                                 Text(
                                                   'Inspector',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: textPrimary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        InkWell(
+                                          onTap: () => ChapterHistorySheet.show(context, controller.activeChapter, isDark),
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.07),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: isDark ? Colors.white24 : Colors.black12,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.history_rounded, size: 13, color: textPrimary),
+                                                const SizedBox(width: 5),
+                                                Text(
+                                                  'Versiones (${controller.activeChapter.snapshots.length})',
                                                   style: TextStyle(
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w700,
@@ -1112,6 +1209,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                     onUndo: () => controller.undo(),
                     onRedo: () => controller.redo(),
                     onAnnotateSelection: () => _annotateSelection(context, controller, isDark),
+                    onFindReplace: _toggleFindReplace,
                   ),
                 ),
 

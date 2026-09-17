@@ -11,6 +11,7 @@ class KeyboardAccessoryBar extends StatelessWidget {
   final bool canUndo;
   final bool canRedo;
   final VoidCallback? onAnnotateSelection;
+  final VoidCallback? onFindReplace;
   final VoidCallback? onOpenOptionsSheet;
   final VoidCallback? onCloseKeyboard;
 
@@ -29,6 +30,7 @@ class KeyboardAccessoryBar extends StatelessWidget {
     this.canUndo = false,
     this.canRedo = false,
     this.onAnnotateSelection,
+    this.onFindReplace,
     this.onOpenOptionsSheet,
     this.onCloseKeyboard,
     this.onToggleZenMode,
@@ -227,6 +229,14 @@ class KeyboardAccessoryBar extends StatelessWidget {
                       icon: Icons.bookmark_add_outlined,
                       tooltip: 'Anotar en Ideas / Códice',
                       onTap: onAnnotateSelection!,
+                      textPrimary: textPrimary,
+                      keyBg: keyBg,
+                    ),
+                  if (onFindReplace != null)
+                    _buildIconKey(
+                      icon: Icons.find_replace_rounded,
+                      tooltip: 'Buscar y Reemplazar',
+                      onTap: onFindReplace!,
                       textPrimary: textPrimary,
                       keyBg: keyBg,
                     ),

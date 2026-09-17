@@ -358,7 +358,7 @@ class DashboardManuscriptTab extends StatelessWidget {
                       ),
                     ),
                     subtitle: Text(
-                      '${chapter.wordCount} palabras • ${chapter.readingTimeMinutes} min lectura',
+                      '${chapter.wordCount} palabras • ${chapter.readingTimeMinutes} min lectura${chapter.snapshots.isNotEmpty ? ' • ${chapter.snapshots.length} vers.' : ''}',
                       style: TextStyle(fontSize: 12, color: textSecondary),
                     ),
                     trailing: Icon(Icons.arrow_forward_ios_rounded, size: 13, color: textSecondary),
