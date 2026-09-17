@@ -640,7 +640,7 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void createNewBook(String title, String subtitle, int targetWordCount, {String genre = 'Ficción'}) {
+  void createNewBook(String title, String subtitle, int targetWordCount, {String genre = 'Ficción', String coverEmoji = '📖'}) {
     final newBook = BookModel(
       id: 'b_${DateTime.now().millisecondsSinceEpoch}',
       title: title,
@@ -650,7 +650,7 @@ class EditorController extends ChangeNotifier {
       status: BookStatus.outlining,
       chapters: [],
       lastEdited: DateTime.now(),
-      coverEmoji: '📖',
+      coverEmoji: coverEmoji,
       coverColorHex: 0xFF18181B,
       tags: [genre],
       synopsis: subtitle,

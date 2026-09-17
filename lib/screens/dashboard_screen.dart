@@ -430,36 +430,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
 
-      // FAB adaptativo según vista (Biblioteca o Estudio del Manuscrito)
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: isDark ? Colors.white : Colors.black,
-        foregroundColor: isDark ? Colors.black : Colors.white,
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        icon: Icon(!_isInsideBookView ? Icons.add_rounded : Icons.edit_note_rounded),
-        label: Text(
-          !_isInsideBookView ? 'Nuevo Libro' : 'Escribir',
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-        ),
-        onPressed: () {
-          if (!_isInsideBookView) {
-            DashboardBookModals.showCreateBookDialog(
-              context,
-              controller,
-              onBookCreated: () {
-                setState(() {
-                  _isInsideBookView = true;
-                  _selectedFilterIndex = 0;
-                });
+      // FAB solo en vista de Estudio del Manuscrito (en la Biblioteca se usa la tarjeta cuadrada '+ Nuevo Libro')
+      floatingActionButton: !_isInsideBookView
+          ? null
+          : FloatingActionButton.extended(
+              backgroundColor: isDark ? Colors.white : Colors.black,
+              foregroundColor: isDark ? Colors.black : Colors.white,
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              icon: const Icon(Icons.edit_note_rounded),
+              label: const Text(
+                'Escribir',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
+                );
               },
-            );
-          } else {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
-            );
-          }
-        },
-      ),
+            ),
     );
   }
 }
