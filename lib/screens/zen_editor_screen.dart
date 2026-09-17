@@ -20,10 +20,12 @@ import '../widgets/editor/zen_typography_sheet.dart';
 import '../widgets/editor/zen_find_replace_bar.dart';
 import '../widgets/editor/zen_selection_note_sheet.dart';
 import '../widgets/editor/zen_speed_dial_fab.dart';
+import '../widgets/editor/prose_inspector_sheet.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'dashboard_screen.dart';
 import 'plot_mind_map_screen.dart';
 import 'manuscript_reader_screen.dart';
+import 'corkboard_screen.dart';
 
 class ZenEditorScreen extends StatefulWidget {
   const ZenEditorScreen({super.key});
@@ -103,20 +105,71 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
     final selection = controller.textEditingController.selection;
     if (!selection.isValid) return;
 
-    final text = controller.textEditingController.text;
-    final cursorOffset = selection.baseOffset.clamp(0, text.length);
-    final lineCount = '\n'.allMatches(text.substring(0, cursorOffset)).length;
-    final lineHeightPx = controller.fontSize * controller.lineHeight;
-    final cursorY = lineCount * lineHeightPx;
+    _scrollOffsetToCursor(selection.baseOffset, controller, animated: true);
+  }
 
+  void _scrollOffsetToCursor(int charOffset, EditorController controller, {bool animated = true}) {
+    if (!_scrollController.hasClients) return;
+    final text = controller.textEditingController.text;
+    final clamped = charOffset.clamp(0, text.length);
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxW = controller.maxEditorWidth == double.infinity ? screenWidth : controller.maxEditorWidth;
+    final textWidth = (screenWidth - 48).clamp(100.0, maxW - 48);
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: _getEditorFontTextStyle(
+          controller.selectedFontFamily,
+          controller.fontSize,
+          controller.lineHeight,
+          controller.isDarkMode,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout(maxWidth: textWidth);
+    final caretOffset = textPainter.getOffsetForCaret(
+      TextPosition(offset: clamped),
+      Rect.zero,
+    );
+    textPainter.dispose();
+
+    // 88.0 accounts for chapter header ("CAPÍTULO X", word count, title input, margins)
+    final cursorY = caretOffset.dy + 88.0;
     final viewportHeight = _scrollController.position.viewportDimension;
-    final targetScroll = (cursorY - (viewportHeight / 2) + lineHeightPx)
+    final lineHeightPx = controller.fontSize * controller.lineHeight;
+    final targetScroll = (cursorY - (viewportHeight / 2) + (lineHeightPx / 2))
         .clamp(0.0, _scrollController.position.maxScrollExtent);
 
-    _scrollController.animateTo(
-      targetScroll,
-      duration: const Duration(milliseconds: 60),
-      curve: Curves.easeOut,
+    if (animated) {
+      _scrollController.animateTo(
+        targetScroll,
+        duration: const Duration(milliseconds: 90),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _scrollController.jumpTo(targetScroll);
+    }
+  }
+
+  void _openProseInspector(BuildContext context, EditorController controller, bool isDark) {
+    ProseInspectorSheet.show(
+      context: context,
+      controller: controller,
+      isDark: isDark,
+      onJumpToIssue: (start, end) {
+        final text = controller.textEditingController.text;
+        final safeStart = start.clamp(0, text.length);
+        final safeEnd = end.clamp(0, text.length);
+        controller.textEditingController.selection = TextSelection(
+          baseOffset: safeStart,
+          extentOffset: safeEnd,
+        );
+        controller.focusNode.requestFocus();
+        _scrollOffsetToCursor(safeStart, controller, animated: true);
+      },
     );
   }
 
@@ -479,6 +532,14 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
           ),
         );
       },
+      onProseInspector: () {
+        _openProseInspector(context, controller, isDark);
+      },
+      onCorkboard: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const CorkboardScreen()),
+        );
+      },
       onGoToDashboard: () {
         controller.saveCurrentSession();
         if (Navigator.of(context).canPop()) {
@@ -785,6 +846,13 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                      },
                                    ),
 
+                                   // Prose & Style Inspector (Hemingway) Button
+                                   IconButton(
+                                     icon: const Icon(Icons.auto_awesome_rounded, size: 21),
+                                     tooltip: 'Inspector de Prosa y Estilo',
+                                     onPressed: () => _openProseInspector(context, controller, isDark),
+                                   ),
+
                                    // Manuscript Reader Mode Button
                                    IconButton(
                                      icon: const Icon(Icons.auto_stories_outlined, size: 21),
@@ -856,7 +924,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                               20,
                               24,
                               controller.isTypewriterMode
-                                  ? MediaQuery.of(context).size.height * 0.4
+                                  ? MediaQuery.of(context).size.height * 0.55
                                   : 140,
                             ),
                             child: Column(

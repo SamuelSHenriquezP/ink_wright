@@ -595,6 +595,35 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateChapterDetails(
+    String chapterId, {
+    String? title,
+    String? notes,
+    String? povCharacter,
+    bool? isCompleted,
+  }) {
+    final updatedChapters = _activeBook.chapters.map((c) {
+      if (c.id == chapterId) {
+        return c.copyWith(
+          title: title ?? c.title,
+          notes: notes ?? c.notes,
+          povCharacter: povCharacter ?? c.povCharacter,
+          isCompleted: isCompleted ?? c.isCompleted,
+          lastEdited: DateTime.now(),
+        );
+      }
+      return c;
+    }).toList();
+
+    _activeBook = _activeBook.copyWith(chapters: updatedChapters);
+    if (_activeChapter.id == chapterId) {
+      _activeChapter = updatedChapters.firstWhere((c) => c.id == chapterId);
+    }
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
   void reorderChapters(int oldIndex, int newIndex) {
     if (oldIndex < newIndex) {
       newIndex -= 1;

@@ -7,6 +7,7 @@ import '../controllers/editor_controller.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'import_manuscript_dialog.dart';
 import 'chapters/new_chapter_modal.dart';
+import '../screens/corkboard_screen.dart';
 
 class ChapterDrawer extends StatelessWidget {
   final EditorController controller;
@@ -145,6 +146,32 @@ class ChapterDrawer extends StatelessWidget {
                               style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                             ),
                             onPressed: () => _showNewChapterDialog(context),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: 'Tablón de Fichas (Corkboard)',
+                        child: InkWell(
+                          onTap: () {
+                            if (Scaffold.maybeOf(context)?.isDrawerOpen == true ||
+                                Scaffold.maybeOf(context)?.isEndDrawerOpen == true) {
+                              Navigator.of(context).pop();
+                            }
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const CorkboardScreen()),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: borderSubtle),
+                            ),
+                            child: Icon(Icons.dashboard_customize_outlined, size: 19, color: textPrimary),
                           ),
                         ),
                       ),

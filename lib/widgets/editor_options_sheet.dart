@@ -19,6 +19,8 @@ class EditorOptionsMenuSheet extends StatelessWidget {
   final VoidCallback onStats;
   final VoidCallback onGoToDashboard;
   final VoidCallback? onContinuousReader;
+  final VoidCallback? onProseInspector;
+  final VoidCallback? onCorkboard;
   final VoidCallback? onNextChapter;
   final VoidCallback? onPreviousChapter;
   final VoidCallback? onNewChapter;
@@ -45,6 +47,8 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     required this.onStats,
     required this.onGoToDashboard,
     this.onContinuousReader,
+    this.onProseInspector,
+    this.onCorkboard,
     this.onNextChapter,
     this.onPreviousChapter,
     this.onNewChapter,
@@ -72,6 +76,8 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     required VoidCallback onStats,
     required VoidCallback onGoToDashboard,
     VoidCallback? onContinuousReader,
+    VoidCallback? onProseInspector,
+    VoidCallback? onCorkboard,
     VoidCallback? onNextChapter,
     VoidCallback? onPreviousChapter,
     VoidCallback? onNewChapter,
@@ -101,6 +107,8 @@ class EditorOptionsMenuSheet extends StatelessWidget {
         onStats: onStats,
         onGoToDashboard: onGoToDashboard,
         onContinuousReader: onContinuousReader,
+        onProseInspector: onProseInspector,
+        onCorkboard: onCorkboard,
         onNextChapter: onNextChapter,
         onPreviousChapter: onPreviousChapter,
         onNewChapter: onNewChapter,
@@ -246,6 +254,26 @@ class EditorOptionsMenuSheet extends StatelessWidget {
           onTap: () {
             Navigator.of(context).pop();
             onContinuousReader!();
+          },
+        ),
+      if (onProseInspector != null)
+        _MenuItem(
+          icon: Icons.auto_awesome_rounded,
+          title: 'Inspector de Prosa',
+          subtitle: 'Análisis de ritmo, adverbios y legibilidad',
+          onTap: () {
+            Navigator.of(context).pop();
+            onProseInspector!();
+          },
+        ),
+      if (onCorkboard != null)
+        _MenuItem(
+          icon: Icons.dashboard_customize_outlined,
+          title: 'Tablón de Fichas (Corkboard)',
+          subtitle: 'Vista de sinopsis en cuadrícula',
+          onTap: () {
+            Navigator.of(context).pop();
+            onCorkboard!();
           },
         ),
       _MenuItem(
