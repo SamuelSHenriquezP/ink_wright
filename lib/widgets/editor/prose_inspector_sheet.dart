@@ -313,7 +313,7 @@ class _ProseInspectorSheetState extends State<ProseInspectorSheet> {
                         controller: scrollController,
                         padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
                         itemCount: filteredIssues.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        separatorBuilder: (context, index) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final issue = filteredIssues[index];
                           return _buildIssueCard(issue, isDark, textPrimary, textSecondary, borderSubtle);
@@ -408,7 +408,7 @@ class _ProseInspectorSheetState extends State<ProseInspectorSheet> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkSurfaceBackground : AppTheme.lightSurfaceBackground,
+        color: isDark ? AppTheme.darkBgPrimary : AppTheme.lightBgPrimary,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: borderSubtle),
       ),

@@ -27,7 +27,7 @@ class _CorkboardScreenState extends State<CorkboardScreen> {
 
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final bgScaffold = isDark ? AppTheme.darkSurfaceBackground : AppTheme.lightSurfaceBackground;
+    final bgScaffold = isDark ? AppTheme.darkBgPrimary : AppTheme.lightBgPrimary;
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
 
     final chapters = controller.activeBook.chapters;
