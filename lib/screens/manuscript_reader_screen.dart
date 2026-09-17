@@ -30,7 +30,7 @@ class _ManuscriptReaderScreenState extends State<ManuscriptReaderScreen> {
   final Map<int, GlobalKey> _chapterKeys = {};
 
   bool _showControls = true;
-  double _scrollProgress = 0.0;
+  final ValueNotifier<double> _scrollProgressNotifier = ValueNotifier<double>(0.0);
   ReaderTheme _readerTheme = ReaderTheme.dark;
   String _fontFamily = 'Lora';
   double _fontSize = 17.5;
@@ -58,6 +58,7 @@ class _ManuscriptReaderScreenState extends State<ManuscriptReaderScreen> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _scrollProgressNotifier.dispose();
     super.dispose();
   }
 
@@ -67,10 +68,8 @@ class _ManuscriptReaderScreenState extends State<ManuscriptReaderScreen> {
     final currentScroll = _scrollController.position.pixels;
     if (maxScroll > 0) {
       final progress = (currentScroll / maxScroll).clamp(0.0, 1.0);
-      if ((progress - _scrollProgress).abs() > 0.005) {
-        setState(() {
-          _scrollProgress = progress;
-        });
+      if ((progress - _scrollProgressNotifier.value).abs() > 0.005) {
+        _scrollProgressNotifier.value = progress;
       }
     }
   }
@@ -576,10 +575,10 @@ class _ManuscriptReaderScreenState extends State<ManuscriptReaderScreen> {
                       (context, index) {
                         final chapter = chapters[index];
                         final isLast = index == chapters.length - 1;
-                        _chapterKeys[index] = GlobalKey();
+                        final chapterKey = _chapterKeys.putIfAbsent(index, () => GlobalKey());
 
                         return Center(
-                          key: _chapterKeys[index],
+                          key: chapterKey,
                           child: Container(
                             constraints: const BoxConstraints(maxWidth: 720),
                             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
@@ -687,6 +686,8 @@ class _ManuscriptReaderScreenState extends State<ManuscriptReaderScreen> {
                         );
                       },
                       childCount: chapters.length,
+                      addAutomaticKeepAlives: true,
+                      addRepaintBoundaries: true,
                     ),
                   ),
 
@@ -736,12 +737,15 @@ class _ManuscriptReaderScreenState extends State<ManuscriptReaderScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            'Modo Lectura • ${(_scrollProgress * 100).toInt()}% leído',
-                            style: TextStyle(
-                              color: colors.textSecondary,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
+                          ValueListenableBuilder<double>(
+                            valueListenable: _scrollProgressNotifier,
+                            builder: (_, progress, _) => Text(
+                              'Modo Lectura • ${(progress * 100).toInt()}% leído',
+                              style: TextStyle(
+                                color: colors.textSecondary,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],
@@ -767,12 +771,15 @@ class _ManuscriptReaderScreenState extends State<ManuscriptReaderScreen> {
               top: 0,
               left: 0,
               right: 0,
-              child: LinearProgressIndicator(
-                value: _scrollProgress,
-                minHeight: 2.5,
-                backgroundColor: Colors.transparent,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  colors.textPrimary.withValues(alpha: 0.7),
+              child: ValueListenableBuilder<double>(
+                valueListenable: _scrollProgressNotifier,
+                builder: (_, progress, _) => LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 2.5,
+                  backgroundColor: Colors.transparent,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    colors.textPrimary.withValues(alpha: 0.7),
+                  ),
                 ),
               ),
             ),
@@ -798,9 +805,12 @@ class _ManuscriptReaderScreenState extends State<ManuscriptReaderScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Progreso general: ${(_scrollProgress * 100).toInt()}%',
-                      style: TextStyle(fontSize: 12, color: colors.textSecondary, fontWeight: FontWeight.w600),
+                    ValueListenableBuilder<double>(
+                      valueListenable: _scrollProgressNotifier,
+                      builder: (_, progress, _) => Text(
+                        'Progreso general: ${(progress * 100).toInt()}%',
+                        style: TextStyle(fontSize: 12, color: colors.textSecondary, fontWeight: FontWeight.w600),
+                      ),
                     ),
                     Text(
                       '${book.currentWordCount} palabras',

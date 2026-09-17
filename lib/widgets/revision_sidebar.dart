@@ -52,7 +52,7 @@ class _RevisionSidebarState extends State<RevisionSidebar> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: bgCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: Row(
           children: [
             Icon(Icons.rate_review_rounded, color: textPrimary, size: 22),
@@ -273,7 +273,7 @@ class _RevisionSidebarState extends State<RevisionSidebar> {
                       backgroundColor: isDark ? Colors.white : Colors.black,
                       foregroundColor: isDark ? Colors.black : Colors.white,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       padding: const EdgeInsets.symmetric(vertical: 11),
                     ),
                     icon: const Icon(Icons.add_comment_rounded, size: 18),
@@ -292,32 +292,82 @@ class _RevisionSidebarState extends State<RevisionSidebar> {
           Expanded(
             child: comments.isEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.mark_chat_read_outlined,
-                          size: 50,
-                          color: textSecondary.withValues(alpha: 0.3),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _hideResolved && allComments.isNotEmpty
-                              ? '¡No hay notas pendientes!'
-                              : 'No hay notas en este capítulo',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: textPrimary,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.mark_chat_read_outlined,
+                            size: 46,
+                            color: textSecondary.withValues(alpha: 0.35),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Selecciona texto en el editor o toca el botón para crear una',
-                          style: TextStyle(fontSize: 12.5, color: textSecondary),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                          const SizedBox(height: 12),
+                          Text(
+                            _hideResolved && allComments.isNotEmpty
+                                ? '¡No hay notas pendientes!'
+                                : '¿Cómo funcionan las notas de revisión?',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: borderColor),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.touch_app_outlined, size: 15, color: textSecondary),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        '1. Selecciona cualquier texto en el editor.',
+                                        style: TextStyle(fontSize: 12, color: textSecondary),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Icon(Icons.edit_note_rounded, size: 16, color: textSecondary),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        '2. Pulsa "Nueva Nota" para anotar dudas o correcciones.',
+                                        style: TextStyle(fontSize: 12, color: textSecondary),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Icon(Icons.check_circle_outline_rounded, size: 15, color: textSecondary),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        '3. Márcala como "Resolver" cuando la apliques.',
+                                        style: TextStyle(fontSize: 12, color: textSecondary),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   )
                 : ListView.builder(

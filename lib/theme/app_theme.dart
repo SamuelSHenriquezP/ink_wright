@@ -22,9 +22,10 @@ class AppTheme {
   static const Color darkBorderSubtle = Color(0xFF27272A);
 
   // Radii
-  static const double cardRadius = 18.0;
-  static const double pillRadius = 30.0;
-  static const double sheetRadius = 24.0;
+  static const double cardRadius = 16.0;
+  static const double pillRadius = 10.0;
+  static const double buttonRadius = 10.0;
+  static const double sheetRadius = 20.0;
 
   // Soft UI Shadows
   static List<BoxShadow> getSoftShadow(bool isDark) {
@@ -98,6 +99,26 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
       ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
+        ),
+      ),
       cardTheme: CardThemeData(
         color: lightSurfaceCard,
         elevation: 0,
@@ -154,6 +175,26 @@ class AppTheme {
         labelLarge: baseTextTheme.labelLarge?.copyWith(
           color: darkTextPrimary,
           fontWeight: FontWeight.w600,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(buttonRadius)),
         ),
       ),
       cardTheme: CardThemeData(

@@ -73,7 +73,7 @@ class DashboardCodexTab extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: textPrimary,
                         side: BorderSide(color: borderSubtle),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       icon: const Icon(Icons.add_rounded, size: 16),
                       label: const Text('Crear Primera Entrada'),

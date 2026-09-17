@@ -350,7 +350,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                           selected: isSelected,
                           selectedColor: widget.isDark ? Colors.white : Colors.black,
                           backgroundColor: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           labelStyle: TextStyle(
                             fontSize: 12,
                             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -388,7 +388,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                           selected: isSelected,
                           selectedColor: widget.isDark ? Colors.white : Colors.black,
                           backgroundColor: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           labelStyle: TextStyle(
                             fontSize: 12,
                             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -423,7 +423,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                           selected: _includeCharacters,
                           selectedColor: widget.isDark ? Colors.white : Colors.black,
                           backgroundColor: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           labelStyle: TextStyle(
                             fontSize: 11.5,
                             fontWeight: _includeCharacters ? FontWeight.w700 : FontWeight.w500,
@@ -438,7 +438,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                           selected: _includeCodex,
                           selectedColor: widget.isDark ? Colors.white : Colors.black,
                           backgroundColor: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           labelStyle: TextStyle(
                             fontSize: 11.5,
                             fontWeight: _includeCodex ? FontWeight.w700 : FontWeight.w500,
@@ -459,7 +459,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                         backgroundColor: accentColor,
                         foregroundColor: widget.isDark ? Colors.black : Colors.white,
                         minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
                       ),
                       icon: Icon(

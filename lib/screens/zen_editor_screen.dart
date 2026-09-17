@@ -138,9 +138,12 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
 
     // 88.0 accounts for chapter header ("CAPÍTULO X", word count, title input, margins)
     final cursorY = caretOffset.dy + 88.0;
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 100;
+    final accessoryBarHeight = (!controller.isZenMode && isKeyboardOpen) ? 48.0 : 0.0;
     final viewportHeight = _scrollController.position.viewportDimension;
+    final visibleHeight = (viewportHeight - accessoryBarHeight).clamp(100.0, double.infinity);
     final lineHeightPx = controller.fontSize * controller.lineHeight;
-    final targetScroll = (cursorY - (viewportHeight / 2) + (lineHeightPx / 2))
+    final targetScroll = (cursorY - (visibleHeight / 2) + (lineHeightPx / 2))
         .clamp(0.0, _scrollController.position.maxScrollExtent);
 
     if (animated) {
@@ -683,6 +686,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
             children: [
               // Main Text Editor Canvas
               Positioned.fill(
+                bottom: (!isZen && isKeyboardOpen) ? 48.0 : 0.0,
                 child: Column(
                   children: [
                     // Minimalist App Bar matching Screenshot 2 (Animated out when Zen mode active)
@@ -698,7 +702,10 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                 children: [
                                   // [ = ] Hamburger Menu Button (Opens Chapter Drawer)
                                   IconButton(
-                                    icon: const Icon(Icons.menu_rounded, size: 24),
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                    icon: const Icon(Icons.menu_rounded, size: 22),
                                     onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                                     tooltip: 'Capítulos',
                                   ),
@@ -718,7 +725,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                                 child: Text(
                                                   activeBook.title,
                                                   style: TextStyle(
-                                                    fontSize: 14,
+                                                    fontSize: 13.5,
                                                     fontWeight: FontWeight.w800,
                                                     color: textPrimary,
                                                     letterSpacing: -0.2,
@@ -727,17 +734,19 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                                   overflow: TextOverflow.ellipsis,
                                                 ),
                                               ),
-                                              const SizedBox(width: 4),
-                                              Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: textSecondary),
+                                              const SizedBox(width: 3),
+                                              Icon(Icons.keyboard_arrow_down_rounded, size: 15, color: textSecondary),
                                             ],
                                           ),
                                           Text(
-                                            'Capítulo ${controller.activeChapterIndex + 1} de ${controller.totalChapters}',
+                                            'Cap. ${controller.activeChapterIndex + 1} de ${controller.totalChapters} • ${controller.activeChapter.title}',
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w500,
                                               color: textSecondary,
                                             ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ),
@@ -749,7 +758,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                     Container(
                                       width: 8,
                                       height: 8,
-                                      margin: const EdgeInsets.only(right: 8),
+                                      margin: const EdgeInsets.only(right: 6),
                                       child: CircularProgressIndicator(
                                         strokeWidth: 1.5,
                                         valueColor: AlwaysStoppedAnimation<Color>(textSecondary),
@@ -757,29 +766,22 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                     ),
                                   ],
 
-                                   // Read-Only Indicator Badge (if active)
+                                   // Read-Only Indicator Badge (compact icon with tooltip)
                                    if (_isReadOnly)
-                                     Container(
-                                       margin: const EdgeInsets.only(right: 6),
-                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                       decoration: BoxDecoration(
-                                         color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
-                                         borderRadius: BorderRadius.circular(12),
-                                       ),
-                                       child: Row(
-                                         mainAxisSize: MainAxisSize.min,
-                                         children: [
-                                           Icon(Icons.menu_book_rounded, size: 12, color: textSecondary),
-                                           const SizedBox(width: 4),
-                                           Text(
-                                             'Lectura (${controller.activeChapter.readingTimeMinutes} min)',
-                                             style: TextStyle(fontSize: 11, color: textSecondary, fontWeight: FontWeight.bold),
-                                           ),
-                                         ],
+                                     Tooltip(
+                                       message: 'Modo Lectura Activo (${controller.activeChapter.readingTimeMinutes} min)',
+                                       child: Container(
+                                         margin: const EdgeInsets.only(right: 4),
+                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                         decoration: BoxDecoration(
+                                           color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
+                                           borderRadius: BorderRadius.circular(8),
+                                         ),
+                                         child: Icon(Icons.menu_book_rounded, size: 15, color: textSecondary),
                                        ),
                                      ),
 
-                                   // Format Badge Pill [MD] / [MD*]
+                                   // Format Badge Pill [MD] / [MD*] (Square aesthetic)
                                    GestureDetector(
                                      onTap: () {
                                        controller.textEditingController.toggleHideMarkdownSymbols();
@@ -790,12 +792,12 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                            ? 'Símbolos Markdown ocultos (pulsa para mostrar)'
                                            : 'Símbolos Markdown visibles (pulsa para ocultar)',
                                        child: Container(
-                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                                          decoration: BoxDecoration(
                                            color: controller.textEditingController.hideMarkdownSymbols
                                                ? (isDark ? Colors.white12 : Colors.black)
                                                : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
-                                           borderRadius: BorderRadius.circular(16),
+                                           borderRadius: BorderRadius.circular(8),
                                            border: Border.all(
                                              color: controller.textEditingController.hideMarkdownSymbols
                                                ? (isDark ? Colors.white54 : Colors.black)
@@ -805,7 +807,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                          child: Text(
                                            controller.textEditingController.hideMarkdownSymbols ? 'MD' : 'MD*',
                                            style: TextStyle(
-                                             fontSize: 11,
+                                             fontSize: 10.5,
                                              fontWeight: FontWeight.w800,
                                              letterSpacing: 0.5,
                                              color: controller.textEditingController.hideMarkdownSymbols
@@ -824,6 +826,9 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                      builder: (ctx) {
                                        final openComments = controller.activeChapterComments.where((c) => !c.isResolved).length;
                                        return IconButton(
+                                         visualDensity: VisualDensity.compact,
+                                         padding: EdgeInsets.zero,
+                                         constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
                                          icon: Badge(
                                            isLabelVisible: openComments > 0,
                                            label: Text('$openComments'),
@@ -831,7 +836,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                            textColor: isDark ? Colors.black : Colors.white,
                                            child: Icon(
                                              controller.isRevisionMode ? Icons.rate_review_rounded : Icons.rate_review_outlined,
-                                             size: 21,
+                                             size: 20,
                                              color: controller.isRevisionMode
                                                  ? (isDark ? Colors.amberAccent : Colors.amber.shade800)
                                                  : textSecondary,
@@ -846,16 +851,12 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                      },
                                    ),
 
-                                   // Prose & Style Inspector (Hemingway) Button
-                                   IconButton(
-                                     icon: const Icon(Icons.auto_awesome_rounded, size: 21),
-                                     tooltip: 'Inspector de Prosa y Estilo',
-                                     onPressed: () => _openProseInspector(context, controller, isDark),
-                                   ),
-
                                    // Manuscript Reader Mode Button
                                    IconButton(
-                                     icon: const Icon(Icons.auto_stories_outlined, size: 21),
+                                     visualDensity: VisualDensity.compact,
+                                     padding: EdgeInsets.zero,
+                                     constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                                     icon: const Icon(Icons.auto_stories_outlined, size: 20),
                                      tooltip: 'Lector del Manuscrito Completo',
                                      onPressed: () {
                                        Navigator.of(context).push(
@@ -870,10 +871,14 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
 
                                    // [ ⋮ ] 2-Column Options Sheet Menu Button
                                    IconButton(
-                                     icon: const Icon(Icons.more_vert_rounded, size: 22),
+                                     visualDensity: VisualDensity.compact,
+                                     padding: EdgeInsets.zero,
+                                     constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                                     icon: const Icon(Icons.more_vert_rounded, size: 21),
                                      onPressed: () => _openEditorOptionsMenu(context, controller, themeController, isDark),
                                      tooltip: 'Opciones del Editor',
                                    ),
+                                   const SizedBox(width: 4),
                                  ],
                                ),
                              ),
@@ -943,20 +948,58 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                         color: textSecondary,
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        '$wordCount pal. • ${WriterTextFormatter.estimateReadingTime(content)} min',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: textSecondary,
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '$wordCount pal. • ${WriterTextFormatter.estimateReadingTime(content)} min',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: textSecondary,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 8),
+                                        InkWell(
+                                          onTap: () => _openProseInspector(context, controller, isDark),
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.07),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: isDark ? Colors.white24 : Colors.black12,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.auto_awesome_rounded, size: 12, color: textPrimary),
+                                                const SizedBox(width: 5),
+                                                Text(
+                                                  'Inspector',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: textPrimary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -1019,12 +1062,16 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                       color: textSecondary.withValues(alpha: 0.4),
                                       fontStyle: FontStyle.italic,
                                     ),
-                                    border: InputBorder.none,
+                                   border: InputBorder.none,
                                     contentPadding: EdgeInsets.zero,
                                   ),
                                 ),
 
-                                const SizedBox(height: 100),
+                                 SizedBox(
+                                   height: controller.isTypewriterMode
+                                       ? (MediaQuery.of(context).size.height * 0.55)
+                                       : (isKeyboardOpen ? 60 : 100),
+                                 ),
                               ],
                             ),
                           ),

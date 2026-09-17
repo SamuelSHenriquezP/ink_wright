@@ -5,6 +5,7 @@ import '../models/codex_entry_model.dart';
 import '../models/mind_map_node_model.dart';
 import '../models/character_model.dart';
 import '../models/writer_stats_model.dart';
+import '../models/revision_comment_model.dart';
 
 class InitialSampleData {
   final BookModel activeBook;
@@ -73,6 +74,17 @@ Pulsa el icono superior para abrir el panel lateral o vuelve al panel de inicio 
       isCompleted: true,
       notes: 'Capítulo introductorio que enseña las funciones básicas del editor.',
       povCharacter: 'Evelyn Vance',
+      comments: [
+        RevisionCommentModel(
+          id: 'rev_tut_sample_1',
+          chapterId: 'ch_tut_1',
+          charOffset: 41,
+          length: 42,
+          commentText: '💡 ¿Cómo funcionan las notas de revisión?\nPuedes seleccionar cualquier fragmento de texto en el editor y pulsar "Nueva Nota" para dejarte anotaciones editoriales, dudas de trama o erratas sin alterar tu texto original. Cuando termines, márcala como "Resolver".',
+          highlightedText: 'un espacio minimalista en blanco y negro',
+          createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+      ],
     );
 
     final ch2 = ChapterModel(

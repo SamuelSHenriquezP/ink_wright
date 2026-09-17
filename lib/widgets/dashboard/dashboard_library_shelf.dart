@@ -129,29 +129,35 @@ class DashboardLibraryShelf extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: textPrimary,
-                        side: BorderSide(color: borderSubtle),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    SizedBox(
+                      height: 36,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: textPrimary,
+                          side: BorderSide(color: borderSubtle),
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.file_download_outlined, size: 16),
+                        label: const Text('Importar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                        onPressed: () => ImportManuscriptDialog.show(context, isDark: isDark),
                       ),
-                      icon: const Icon(Icons.file_download_outlined, size: 16),
-                      label: const Text('Importar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                      onPressed: () => ImportManuscriptDialog.show(context, isDark: isDark),
                     ),
                     const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isDark ? Colors.white : Colors.black,
-                        foregroundColor: isDark ? Colors.black : Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        elevation: 0,
+                    SizedBox(
+                      height: 36,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? Colors.white : Colors.black,
+                          foregroundColor: isDark ? Colors.black : Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.add_rounded, size: 17),
+                        label: const Text('Nuevo Libro', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                        onPressed: onCreateBook,
                       ),
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Nuevo Libro', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                      onPressed: onCreateBook,
                     ),
                   ],
                 ),
@@ -175,57 +181,6 @@ class DashboardLibraryShelf extends StatelessWidget {
             ),
             delegate: SliverChildBuilderDelegate(
               (context, index) {
-                if (index == controller.allBooks.length) {
-                  // Tarjeta "Nuevo Libro" al final de la estantería
-                  return InkWell(
-                    onTap: onCreateBook,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: borderSubtle,
-                          width: 1.2,
-                        ),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                                shape: BoxShape.circle,
-                              ),
-                              alignment: Alignment.center,
-                              child: Icon(Icons.add_rounded, size: 24, color: textPrimary),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Nuevo Libro',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                      .animate(delay: (index * 60).ms)
-                      .fadeIn(duration: 350.ms, curve: Curves.easeOutCubic)
-                      .scale(
-                        begin: const Offset(0.96, 0.96),
-                        end: const Offset(1, 1),
-                        curve: Curves.easeOutCubic,
-                      );
-                }
-
                 final book = controller.allBooks[index];
                 final isActive = book.id == controller.activeBook.id;
                 final targetWords = book.targetWordCount;
@@ -449,7 +404,7 @@ class DashboardLibraryShelf extends StatelessWidget {
                       curve: Curves.easeOutCubic,
                     );
               },
-              childCount: controller.allBooks.length + 1,
+              childCount: controller.allBooks.length,
             ),
           ),
         ),

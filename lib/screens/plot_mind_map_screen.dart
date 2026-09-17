@@ -322,39 +322,46 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
       appBar: AppBar(
         backgroundColor: bgPrimary,
         elevation: 0,
+        titleSpacing: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              _isTimelineMode ? 'Línea de Tiempo' : 'Mapa Mental de Trama',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textPrimary),
+              _isTimelineMode ? 'Línea de Tiempo' : 'Mapa Mental',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: textPrimary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
-              '${controller.activeBook.title} • Planificación Narrativa',
+              controller.activeBook.title,
               style: TextStyle(fontSize: 11, color: textSecondary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
         actions: [
-          // ── View toggle button ──────────────────────────────────────
+          // ── View toggle button (Square aesthetic, aligned with other actions) ──────
           Tooltip(
-            message: _isTimelineMode ? 'Cambiar a Mapa Mental' : 'Cambiar a Línea de Tiempo',
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            message: _isTimelineMode ? 'Ver Mapa Mental' : 'Ver Línea de Tiempo',
+            child: Container(
+              height: 34,
+              margin: const EdgeInsets.symmetric(vertical: 11, horizontal: 3),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
+              ),
               child: InkWell(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(10),
                 onTap: () => setState(() => _isTimelineMode = !_isTimelineMode),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.07),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
-                  ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 9),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -363,11 +370,11 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                         size: 15,
                         color: textPrimary,
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 5),
                       Text(
                         _isTimelineMode ? 'Mapa' : 'Timeline',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w700,
                           color: textPrimary,
                         ),
@@ -381,21 +388,31 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
           // ── Map-only actions ─────────────────────────────────────────
           if (!_isTimelineMode) ...[
             IconButton(
-              icon: Icon(Icons.auto_awesome_mosaic_outlined, color: textPrimary),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              icon: Icon(Icons.auto_awesome_mosaic_outlined, size: 20, color: textPrimary),
               onPressed: () => _autoArrange(controller),
-              tooltip: 'Organizar Cronológicamente por Actos',
+              tooltip: 'Organizar Cronológicamente',
             ),
             IconButton(
-              icon: Icon(Icons.center_focus_strong_outlined, color: textPrimary),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              icon: Icon(Icons.center_focus_strong_outlined, size: 20, color: textPrimary),
               onPressed: _resetView,
               tooltip: 'Centrar Lienzo',
             ),
           ],
           IconButton(
-            icon: Icon(Icons.add_circle_outline_rounded, color: textPrimary),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            icon: Icon(Icons.add_circle_outline_rounded, size: 21, color: textPrimary),
             onPressed: () => _showAddNodeDialog(context, controller),
             tooltip: 'Añadir Nodo de Trama',
           ),
+          const SizedBox(width: 6),
         ],
       ),
       body: _isTimelineMode
@@ -432,7 +449,7 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                     avatar: Icon(Icons.add_rounded, size: 16, color: textSecondary),
                     label: Text('Acto', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textSecondary)),
                     backgroundColor: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     side: BorderSide(color: isDark ? Colors.white12 : Colors.black12),
                     onPressed: () => _showAddActDialog(context, controller),
                   ),
@@ -986,7 +1003,7 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
         selected: isSelected,
         selectedColor: isDark ? Colors.white : Colors.black,
         backgroundColor: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         labelStyle: TextStyle(
           fontSize: 12,
           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,

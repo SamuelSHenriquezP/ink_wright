@@ -167,7 +167,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: textPrimary,
                           side: BorderSide(color: borderSubtle),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                         icon: const Icon(Icons.arrow_back_rounded, size: 16),
@@ -370,7 +370,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               backgroundColor: isDark ? Colors.white : Colors.black,
                               foregroundColor: isDark ? Colors.black : Colors.white,
                               minimumSize: const Size(double.infinity, 48),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               elevation: 0,
                             ),
                             icon: const Icon(Icons.hub_rounded),
