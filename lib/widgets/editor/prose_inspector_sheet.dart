@@ -186,35 +186,71 @@ class _ProseInspectorSheetState extends State<ProseInspectorSheet> {
                     ),
                     const SizedBox(width: 8),
 
-                    // Quick Counts
+                    // Quick Counts Carousel
                     Expanded(
                       flex: 5,
-                      child: Row(
-                        children: [
-                          _buildMetricPill(
-                            context: context,
-                            label: 'Adverbios',
-                            count: _result.adverbsCount,
-                            type: ProseIssueType.adverb,
-                            isDark: isDark,
-                          ),
-                          const SizedBox(width: 6),
-                          _buildMetricPill(
-                            context: context,
-                            label: 'Densas',
-                            count: _result.longSentencesCount,
-                            type: ProseIssueType.longSentence,
-                            isDark: isDark,
-                          ),
-                          const SizedBox(width: 6),
-                          _buildMetricPill(
-                            context: context,
-                            label: 'Ecos',
-                            count: _result.echoesCount,
-                            type: ProseIssueType.echo,
-                            isDark: isDark,
-                          ),
-                        ],
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: Row(
+                          children: [
+                            _buildMetricPill(
+                              context: context,
+                              label: 'Adverbios',
+                              count: _result.adverbsCount,
+                              type: ProseIssueType.adverb,
+                              isDark: isDark,
+                            ),
+                            const SizedBox(width: 6),
+                            _buildMetricPill(
+                              context: context,
+                              label: 'Densas',
+                              count: _result.longSentencesCount,
+                              type: ProseIssueType.longSentence,
+                              isDark: isDark,
+                            ),
+                            const SizedBox(width: 6),
+                            _buildMetricPill(
+                              context: context,
+                              label: 'Ecos',
+                              count: _result.echoesCount,
+                              type: ProseIssueType.echo,
+                              isDark: isDark,
+                            ),
+                            const SizedBox(width: 6),
+                            _buildMetricPill(
+                              context: context,
+                              label: 'Muletillas',
+                              count: _result.fillerWordsCount,
+                              type: ProseIssueType.fillerWord,
+                              isDark: isDark,
+                            ),
+                            const SizedBox(width: 6),
+                            _buildMetricPill(
+                              context: context,
+                              label: 'Clichés',
+                              count: _result.clichesCount,
+                              type: ProseIssueType.cliche,
+                              isDark: isDark,
+                            ),
+                            const SizedBox(width: 6),
+                            _buildMetricPill(
+                              context: context,
+                              label: 'Pasiva',
+                              count: _result.passiveVoiceCount,
+                              type: ProseIssueType.passiveVoice,
+                              isDark: isDark,
+                            ),
+                            const SizedBox(width: 6),
+                            _buildMetricPill(
+                              context: context,
+                              label: 'Párrafos',
+                              count: _result.longParagraphsCount,
+                              type: ProseIssueType.longParagraph,
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -227,61 +263,21 @@ class _ProseInspectorSheetState extends State<ProseInspectorSheet> {
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
                 child: Row(
                   children: [
-                    FilterChip(
-                      selected: _selectedFilter == null,
-                      label: Text('Todos (${_result.issues.length})'),
-                      labelStyle: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: _selectedFilter == null ? FontWeight.bold : FontWeight.w500,
-                        color: _selectedFilter == null ? (isDark ? Colors.black : Colors.white) : textSecondary,
-                      ),
-                      backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
-                      selectedColor: isDark ? Colors.white : Colors.black,
-                      checkmarkColor: isDark ? Colors.black : Colors.white,
-                      onSelected: (_) => setState(() => _selectedFilter = null),
-                    ),
+                    _buildFilterChip('Todos (${_result.issues.length})', null, isDark, textSecondary),
                     const SizedBox(width: 8),
-                    FilterChip(
-                      selected: _selectedFilter == ProseIssueType.adverb,
-                      label: Text('Adverbios -mente (${_result.adverbsCount})'),
-                      labelStyle: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: _selectedFilter == ProseIssueType.adverb ? FontWeight.bold : FontWeight.w500,
-                        color: _selectedFilter == ProseIssueType.adverb ? (isDark ? Colors.black : Colors.white) : textSecondary,
-                      ),
-                      backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
-                      selectedColor: isDark ? Colors.white : Colors.black,
-                      checkmarkColor: isDark ? Colors.black : Colors.white,
-                      onSelected: (_) => setState(() => _selectedFilter = ProseIssueType.adverb),
-                    ),
+                    _buildFilterChip('Adverbios -mente (${_result.adverbsCount})', ProseIssueType.adverb, isDark, textSecondary),
                     const SizedBox(width: 8),
-                    FilterChip(
-                      selected: _selectedFilter == ProseIssueType.longSentence,
-                      label: Text('Oraciones densas (${_result.longSentencesCount})'),
-                      labelStyle: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: _selectedFilter == ProseIssueType.longSentence ? FontWeight.bold : FontWeight.w500,
-                        color: _selectedFilter == ProseIssueType.longSentence ? (isDark ? Colors.black : Colors.white) : textSecondary,
-                      ),
-                      backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
-                      selectedColor: isDark ? Colors.white : Colors.black,
-                      checkmarkColor: isDark ? Colors.black : Colors.white,
-                      onSelected: (_) => setState(() => _selectedFilter = ProseIssueType.longSentence),
-                    ),
+                    _buildFilterChip('Oraciones densas (${_result.longSentencesCount})', ProseIssueType.longSentence, isDark, textSecondary),
                     const SizedBox(width: 8),
-                    FilterChip(
-                      selected: _selectedFilter == ProseIssueType.echo,
-                      label: Text('Ecos y repeticiones (${_result.echoesCount})'),
-                      labelStyle: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: _selectedFilter == ProseIssueType.echo ? FontWeight.bold : FontWeight.w500,
-                        color: _selectedFilter == ProseIssueType.echo ? (isDark ? Colors.black : Colors.white) : textSecondary,
-                      ),
-                      backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
-                      selectedColor: isDark ? Colors.white : Colors.black,
-                      checkmarkColor: isDark ? Colors.black : Colors.white,
-                      onSelected: (_) => setState(() => _selectedFilter = ProseIssueType.echo),
-                    ),
+                    _buildFilterChip('Ecos y repeticiones (${_result.echoesCount})', ProseIssueType.echo, isDark, textSecondary),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Muletillas (${_result.fillerWordsCount})', ProseIssueType.fillerWord, isDark, textSecondary),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Clichés (${_result.clichesCount})', ProseIssueType.cliche, isDark, textSecondary),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Voz pasiva (${_result.passiveVoiceCount})', ProseIssueType.passiveVoice, isDark, textSecondary),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Párrafos densos (${_result.longParagraphsCount})', ProseIssueType.longParagraph, isDark, textSecondary),
                   ],
                 ),
               ),
@@ -327,6 +323,23 @@ class _ProseInspectorSheetState extends State<ProseInspectorSheet> {
     );
   }
 
+  Widget _buildFilterChip(String label, ProseIssueType? type, bool isDark, Color textSecondary) {
+    final isSelected = _selectedFilter == type;
+    return FilterChip(
+      selected: isSelected,
+      label: Text(label),
+      labelStyle: TextStyle(
+        fontSize: 11.5,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+        color: isSelected ? (isDark ? Colors.black : Colors.white) : textSecondary,
+      ),
+      backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
+      selectedColor: isDark ? Colors.white : Colors.black,
+      checkmarkColor: isDark ? Colors.black : Colors.white,
+      onSelected: (_) => setState(() => _selectedFilter = isSelected ? null : type),
+    );
+  }
+
   Widget _buildMetricPill({
     required BuildContext context,
     required String label,
@@ -337,7 +350,8 @@ class _ProseInspectorSheetState extends State<ProseInspectorSheet> {
     final isSelected = _selectedFilter == type;
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
 
-    return Expanded(
+    return SizedBox(
+      width: 68,
       child: GestureDetector(
         onTap: () {
           setState(() {
@@ -402,6 +416,18 @@ class _ProseInspectorSheetState extends State<ProseInspectorSheet> {
         break;
       case ProseIssueType.echo:
         icon = Icons.repeat_rounded;
+        break;
+      case ProseIssueType.fillerWord:
+        icon = Icons.bubble_chart_outlined;
+        break;
+      case ProseIssueType.cliche:
+        icon = Icons.auto_fix_high_rounded;
+        break;
+      case ProseIssueType.passiveVoice:
+        icon = Icons.swap_horiz_rounded;
+        break;
+      case ProseIssueType.longParagraph:
+        icon = Icons.view_headline_rounded;
         break;
     }
 

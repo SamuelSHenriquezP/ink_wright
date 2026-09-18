@@ -3,6 +3,10 @@ enum ProseIssueType {
   adverb,
   longSentence,
   echo,
+  fillerWord,
+  cliche,
+  passiveVoice,
+  longParagraph,
 }
 
 /// A specific highlighted issue within the analysed prose.
@@ -31,6 +35,14 @@ class ProseIssue {
         return 'Oración densa';
       case ProseIssueType.echo:
         return 'Eco / Repetición';
+      case ProseIssueType.fillerWord:
+        return 'Muletilla de relleno';
+      case ProseIssueType.cliche:
+        return 'Cliché literario';
+      case ProseIssueType.passiveVoice:
+        return 'Voz pasiva débil';
+      case ProseIssueType.longParagraph:
+        return 'Párrafo denso';
     }
   }
 }
@@ -44,6 +56,10 @@ class ProseAnalysisResult {
   final int adverbsCount;
   final int longSentencesCount;
   final int echoesCount;
+  final int fillerWordsCount;
+  final int clichesCount;
+  final int passiveVoiceCount;
+  final int longParagraphsCount;
   final double readabilityScore; // 0 - 100
   final String readabilityLabel;
   final List<ProseIssue> issues;
@@ -56,6 +72,10 @@ class ProseAnalysisResult {
     required this.adverbsCount,
     required this.longSentencesCount,
     required this.echoesCount,
+    this.fillerWordsCount = 0,
+    this.clichesCount = 0,
+    this.passiveVoiceCount = 0,
+    this.longParagraphsCount = 0,
     required this.readabilityScore,
     required this.readabilityLabel,
     required this.issues,
@@ -77,6 +97,41 @@ class ProseStyleAnalyzerService {
     'ningún', 'ninguno', 'ninguna', 'delante', 'detras', 'detrás', 'alrededor',
   };
 
+  static const List<String> _cliches = [
+    'en un abrir y cerrar de ojos',
+    'de la noche a la mañana',
+    'de la noche a la manana',
+    'frío sepulcral',
+    'frio sepulcral',
+    'un frío sepulcral',
+    'el corazón le dio un vuelco',
+    'el corazon le dio un vuelco',
+    'un vuelco al corazón',
+    'un vuelco al corazon',
+    'contra viento y marea',
+    'un mar de dudas',
+    'mar de dudas',
+    'oscuridad impenetrable',
+    'silencio sepulcral',
+    'un silencio sepulcral',
+    'a flor de piel',
+    'como caído del cielo',
+    'como caido del cielo',
+    'más claro que el agua',
+    'mas claro que el agua',
+    'de pies a cabeza',
+    'punto de no retorno',
+    'un rayo de esperanza',
+    'sudor frío',
+    'sudor frio',
+    'lágrimas de cocodrilo',
+    'lagrimas de cocodrilo',
+    'correr como alma que lleva el diablo',
+    'temblar como una hoja',
+    'bajar la guardia',
+    'arma de doble filo',
+  ];
+
   /// Analyzes the supplied text and returns diagnostics with exact character ranges.
   static ProseAnalysisResult analyze(String rawText) {
     if (rawText.trim().isEmpty) {
@@ -88,6 +143,10 @@ class ProseStyleAnalyzerService {
         adverbsCount: 0,
         longSentencesCount: 0,
         echoesCount: 0,
+        fillerWordsCount: 0,
+        clichesCount: 0,
+        passiveVoiceCount: 0,
+        longParagraphsCount: 0,
         readabilityScore: 100,
         readabilityLabel: 'Vacío',
         issues: [],
@@ -147,12 +206,30 @@ class ProseStyleAnalyzerService {
       }
     }
 
-    // 3. Detect echoes / repetitions inside the same paragraph
+    // 3. Detect echoes / repetitions & Long paragraphs inside each paragraph
     final paragraphs = rawText.split('\n');
     int echoesCount = 0;
+    int longParagraphsCount = 0;
     int cumulativeIndex = 0;
 
     for (final para in paragraphs) {
+      final trimmedPara = para.trim();
+      if (trimmedPara.isNotEmpty) {
+        final paraWords = trimmedPara.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+        if (paraWords.length > 100) {
+          longParagraphsCount++;
+          final preview = trimmedPara.length > 70 ? '${trimmedPara.substring(0, 70)}...' : trimmedPara;
+          issues.add(ProseIssue(
+            type: ProseIssueType.longParagraph,
+            startIndex: cumulativeIndex,
+            endIndex: cumulativeIndex + para.length,
+            matchedText: preview,
+            message: 'Párrafo denso de ${paraWords.length} palabras.',
+            suggestion: 'Un muro de texto continuo fatiga la vista. Añadir puntos y aparte oxigena la narrativa.',
+          ));
+        }
+      }
+
       if (para.trim().length > 30) {
         final wordRegex = RegExp(r'\b([a-záéíóúñA-ZÁÉÍÓÚÑ]{5,})\b');
         final wordOccurrences = <String, List<Match>>{};
@@ -181,6 +258,65 @@ class ProseStyleAnalyzerService {
         });
       }
       cumulativeIndex += para.length + 1; // +1 for the newline
+    }
+
+    // 4. Detect Filler Words (Muletillas debilitantes)
+    final fillerRegex = RegExp(
+      r'\b(realmente|simplemente|prácticamente|practicamente|bastante|un poco|literalmente|apenas|quizás|quizas|tal vez|ciertamente|definitivamente|francamente|verdaderamente)\b',
+      caseSensitive: false,
+    );
+    int fillerWordsCount = 0;
+    for (final match in fillerRegex.allMatches(rawText)) {
+      final matchedStr = match.group(0)!;
+      fillerWordsCount++;
+      issues.add(ProseIssue(
+        type: ProseIssueType.fillerWord,
+        startIndex: match.start,
+        endIndex: match.end,
+        matchedText: matchedStr,
+        message: 'Muletilla de relleno ("$matchedStr").',
+        suggestion: 'Eliminar modificadores superfluos otorga mayor peso y seguridad al tono narrativo.',
+      ));
+    }
+
+    // 5. Detect Clichés literarios
+    int clichesCount = 0;
+    for (final cliche in _cliches) {
+      final clicheRegex = RegExp('\\b${RegExp.escape(cliche)}\\b', caseSensitive: false);
+      for (final match in clicheRegex.allMatches(rawText)) {
+        clichesCount++;
+        issues.add(ProseIssue(
+          type: ProseIssueType.cliche,
+          startIndex: match.start,
+          endIndex: match.end,
+          matchedText: match.group(0)!,
+          message: 'Cliché común detectado ("${match.group(0)!}").',
+          suggestion: 'Crea una imagen visual o metáfora original que evoque la singularidad de tu mundo.',
+        ));
+      }
+    }
+
+    // 6. Detect Passive Voice (Voz pasiva compuesta débil)
+    final passiveRegex = RegExp(
+      r'\b(fue|fueron|era|eran|había sido|habian sido|ha sido|han sido|será|sera|serán|seran)\s+([a-záéíóúñA-ZÁÉÍÓÚÑ]+(?:ado|ada|ados|adas|ido|ida|idos|idas|to|ta|tos|tas|so|sa|sos|sas|cho|cha|chos|chas))\b',
+      caseSensitive: false,
+    );
+    int passiveVoiceCount = 0;
+    for (final match in passiveRegex.allMatches(rawText)) {
+      final participle = match.group(2)!.toLowerCase();
+      if (participle == 'todo' || participle == 'toda' || participle == 'todos' || participle == 'todas' || participle == 'solo' || participle == 'sola') {
+        continue;
+      }
+      final matchedStr = match.group(0)!;
+      passiveVoiceCount++;
+      issues.add(ProseIssue(
+        type: ProseIssueType.passiveVoice,
+        startIndex: match.start,
+        endIndex: match.end,
+        matchedText: matchedStr,
+        message: 'Construcción en voz pasiva ("$matchedStr").',
+        suggestion: 'Dar protagonismo al sujeto en voz activa genera mayor inmersión y energía dramática.',
+      ));
     }
 
     // Sort issues by appearance in text
@@ -221,6 +357,10 @@ class ProseStyleAnalyzerService {
       adverbsCount: adverbsCount,
       longSentencesCount: longSentencesCount,
       echoesCount: echoesCount,
+      fillerWordsCount: fillerWordsCount,
+      clichesCount: clichesCount,
+      passiveVoiceCount: passiveVoiceCount,
+      longParagraphsCount: longParagraphsCount,
       readabilityScore: double.parse(calculatedScore.toStringAsFixed(1)),
       readabilityLabel: readabilityLabel,
       issues: issues,

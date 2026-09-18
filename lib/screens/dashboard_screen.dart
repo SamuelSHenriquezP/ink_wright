@@ -162,18 +162,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                   child: Row(
                     children: [
-                      // Botón Estratégico para volver a la biblioteca
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
+                      // Botón Estratégico para volver a la biblioteca (sin borde, solo texto e icono)
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
                           foregroundColor: textPrimary,
-                          side: BorderSide(color: borderSubtle),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                         ),
                         icon: const Icon(Icons.arrow_back_rounded, size: 16),
                         label: const Text(
                           'Biblioteca',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                         ),
                         onPressed: () {
                           setState(() {
@@ -437,7 +435,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               backgroundColor: isDark ? Colors.white : Colors.black,
               foregroundColor: isDark ? Colors.black : Colors.white,
               elevation: 3,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: const StadiumBorder(),
               icon: const Icon(Icons.edit_note_rounded),
               label: const Text(
                 'Escribir',

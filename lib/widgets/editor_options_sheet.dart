@@ -20,6 +20,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
   final VoidCallback onGoToDashboard;
   final VoidCallback? onContinuousReader;
   final VoidCallback? onProseInspector;
+  final VoidCallback? onRevisionNotes;
   final VoidCallback? onCorkboard;
   final VoidCallback? onNextChapter;
   final VoidCallback? onPreviousChapter;
@@ -48,6 +49,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     required this.onGoToDashboard,
     this.onContinuousReader,
     this.onProseInspector,
+    this.onRevisionNotes,
     this.onCorkboard,
     this.onNextChapter,
     this.onPreviousChapter,
@@ -77,6 +79,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     required VoidCallback onGoToDashboard,
     VoidCallback? onContinuousReader,
     VoidCallback? onProseInspector,
+    VoidCallback? onRevisionNotes,
     VoidCallback? onCorkboard,
     VoidCallback? onNextChapter,
     VoidCallback? onPreviousChapter,
@@ -108,6 +111,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
         onGoToDashboard: onGoToDashboard,
         onContinuousReader: onContinuousReader,
         onProseInspector: onProseInspector,
+        onRevisionNotes: onRevisionNotes,
         onCorkboard: onCorkboard,
         onNextChapter: onNextChapter,
         onPreviousChapter: onPreviousChapter,
@@ -236,6 +240,16 @@ class EditorOptionsMenuSheet extends StatelessWidget {
           onHistory();
         },
       ),
+      if (onRevisionNotes != null)
+        _MenuItem(
+          icon: Icons.rate_review_outlined,
+          title: 'Notas de Revisión',
+          subtitle: 'Comentarios y correcciones',
+          onTap: () {
+            Navigator.of(context).pop();
+            onRevisionNotes!();
+          },
+        ),
       _MenuItem(
         icon: isReadOnly ? Icons.visibility_rounded : Icons.edit_note_rounded,
         title: 'Modo Solo Lectura',

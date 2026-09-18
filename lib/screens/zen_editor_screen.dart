@@ -561,6 +561,10 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
       onHistory: () {
         ChapterHistorySheet.show(context, controller.activeChapter, isDark);
       },
+      onRevisionNotes: () {
+        controller.toggleRevisionMode();
+        RevisionSidebar.show(context);
+      },
       onTypography: () {
         _openTypographySheet(context, controller, isDark);
       },
@@ -867,55 +871,9 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                      ),
                                    ),
 
-                                   const SizedBox(width: 2),
+                                    const SizedBox(width: 4),
 
-                                   // Revision Mode Button
-                                   Builder(
-                                     builder: (ctx) {
-                                       final openComments = controller.activeChapterComments.where((c) => !c.isResolved).length;
-                                       return IconButton(
-                                         visualDensity: VisualDensity.compact,
-                                         padding: EdgeInsets.zero,
-                                         constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                                         icon: Badge(
-                                           isLabelVisible: openComments > 0,
-                                           label: Text('$openComments'),
-                                           backgroundColor: isDark ? Colors.amberAccent : Colors.amber.shade800,
-                                           textColor: isDark ? Colors.black : Colors.white,
-                                           child: Icon(
-                                             controller.isRevisionMode ? Icons.rate_review_rounded : Icons.rate_review_outlined,
-                                             size: 20,
-                                             color: controller.isRevisionMode
-                                                 ? (isDark ? Colors.amberAccent : Colors.amber.shade800)
-                                                 : textSecondary,
-                                           ),
-                                         ),
-                                         tooltip: 'Panel de Revisión & Notas',
-                                         onPressed: () {
-                                           controller.toggleRevisionMode();
-                                           RevisionSidebar.show(context);
-                                         },
-                                       );
-                                     },
-                                   ),
-
-                                   // Find & Replace Toggle Button
-                                   IconButton(
-                                     visualDensity: VisualDensity.compact,
-                                     padding: EdgeInsets.zero,
-                                     constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                                     icon: Icon(
-                                       _showFindReplace ? Icons.find_replace_rounded : Icons.search_rounded,
-                                       size: 20,
-                                       color: _showFindReplace
-                                           ? (isDark ? Colors.white : Colors.black)
-                                           : textSecondary,
-                                     ),
-                                     tooltip: 'Buscar y Reemplazar (Ctrl+F)',
-                                     onPressed: _toggleFindReplace,
-                                   ),
-
-                                   // Manuscript Reader Mode Button
+                                    // Manuscript Reader Mode Button
                                    IconButton(
                                      visualDensity: VisualDensity.compact,
                                      padding: EdgeInsets.zero,
@@ -1056,36 +1014,6 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                                 const SizedBox(width: 5),
                                                 Text(
                                                   'Inspector',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: textPrimary,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        InkWell(
-                                          onTap: () => ChapterHistorySheet.show(context, controller.activeChapter, isDark),
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.07),
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(
-                                                color: isDark ? Colors.white24 : Colors.black12,
-                                              ),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(Icons.history_rounded, size: 13, color: textPrimary),
-                                                const SizedBox(width: 5),
-                                                Text(
-                                                  'Versiones (${controller.activeChapter.snapshots.length})',
                                                   style: TextStyle(
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w700,
