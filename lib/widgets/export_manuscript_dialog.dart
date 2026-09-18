@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../theme/app_theme.dart';
 import '../controllers/editor_controller.dart';
 import '../services/export_service.dart';
+import '../services/cloud_backup_service.dart';
 import 'import_manuscript_dialog.dart';
 
 class ExportManuscriptDialog extends StatefulWidget {
@@ -526,6 +525,25 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
 
                     const SizedBox(height: 12),
 
+                    // Botón Subir a Google Drive
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: widget.isDark ? Colors.white : Colors.black,
+                        foregroundColor: widget.isDark ? Colors.black : Colors.white,
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.cloud_upload_outlined, size: 20),
+                      label: const Text(
+                        'Subir Respaldo a Google Drive / Nube',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      onPressed: () => CloudBackupService.uploadToCloudDrive(context, controller),
+                    ),
+
+                    const SizedBox(height: 10),
+
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
                         backgroundColor: widget.isDark ? const Color(0xFF2A2A2E) : const Color(0xFFF0EFE9),
@@ -537,41 +555,16 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                         ),
                         elevation: 0,
                       ),
-                      icon: const Icon(Icons.upload_file_rounded, size: 20),
+                      icon: const Icon(Icons.cloud_download_outlined, size: 20),
                       label: const Text(
-                        'Importar archivo .inkwright',
+                        'Restaurar de Google Drive / Archivo',
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      onPressed: () async {
-                        final result = await FilePicker.platform.pickFiles(
-                          type: FileType.custom,
-                          allowedExtensions: ['inkwright', 'json'],
-                          withData: true,
-                        );
-                        if (!context.mounted) return;
-                        if (result != null && result.files.single.bytes != null) {
-                          final jsonStr = utf8.decode(result.files.single.bytes!);
-                          final success = controller.restoreFromBackupJson(jsonStr);
-                          if (!context.mounted) return;
-                          if (success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Backup restaurado correctamente'),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                            Navigator.of(context).pop();
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('No se pudo leer el archivo. Verifica que sea un backup válido de Ink Wright.'),
-                                backgroundColor: Colors.redAccent,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          }
-                        }
-                      },
+                      onPressed: () => CloudBackupService.restoreFromCloudDrive(
+                        context,
+                        controller,
+                        isDark: widget.isDark,
+                      ),
                     ),
 
                     const SizedBox(height: 10),

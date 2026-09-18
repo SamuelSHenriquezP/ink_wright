@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import 'dashboard_goal_modal.dart';
 import 'dashboard_restore_dialog.dart';
 import 'dashboard_tutorial_sheet.dart';
+import '../../services/cloud_backup_service.dart';
 
 class DashboardToolsTab extends StatelessWidget {
   final EditorController controller;
@@ -212,7 +213,7 @@ class DashboardToolsTab extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Card de Copia de Seguridad Integral (.inkwright)
+            // Card de Copia de Seguridad en la Nube (Google Drive / Nube)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -234,8 +235,8 @@ class DashboardToolsTab extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
-                          Icons.shield_outlined,
-                          size: 20,
+                          Icons.cloud_sync_rounded,
+                          size: 22,
                           color: textPrimary,
                         ),
                       ),
@@ -244,19 +245,35 @@ class DashboardToolsTab extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Copia de Seguridad Integral',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: textPrimary,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  'Copia en la Nube',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '100% Gratis',
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: textSecondary),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Exporta o restaura toda tu biblioteca (.inkwright)',
+                              'Google Drive, OneDrive o almacenamiento personal',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 11.5,
                                 color: textSecondary,
                               ),
                             ),
@@ -265,43 +282,104 @@ class DashboardToolsTab extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   Text(
-                    'Guarda una copia completa en archivo local de tus novelas, capítulos, personajes, códice, notas y mapas de trama para no perder nunca tu trabajo o transferirlo a otro dispositivo.',
+                    'Sube un archivo de respaldo seguro (.inkwright) a tu Google Drive personal con un toque para proteger tus novelas, capítulos, personajes y mapas de trama sin costo.',
                     style: TextStyle(
                       fontSize: 12,
                       color: textSecondary,
                       height: 1.45,
                     ),
                   ),
+                  const SizedBox(height: 14),
+
+                  // Estado del último respaldo
+                  FutureBuilder<DateTime?>(
+                    future: CloudBackupService.getLastCloudUploadTime(),
+                    builder: (context, snapshot) {
+                      final statusText = CloudBackupService.formatLastUploadText(snapshot.data);
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: borderSubtle),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.access_time_rounded, size: 14, color: textSecondary),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Última copia en nube: ',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textSecondary),
+                            ),
+                            Text(
+                              statusText,
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textPrimary),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
                   const SizedBox(height: 16),
+
+                  // Botón Principal: Subir a Google Drive
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? Colors.white : Colors.black,
+                        foregroundColor: isDark ? Colors.black : Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.cloud_upload_outlined, size: 19),
+                      label: const Text(
+                        'Subir a Google Drive / Nube',
+                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                      ),
+                      onPressed: () => CloudBackupService.uploadToCloudDrive(context, controller),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Botón Secundario: Restaurar desde la nube / archivo
                   Row(
                     children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isDark ? Colors.white : Colors.black,
-                            foregroundColor: isDark ? Colors.black : Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 13),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-                            elevation: 0,
-                          ),
-                          icon: const Icon(Icons.download_rounded, size: 17),
-                          label: const Text('Exportar', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                          onPressed: onExportBackup,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
                       Expanded(
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: textPrimary,
                             side: BorderSide(color: borderSubtle),
-                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                           ),
-                          icon: const Icon(Icons.settings_backup_restore_rounded, size: 17),
-                          label: const Text('Restaurar', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          icon: const Icon(Icons.cloud_download_outlined, size: 17),
+                          label: const Text(
+                            'Restaurar de Nube',
+                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                          ),
+                          onPressed: () => CloudBackupService.restoreFromCloudDrive(context, controller, isDark: isDark),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: textPrimary,
+                            side: BorderSide(color: borderSubtle),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                          ),
+                          icon: const Icon(Icons.paste_rounded, size: 16),
+                          label: const Text(
+                            'Pegar JSON',
+                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                          ),
                           onPressed: () => DashboardRestoreDialog.show(context, controller, isDark),
                         ),
                       ),

@@ -22,6 +22,7 @@ import '../widgets/editor/zen_selection_note_sheet.dart';
 import '../widgets/editor/zen_speed_dial_fab.dart';
 import '../widgets/editor/prose_inspector_sheet.dart';
 import '../widgets/dashboard/dashboard_tutorial_sheet.dart';
+import '../services/cloud_backup_service.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'dashboard_screen.dart';
 import 'plot_mind_map_screen.dart';
@@ -566,6 +567,9 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
         controller.toggleRevisionMode();
         RevisionSidebar.show(context);
       },
+      onCloudBackup: () {
+        CloudBackupService.uploadToCloudDrive(context, controller);
+      },
       onTypography: () {
         _openTypographySheet(context, controller, isDark);
       },
@@ -608,6 +612,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
             MaterialPageRoute(builder: (_) => const DashboardScreen()),
           );
         }
+        CloudBackupService.promptCloudBackupReminder(context, controller);
       },
     );
   }

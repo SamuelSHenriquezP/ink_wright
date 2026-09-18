@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../controllers/editor_controller.dart';
 import '../../theme/app_theme.dart';
 
@@ -41,26 +43,59 @@ class DashboardRestoreDialog {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Pega el contenido de tu archivo de respaldo (.inkwright o JSON) a continuación. Esta acción reemplazará los libros, códice, ideas y trama actuales.',
+                      'Carga tu archivo de respaldo (.inkwright o JSON) o pega su contenido. Esta acción sincronizará tus novelas, códice, ideas y trama.',
                       style: TextStyle(fontSize: 13, color: textSecondary, height: 1.4),
                     ),
                     const SizedBox(height: 14),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: textPrimary,
-                        side: BorderSide(color: borderSubtle),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      icon: const Icon(Icons.paste_rounded, size: 16),
-                      label: const Text('Pegar desde Portapapeles'),
-                      onPressed: () async {
-                        final data = await Clipboard.getData(Clipboard.kTextPlain);
-                        if (data?.text != null && data!.text!.isNotEmpty) {
-                          setDialogState(() {
-                            textController.text = data.text!;
-                          });
-                        }
-                      },
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: isDark ? Colors.white : Colors.black,
+                              foregroundColor: isDark ? Colors.black : Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            icon: const Icon(Icons.cloud_download_outlined, size: 16),
+                            label: const Text('Archivo / Drive', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                            onPressed: () async {
+                              final result = await FilePicker.platform.pickFiles(
+                                type: FileType.custom,
+                                allowedExtensions: ['inkwright', 'json'],
+                                withData: true,
+                              );
+                              if (result != null && result.files.single.bytes != null) {
+                                final text = utf8.decode(result.files.single.bytes!);
+                                setDialogState(() {
+                                  textController.text = text;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: textPrimary,
+                              side: BorderSide(color: borderSubtle),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            icon: const Icon(Icons.paste_rounded, size: 16),
+                            label: const Text('Portapapeles', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                            onPressed: () async {
+                              final data = await Clipboard.getData(Clipboard.kTextPlain);
+                              if (data?.text != null && data!.text!.isNotEmpty) {
+                                setDialogState(() {
+                                  textController.text = data.text!;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     TextField(

@@ -21,6 +21,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
   final VoidCallback? onContinuousReader;
   final VoidCallback? onProseInspector;
   final VoidCallback? onRevisionNotes;
+  final VoidCallback? onCloudBackup;
   final VoidCallback? onTutorial;
   final VoidCallback? onCorkboard;
   final VoidCallback? onNextChapter;
@@ -51,6 +52,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     this.onContinuousReader,
     this.onProseInspector,
     this.onRevisionNotes,
+    this.onCloudBackup,
     this.onTutorial,
     this.onCorkboard,
     this.onNextChapter,
@@ -82,6 +84,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     VoidCallback? onContinuousReader,
     VoidCallback? onProseInspector,
     VoidCallback? onRevisionNotes,
+    VoidCallback? onCloudBackup,
     VoidCallback? onTutorial,
     VoidCallback? onCorkboard,
     VoidCallback? onNextChapter,
@@ -115,6 +118,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
         onContinuousReader: onContinuousReader,
         onProseInspector: onProseInspector,
         onRevisionNotes: onRevisionNotes,
+        onCloudBackup: onCloudBackup,
         onTutorial: onTutorial,
         onCorkboard: onCorkboard,
         onNextChapter: onNextChapter,
@@ -252,6 +256,16 @@ class EditorOptionsMenuSheet extends StatelessWidget {
           onTap: () {
             Navigator.of(context).pop();
             onRevisionNotes!();
+          },
+        ),
+      if (onCloudBackup != null)
+        _MenuItem(
+          icon: Icons.cloud_upload_outlined,
+          title: 'Copia en la Nube (Drive)',
+          subtitle: 'Subir a Google Drive / Nube',
+          onTap: () {
+            Navigator.of(context).pop();
+            onCloudBackup!();
           },
         ),
       _MenuItem(
