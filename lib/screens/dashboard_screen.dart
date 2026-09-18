@@ -162,24 +162,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                   child: Row(
                     children: [
-                      // Botón Estratégico para volver a la biblioteca (sin borde, solo texto e icono)
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          foregroundColor: textPrimary,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        ),
-                        icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                        label: const Text(
-                          'Biblioteca',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                        ),
+                      // Botón para volver a la biblioteca (solo flecha)
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        color: textPrimary,
+                        tooltip: 'Volver',
                         onPressed: () {
                           setState(() {
                             _isInsideBookView = false;
                           });
                         },
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 4),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
