@@ -129,10 +129,10 @@ void showPlotNodeFormModal(
                                 ),
                               ),
                               Text(
-                                '${controller.activeBook.title} • ${selectedActItem.label}',
+                                '${selectedActItem.label} • ${selectedType.label}',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.w600,
                                   color: textSecondary,
                                 ),
                                 maxLines: 1,
@@ -151,11 +151,26 @@ void showPlotNodeFormModal(
                   const SizedBox(height: 14),
                   Divider(height: 1, color: borderSubtle),
 
-                  // Scrollable Body
+                  // Scrollable Body con desvanecimiento superior suave para evitar recortes abruptos
                   Flexible(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      physics: const BouncingScrollPhysics(),
+                    child: ShaderMask(
+                      shaderCallback: (Rect bounds) {
+                        return const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black,
+                            Colors.black,
+                            Colors.transparent,
+                          ],
+                          stops: [0.0, 0.04, 0.96, 1.0],
+                        ).createShader(bounds);
+                      },
+                      blendMode: BlendMode.dstIn,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        physics: const BouncingScrollPhysics(),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -345,8 +360,10 @@ void showPlotNodeFormModal(
                           ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<String?>(
+                            isExpanded: true,
                             initialValue: selectedChapterId,
                             dropdownColor: bgCard,
+                            icon: Icon(Icons.keyboard_arrow_down_rounded, color: textSecondary),
                             style: TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                             decoration: InputDecoration(
                               prefixIcon: Icon(Icons.menu_book_rounded, size: 20, color: textSecondary),
@@ -363,10 +380,14 @@ void showPlotNodeFormModal(
                                 child: Text('Ninguno (No vinculado)'),
                               ),
                               ...controller.activeBook.chapters.map((ch) {
+                                final cleanTitle = ch.title.trim();
+                                final hasPrefix = RegExp(r'^cap[ií]tulo\s*\d*[:\s.-]*', caseSensitive: false).hasMatch(cleanTitle);
+                                final chapterLabel = hasPrefix ? cleanTitle : 'Capítulo ${ch.chapterNumber}: $cleanTitle';
                                 return DropdownMenuItem<String?>(
                                   value: ch.id,
                                   child: Text(
-                                    'Capítulo ${ch.chapterNumber}: ${ch.title}',
+                                    chapterLabel,
+                                    maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 );
@@ -407,8 +428,8 @@ void showPlotNodeFormModal(
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: textSecondary),
                           ),
                           const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 10,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: availableColors.map((c) {
                               final isChosen = c == selectedColor;
                               return InkWell(
@@ -513,6 +534,7 @@ void showPlotNodeFormModal(
                       ),
                     ),
                   ),
+                ),
                 ],
               ),
             ),
