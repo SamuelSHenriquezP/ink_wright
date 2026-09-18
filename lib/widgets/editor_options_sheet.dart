@@ -21,6 +21,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
   final VoidCallback? onContinuousReader;
   final VoidCallback? onProseInspector;
   final VoidCallback? onRevisionNotes;
+  final VoidCallback? onTutorial;
   final VoidCallback? onCorkboard;
   final VoidCallback? onNextChapter;
   final VoidCallback? onPreviousChapter;
@@ -50,6 +51,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     this.onContinuousReader,
     this.onProseInspector,
     this.onRevisionNotes,
+    this.onTutorial,
     this.onCorkboard,
     this.onNextChapter,
     this.onPreviousChapter,
@@ -80,6 +82,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     VoidCallback? onContinuousReader,
     VoidCallback? onProseInspector,
     VoidCallback? onRevisionNotes,
+    VoidCallback? onTutorial,
     VoidCallback? onCorkboard,
     VoidCallback? onNextChapter,
     VoidCallback? onPreviousChapter,
@@ -112,6 +115,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
         onContinuousReader: onContinuousReader,
         onProseInspector: onProseInspector,
         onRevisionNotes: onRevisionNotes,
+        onTutorial: onTutorial,
         onCorkboard: onCorkboard,
         onNextChapter: onNextChapter,
         onPreviousChapter: onPreviousChapter,
@@ -328,6 +332,16 @@ class EditorOptionsMenuSheet extends StatelessWidget {
           onStats();
         },
       ),
+      if (onTutorial != null)
+        _MenuItem(
+          icon: Icons.menu_book_rounded,
+          title: 'Guía y Tutorial',
+          subtitle: 'Manual de cada herramienta',
+          onTap: () {
+            Navigator.of(context).pop();
+            onTutorial!();
+          },
+        ),
       _MenuItem(
         icon: Icons.dashboard_rounded,
         title: 'Volver al Inicio',

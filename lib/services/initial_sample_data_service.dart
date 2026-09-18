@@ -139,6 +139,81 @@ Cada libro en Ink & Wright tiene su propio **Mapa Mental independiente**. Lo que
       povCharacter: 'Evelyn Vance',
     );
 
+    final ch4 = ChapterModel(
+      id: 'ch_tut_4',
+      bookId: 'b_tutorial',
+      chapterNumber: 4,
+      title: 'Capítulo 4: El Inspector de Prosa y Pulido de Estilo',
+      content: '''# El Laboratorio del Estilo: Inspector de Prosa
+
+En la cabecera de cada capítulo encontrarás el botón `[✨ Inspector]` junto a las métricas de palabras y tiempo de lectura. Esta herramienta actúa como un editor profesional a tu lado.
+
+## ¿Qué analiza el Inspector en Vivo?
+
+El Inspector evalúa tu texto con heurísticas diseñadas específicamente para la narrativa en español:
+
+1. **Puntuación de Legibilidad (Fórmula Fernández-Huerta):**
+   Mide la fluidez lectora de 0 a 100. Puntuaciones superiores a 65 indican una prosa ágil y equilibrada.
+
+2. **Adverbios en -mente:**
+   Los adverbios (*rápidamente, silenciosamente*) suelen ocultar verbos débiles. Cámbialos por acciones concretas (*echó a correr, contuvo el aliento*).
+
+3. **Oraciones Densas:**
+   Oraciones de más de 32 palabras. Considera dividirlas con puntos y seguidos para crear tensión o aliviar al lector.
+
+4. **Ecos Acústicos:**
+   Repeticiones involuntarias de la misma palabra dentro del mismo párrafo. Sustitúyelas con sinónimos o reestructura.
+
+5. **Muletillas de Relleno:**
+   Palabras como *realmente, prácticamente, simplemente, bastante, un poco, literalmente*. Eliminarlas dota a tu voz de mayor autoridad.
+
+6. **Clichés Literarios:**
+   Frases gastadas como *en un abrir y cerrar de ojos*, *frío sepulcral* o *mar de dudas*. Cámbialas por metáforas propias de tu universo.
+
+7. **Voz Pasiva Débil:**
+   Estructuras como *fue descubierto por* o *era custodiado*. La voz activa (*el guardián custodiaba*) siempre genera mayor impacto dramático.
+
+8. **Párrafos Densos:**
+   Bloques de más de 100 palabras sin punto y aparte. En lectores electrónicos, los párrafos monolíticos fatigan la vista.
+
+> "Escribir es humano, corregir es divino." — Stephen King''',
+      lastEdited: DateTime.now(),
+      isCompleted: false,
+      notes: 'Capítulo tutorial sobre el inspector de prosa y estilo.',
+      povCharacter: 'Evelyn Vance',
+    );
+
+    final ch5 = ChapterModel(
+      id: 'ch_tut_5',
+      bookId: 'b_tutorial',
+      chapterNumber: 5,
+      title: 'Capítulo 5: Caja de Herramientas Editoriales y Modos de Trabajo',
+      content: '''# Herramientas Editoriales Avanzadas
+
+Ink & Wright reúne todas las utilidades que un novelista necesita durante las fases de redacción, corrección y maquetación.
+
+## El Menú de Tres Puntos [ ⋮ ]
+
+En la esquina superior derecha del editor tienes acceso directo a:
+
+- **Historial de Versiones (Snapshots):** Congela el estado de tu capítulo antes de hacer una reescritura importante. Puedes restaurar cualquier instante con un solo toque.
+- **Notas de Revisión:** Selecciona cualquier frase y añade comentarios marginales para recordar cabos sueltos sin alterar tu texto.
+- **Buscar y Reemplazar:** Con sensibilidad a mayúsculas (`Aa`) y la opción de reemplazar en el capítulo o en **todo el libro** a la vez.
+- **Modo Máquina de Escribir:** Centra la línea de escritura en la pantalla para relajar la postura.
+- **Tipografía y Diseño:** Ajusta tipografías literarias (Lora, Merriweather, Playfair Display, JetBrains Mono), interlineado y ancho de columna.
+
+## Modos de Lectura & Concentración
+
+- **Lector de Manuscrito Completo:** El icono del libro en la barra superior te permite leer todos los capítulos en cascada continua.
+- **Sprints de Escritura & Sonidos:** Fija metas de palabras con cronómetro y sumérgete con sonidos ambientales de lluvia, chimenea o cafetería.
+- **Tablón de Fichas (Corkboard):** En el panel del libro, visualiza todos tus capítulos como tarjetas de sinopsis.
+- **Exportación y Respaldos:** Exporta a PDF, EPUB, TXT o Markdown, y guarda copias de seguridad `.inkwright` para transferir tus novelas a cualquier dispositivo.''',
+      lastEdited: DateTime.now(),
+      isCompleted: false,
+      notes: 'Capítulo tutorial sobre herramientas avanzadas del editor.',
+      povCharacter: 'Evelyn Vance',
+    );
+
     final tutorialBook = BookModel(
       id: 'b_tutorial',
       title: 'Manual del Escritor — Guía de Ink & Wright',
@@ -146,7 +221,7 @@ Cada libro en Ink & Wright tiene su propio **Mapa Mental independiente**. Lo que
       genre: 'Guía / Tutorial',
       targetWordCount: 25000,
       status: BookStatus.drafting,
-      chapters: [ch1, ch2, ch3],
+      chapters: [ch1, ch2, ch3, ch4, ch5],
       lastEdited: DateTime.now(),
       coverEmoji: '🖋️',
       coverColorHex: 0xFF18181B,

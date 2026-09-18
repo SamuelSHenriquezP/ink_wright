@@ -21,6 +21,7 @@ import '../widgets/editor/zen_find_replace_bar.dart';
 import '../widgets/editor/zen_selection_note_sheet.dart';
 import '../widgets/editor/zen_speed_dial_fab.dart';
 import '../widgets/editor/prose_inspector_sheet.dart';
+import '../widgets/dashboard/dashboard_tutorial_sheet.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'dashboard_screen.dart';
 import 'plot_mind_map_screen.dart';
@@ -594,6 +595,9 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const CorkboardScreen()),
         );
+      },
+      onTutorial: () {
+        DashboardTutorialSheet.show(context, isDark, controller);
       },
       onGoToDashboard: () {
         controller.saveCurrentSession();
