@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:pdf/pdf.dart';
@@ -7,110 +8,236 @@ import '../models/book_model.dart';
 import '../models/chapter_model.dart';
 import '../models/character_model.dart';
 import '../models/codex_entry_model.dart';
+import '../models/book_compilation_config_model.dart';
+
+class CompiledChapterItem {
+  final ChapterModel chapter;
+  final String displayTitle;
+  final String displayHeader;
+  final int index;
+
+  CompiledChapterItem({
+    required this.chapter,
+    required this.displayTitle,
+    required this.displayHeader,
+    required this.index,
+  });
+}
 
 class ExportService {
-  /// Generates clean, well-formatted Markdown with YAML frontmatter
+  /// Sorts, filters, and formats chapters according to the compilation configuration.
+  /// Prologues first, followed by regular chapters, followed by epilogues.
+  static List<CompiledChapterItem> getCompiledChapters(
+    BookModel book, [
+    BookCompilationConfig? config,
+  ]) {
+    final cfg = config ?? book.compilationConfig;
+    final excluded = cfg?.excludedChapterIds.toSet() ?? const <String>{};
+    final active = book.chapters.where((c) => !excluded.contains(c.id)).toList();
+
+    final prologues = active.where((c) => c.chapterType == ChapterType.prologue).toList();
+    final regulars = active.where((c) => c.chapterType == ChapterType.chapter).toList();
+    final epilogues = active.where((c) => c.chapterType == ChapterType.epilogue).toList();
+
+    final List<CompiledChapterItem> result = [];
+    int counter = 1;
+
+    for (final p in prologues) {
+      final custom = cfg?.customChapterTitles[p.id]?.trim();
+      final title = (custom != null && custom.isNotEmpty) ? custom : p.title;
+      final header = title.toLowerCase().contains('prólogo') || title.toLowerCase().contains('prologo')
+          ? title
+          : (title.isEmpty ? 'Prólogo' : 'Prólogo: $title');
+      result.add(CompiledChapterItem(chapter: p, displayTitle: title, displayHeader: header, index: counter++));
+    }
+
+    int regNum = 1;
+    for (final r in regulars) {
+      final custom = cfg?.customChapterTitles[r.id]?.trim();
+      final title = (custom != null && custom.isNotEmpty) ? custom : r.title;
+      final header = 'Capítulo $regNum${title.isNotEmpty ? ': $title' : ''}';
+      result.add(CompiledChapterItem(chapter: r, displayTitle: title, displayHeader: header, index: counter++));
+      regNum++;
+    }
+
+    for (final e in epilogues) {
+      final custom = cfg?.customChapterTitles[e.id]?.trim();
+      final title = (custom != null && custom.isNotEmpty) ? custom : e.title;
+      final header = title.toLowerCase().contains('epílogo') || title.toLowerCase().contains('epilogo')
+          ? title
+          : (title.isEmpty ? 'Epílogo' : 'Epílogo: $title');
+      result.add(CompiledChapterItem(chapter: e, displayTitle: title, displayHeader: header, index: counter++));
+    }
+
+    return result;
+  }
+
+  /// Exports purely the story text without any metadata, statistics, cover, or extra dividers.
+  /// Permite exportar únicamente el texto de la obra sin agregados adicionales.
+  static String exportRawText(
+    BookModel book, {
+    bool includeChapterHeaders = true,
+    BookCompilationConfig? compilationConfig,
+  }) {
+    final cfg = compilationConfig ?? book.compilationConfig;
+    final compiledChapters = getCompiledChapters(book, cfg);
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < compiledChapters.length; i++) {
+      final item = compiledChapters[i];
+      if (includeChapterHeaders && item.displayHeader.isNotEmpty) {
+        buffer.writeln(item.displayHeader);
+        buffer.writeln();
+      }
+      buffer.writeln(item.chapter.content.trim());
+      if (i < compiledChapters.length - 1) {
+        buffer.writeln();
+        buffer.writeln();
+      }
+    }
+
+    return buffer.toString().trim();
+  }
+
+  /// Generates clean, well-formatted Markdown with optional YAML frontmatter and editorial additions
   static String exportToMarkdown(
     BookModel book, {
     List<CharacterModel>? characters,
     List<CodexEntryModel>? codexEntries,
+    BookCompilationConfig? compilationConfig,
+    bool includeEditorialElements = true,
   }) {
+    final cfg = compilationConfig ?? book.compilationConfig;
+    final compiledChapters = getCompiledChapters(book, cfg);
     final buffer = StringBuffer();
 
-    // YAML Frontmatter
-    buffer.writeln('---');
-    buffer.writeln('title: "${book.title}"');
-    if (book.subtitle.isNotEmpty) {
-      buffer.writeln('subtitle: "${book.subtitle}"');
-    }
-    buffer.writeln('genre: "${book.genre}"');
-    buffer.writeln('total_words: ${book.currentWordCount}');
-    buffer.writeln('target_words: ${book.targetWordCount}');
-    buffer.writeln('chapters_count: ${book.chapters.length}');
-    buffer.writeln('exported_at: "${DateTime.now().toIso8601String()}"');
-    if (book.tags.isNotEmpty) {
-      buffer.writeln('tags: [${book.tags.map((t) => '"$t"').join(', ')}]');
-    }
-    buffer.writeln('---');
-    buffer.writeln();
+    if (includeEditorialElements) {
+      final title = cfg?.cover.title.isNotEmpty == true ? cfg!.cover.title : book.title;
+      final subtitle = cfg?.cover.subtitle.isNotEmpty == true ? cfg!.cover.subtitle : book.subtitle;
+      final author = cfg?.cover.author.isNotEmpty == true ? cfg!.cover.author : 'InkWright Author';
 
-    // Book Title & Synopsis
-    buffer.writeln('# ${book.title}');
-    if (book.subtitle.isNotEmpty) {
-      buffer.writeln('### *${book.subtitle}*');
-    }
-    buffer.writeln();
-
-    if (book.synopsis.isNotEmpty) {
-      buffer.writeln('> **Sinopsis:** ${book.synopsis}');
+      // YAML Frontmatter
+      buffer.writeln('---');
+      buffer.writeln('title: "$title"');
+      if (subtitle.isNotEmpty) {
+        buffer.writeln('subtitle: "$subtitle"');
+      }
+      buffer.writeln('author: "$author"');
+      buffer.writeln('genre: "${book.genre}"');
+      buffer.writeln('total_words: ${book.currentWordCount}');
+      buffer.writeln('target_words: ${book.targetWordCount}');
+      buffer.writeln('chapters_count: ${compiledChapters.length}');
+      buffer.writeln('exported_at: "${DateTime.now().toIso8601String()}"');
+      if (book.tags.isNotEmpty) {
+        buffer.writeln('tags: [${book.tags.map((t) => '"$t"').join(', ')}]');
+      }
+      buffer.writeln('---');
       buffer.writeln();
-    }
 
-    // Optional Dramatis Personae
-    if (characters != null && characters.isNotEmpty) {
-      buffer.writeln('## Dramatis Personae (Personajes)');
+      // Book Title & Author
+      buffer.writeln('# $title');
+      if (subtitle.isNotEmpty) {
+        buffer.writeln('### *$subtitle*');
+      }
+      buffer.writeln('**Por: $author**');
       buffer.writeln();
-      for (final char in characters) {
-        buffer.writeln('### ${char.avatarEmoji} ${char.name} — ${char.role}${char.archetype.isNotEmpty ? ' (${char.archetype})' : ''}');
-        if (char.quote.isNotEmpty) {
-          buffer.writeln('> ${char.quote}');
-        }
-        if (char.traits.isNotEmpty) {
-          buffer.writeln('- **Rasgos:** ${char.traits.join(", ")}');
-        }
-        if (char.motivation.isNotEmpty) {
-          buffer.writeln('- **Motivación:** ${char.motivation}');
-        }
-        if (char.flawOrGhost.isNotEmpty) {
-          buffer.writeln('- **Conflicto interno:** ${char.flawOrGhost}');
-        }
-        if (char.writtenBiography.isNotEmpty) {
-          buffer.writeln('\n${char.writtenBiography}');
-        }
+
+      // Dedication
+      if (cfg != null && cfg.dedication.trim().isNotEmpty) {
+        buffer.writeln('> *«${cfg.dedication.trim()}»*');
+        buffer.writeln();
+        buffer.writeln('---');
         buffer.writeln();
       }
-      buffer.writeln('***');
-      buffer.writeln();
-    }
 
-    // Optional Codex Entries
-    if (codexEntries != null && codexEntries.isNotEmpty) {
-      buffer.writeln('## Apéndice del Códice');
-      buffer.writeln();
-      for (final entry in codexEntries) {
-        buffer.writeln('### ${entry.avatarEmoji.isNotEmpty ? entry.avatarEmoji : entry.defaultEmoji} ${entry.name} (${entry.typeLabel})');
-        if (entry.role.isNotEmpty) {
-          buffer.writeln('> ${entry.role}');
-        }
-        if (entry.description.isNotEmpty) {
-          buffer.writeln('\n${entry.description}');
-        }
+      if (book.synopsis.isNotEmpty) {
+        buffer.writeln('> **Sinopsis:** ${book.synopsis}');
         buffer.writeln();
       }
-      buffer.writeln('***');
-      buffer.writeln();
-    }
 
-    buffer.writeln('---');
-    buffer.writeln();
+      // Optional Dramatis Personae
+      if (characters != null && characters.isNotEmpty) {
+        buffer.writeln('## Dramatis Personae (Personajes)');
+        buffer.writeln();
+        for (final char in characters) {
+          buffer.writeln('### ${char.avatarEmoji} ${char.name} — ${char.role}${char.archetype.isNotEmpty ? ' (${char.archetype})' : ''}');
+          if (char.quote.isNotEmpty) {
+            buffer.writeln('> ${char.quote}');
+          }
+          if (char.traits.isNotEmpty) {
+            buffer.writeln('- **Rasgos:** ${char.traits.join(", ")}');
+          }
+          if (char.motivation.isNotEmpty) {
+            buffer.writeln('- **Motivación:** ${char.motivation}');
+          }
+          if (char.flawOrGhost.isNotEmpty) {
+            buffer.writeln('- **Conflicto interno:** ${char.flawOrGhost}');
+          }
+          if (char.writtenBiography.isNotEmpty) {
+            buffer.writeln('\n${char.writtenBiography}');
+          }
+          buffer.writeln();
+        }
+        buffer.writeln('***');
+        buffer.writeln();
+      }
+
+      // Optional Codex Entries
+      if (codexEntries != null && codexEntries.isNotEmpty) {
+        buffer.writeln('## Apéndice del Códice');
+        buffer.writeln();
+        for (final entry in codexEntries) {
+          buffer.writeln('### ${entry.avatarEmoji.isNotEmpty ? entry.avatarEmoji : entry.defaultEmoji} ${entry.name} (${entry.typeLabel})');
+          if (entry.role.isNotEmpty) {
+            buffer.writeln('> ${entry.role}');
+          }
+          if (entry.description.isNotEmpty) {
+            buffer.writeln('\n${entry.description}');
+          }
+          buffer.writeln();
+        }
+        buffer.writeln('***');
+        buffer.writeln();
+      }
+
+      // Table of contents
+      if (cfg?.includeTableOfContents == true) {
+        buffer.writeln('## Índice de Contenido');
+        buffer.writeln();
+        for (final item in compiledChapters) {
+          buffer.writeln('- ${item.displayHeader}');
+        }
+        buffer.writeln();
+        buffer.writeln('---');
+        buffer.writeln();
+      }
+    }
 
     // Chapters
-    for (int i = 0; i < book.chapters.length; i++) {
-      final ChapterModel ch = book.chapters[i];
-      buffer.writeln('## Capítulo ${ch.chapterNumber}: ${ch.title}');
-      if (ch.povCharacter.isNotEmpty) {
+    for (int i = 0; i < compiledChapters.length; i++) {
+      final item = compiledChapters[i];
+      final ChapterModel ch = item.chapter;
+      buffer.writeln('## ${item.displayHeader}');
+      if (includeEditorialElements && ch.povCharacter.isNotEmpty) {
         buffer.writeln('*POV: ${ch.povCharacter}*');
       }
       buffer.writeln();
       buffer.writeln(ch.content.trim());
       buffer.writeln();
-      if (i < book.chapters.length - 1) {
+      if (i < compiledChapters.length - 1) {
         buffer.writeln('***');
         buffer.writeln();
       }
     }
 
-    return buffer.toString();
+    if (includeEditorialElements && cfg != null && cfg.copyrightNotice.trim().isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('---');
+      buffer.writeln();
+      buffer.writeln('*${cfg.copyrightNotice.trim()}*');
+    }
+
+    return buffer.toString().trim();
   }
 
   /// Generates classic plain text manuscript layout
@@ -118,21 +245,42 @@ class ExportService {
     BookModel book, {
     List<CharacterModel>? characters,
     List<CodexEntryModel>? codexEntries,
+    BookCompilationConfig? compilationConfig,
+    bool rawTextOnly = false,
+    bool includeEditorialElements = true,
   }) {
+    if (rawTextOnly || !includeEditorialElements) {
+      return exportRawText(book, includeChapterHeaders: true, compilationConfig: compilationConfig);
+    }
+    final cfg = compilationConfig ?? book.compilationConfig;
+    final compiledChapters = getCompiledChapters(book, cfg);
     final buffer = StringBuffer();
 
+    final title = cfg?.cover.title.isNotEmpty == true ? cfg!.cover.title : book.title;
+    final subtitle = cfg?.cover.subtitle.isNotEmpty == true ? cfg!.cover.subtitle : book.subtitle;
+    final author = cfg?.cover.author.isNotEmpty == true ? cfg!.cover.author : 'InkWright Author';
+
     buffer.writeln('================================================================');
-    buffer.writeln(book.title.toUpperCase());
-    if (book.subtitle.isNotEmpty) {
-      buffer.writeln(book.subtitle);
+    buffer.writeln(title.toUpperCase());
+    if (subtitle.isNotEmpty) {
+      buffer.writeln(subtitle);
     }
+    buffer.writeln('Por: $author');
     buffer.writeln('================================================================');
     buffer.writeln('Género: ${book.genre}');
     buffer.writeln('Palabras totales: ${book.currentWordCount}');
-    buffer.writeln('Capítulos: ${book.chapters.length}');
+    buffer.writeln('Capítulos: ${compiledChapters.length}');
     buffer.writeln('Fecha: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}');
     buffer.writeln('================================================================');
     buffer.writeln();
+
+    if (cfg != null && cfg.dedication.trim().isNotEmpty) {
+      buffer.writeln('DEDICATORIA:');
+      buffer.writeln('"${cfg.dedication.trim()}"');
+      buffer.writeln();
+      buffer.writeln('----------------------------------------------------------------');
+      buffer.writeln();
+    }
 
     if (book.synopsis.isNotEmpty) {
       buffer.writeln('SINOPSIS:');
@@ -170,8 +318,20 @@ class ExportService {
       buffer.writeln();
     }
 
-    for (final ch in book.chapters) {
-      buffer.writeln('CAPÍTULO ${ch.chapterNumber} — ${ch.title.toUpperCase()}');
+    if (cfg?.includeTableOfContents == true) {
+      buffer.writeln('ÍNDICE DE CONTENIDO');
+      buffer.writeln('----------------------------------------------------------------');
+      for (final item in compiledChapters) {
+        buffer.writeln('• ${item.displayHeader}');
+      }
+      buffer.writeln();
+      buffer.writeln('----------------------------------------------------------------');
+      buffer.writeln();
+    }
+
+    for (final item in compiledChapters) {
+      final ch = item.chapter;
+      buffer.writeln(item.displayHeader.toUpperCase());
       if (ch.povCharacter.isNotEmpty) {
         buffer.writeln('(POV: ${ch.povCharacter})');
       }
@@ -179,6 +339,11 @@ class ExportService {
       buffer.writeln(ch.content.trim());
       buffer.writeln();
       buffer.writeln('----------------------------------------------------------------');
+      buffer.writeln();
+    }
+
+    if (cfg != null && cfg.copyrightNotice.trim().isNotEmpty) {
+      buffer.writeln(cfg.copyrightNotice.trim());
       buffer.writeln();
     }
 
@@ -190,9 +355,40 @@ class ExportService {
     BookModel book, {
     List<CharacterModel>? characters,
     List<CodexEntryModel>? codexEntries,
+    BookCompilationConfig? compilationConfig,
+    bool includeEditorialElements = true,
   }) {
+    final cfg = compilationConfig ?? book.compilationConfig;
+    final compiledChapters = getCompiledChapters(book, cfg);
+    final title = cfg?.cover.title.isNotEmpty == true ? cfg!.cover.title : book.title;
+    final subtitle = cfg?.cover.subtitle.isNotEmpty == true ? cfg!.cover.subtitle : book.subtitle;
+    final author = cfg?.cover.author.isNotEmpty == true ? cfg!.cover.author : 'InkWright Author';
+
+    String dedicationHtml = '';
+    if (includeEditorialElements && cfg != null && cfg.dedication.trim().isNotEmpty) {
+      dedicationHtml = '''
+    <section class="dedication" style="text-align: center; margin: 40px auto; font-style: italic; max-width: 500px;">
+      <blockquote>«${_xmlEscape(cfg.dedication.trim())}»</blockquote>
+    </section>
+    <hr class="chapter-divider"/>
+''';
+    }
+
+    String tocHtml = '';
+    if (includeEditorialElements && cfg?.includeTableOfContents == true) {
+      tocHtml = '''
+    <section class="toc" style="margin: 40px 0;">
+      <h2>Índice de Contenido</h2>
+      <ul style="list-style-type: none; padding-left: 0;">
+        ${compiledChapters.map((item) => '<li style="padding: 6px 0; border-bottom: 1px dotted #ccc;"><strong>${_xmlEscape(item.displayHeader)}</strong></li>').join('\n')}
+      </ul>
+    </section>
+    <hr class="chapter-divider"/>
+''';
+    }
+
     String charactersHtml = '';
-    if (characters != null && characters.isNotEmpty) {
+    if (includeEditorialElements && characters != null && characters.isNotEmpty) {
       charactersHtml = '''
     <section class="characters">
       <h2>Dramatis Personae (Personajes)</h2>
@@ -201,7 +397,7 @@ class ExportService {
           <h3>${c.name} <small style="color: #666; font-size: 14px;">— ${c.role}${c.archetype.isNotEmpty ? ' (${c.archetype})' : ''}</small></h3>
           ${c.quote.isNotEmpty ? '<blockquote>«${c.quote}»</blockquote>' : ''}
           ${c.motivation.isNotEmpty ? '<p><strong>Motivación:</strong> ${c.motivation}</p>' : ''}
-          ${c.writtenBiography.isNotEmpty ? '<p>${c.writtenBiography}</p>' : ''}
+          ${c.writtenBiography.isNotEmpty ? _convertMarkdownToEpubHtml(c.writtenBiography) : ''}
         </div>
       ''').join('\n')}
     </section>
@@ -210,7 +406,7 @@ class ExportService {
     }
 
     String codexHtml = '';
-    if (codexEntries != null && codexEntries.isNotEmpty) {
+    if (includeEditorialElements && codexEntries != null && codexEntries.isNotEmpty) {
       codexHtml = '''
     <section class="codex">
       <h2>Apéndice del Códice</h2>
@@ -218,7 +414,7 @@ class ExportService {
         <div class="codex-card">
           <h3>${e.name} <small style="color: #666; font-size: 14px;">(${e.typeLabel})</small></h3>
           ${e.role.isNotEmpty ? '<blockquote>${e.role}</blockquote>' : ''}
-          ${e.description.isNotEmpty ? '<p>${e.description}</p>' : ''}
+          ${e.description.isNotEmpty ? _convertMarkdownToEpubHtml(e.description) : ''}
         </div>
       ''').join('\n')}
     </section>
@@ -226,24 +422,29 @@ class ExportService {
 ''';
     }
 
-    final chaptersHtml = book.chapters.map((ch) {
-      final formattedContent = ch.content
-          .split('\n\n')
-          .map((p) => p.trim())
-          .where((p) => p.isNotEmpty)
-          .map((p) => '<p>$p</p>')
-          .join('\n');
+    final chaptersHtml = compiledChapters.map((item) {
+      final ch = item.chapter;
+      final formattedContent = _convertMarkdownToEpubHtml(ch.content);
 
       return '''
     <section class="chapter">
-      <h2>Capítulo ${ch.chapterNumber}: ${ch.title}</h2>
-      ${ch.povCharacter.isNotEmpty ? '<p class="pov"><em>POV: ${ch.povCharacter}</em></p>' : ''}
+      <h2>${_xmlEscape(item.displayHeader)}</h2>
+      ${(includeEditorialElements && ch.povCharacter.isNotEmpty) ? '<p class="pov"><em>POV: ${ch.povCharacter}</em></p>' : ''}
       <div class="chapter-content">
         $formattedContent
       </div>
     </section>
 ''';
     }).join('\n<hr class="chapter-divider"/>\n');
+
+    String copyrightHtml = '';
+    if (includeEditorialElements && cfg != null && cfg.copyrightNotice.trim().isNotEmpty) {
+      copyrightHtml = '''
+    <footer style="margin-top: 60px; text-align: center; font-size: 13px; color: #777;">
+      <p>${_xmlEscape(cfg.copyrightNotice.trim())}</p>
+    </footer>
+''';
+    }
 
     return '''<!DOCTYPE html>
 <html lang="es">
@@ -328,7 +529,7 @@ class ExportService {
   </style>
 </head>
 <body>
-  <header>
+  ${includeEditorialElements ? '''<header>
     <h1>${book.title}</h1>
     ${book.subtitle.isNotEmpty ? '<p class="subtitle">${book.subtitle}</p>' : ''}
     <div class="meta">
@@ -336,13 +537,15 @@ class ExportService {
       <span>${book.currentWordCount} palabras</span> • 
       <span>${book.chapters.length} capítulos</span>
     </div>
-  </header>
+  </header>''' : ''}
 
-  ${book.synopsis.isNotEmpty ? '<div class="synopsis"><strong>Sinopsis:</strong> ${book.synopsis}</div>' : ''}
-
+  ${(includeEditorialElements && book.synopsis.isNotEmpty) ? '<div class="synopsis"><strong>Sinopsis:</strong> ${book.synopsis}</div>' : ''}
+  $dedicationHtml
+  $tocHtml
   $charactersHtml
   $codexHtml
   $chaptersHtml
+  $copyrightHtml
 </body>
 </html>''';
   }
@@ -352,88 +555,344 @@ class ExportService {
     BookModel book, {
     List<CharacterModel>? characters,
     List<CodexEntryModel>? codexEntries,
+    BookCompilationConfig? compilationConfig,
+    bool includeEditorialElements = true,
   }) async {
+    final cfg = compilationConfig ?? book.compilationConfig;
+    final compiledChapters = getCompiledChapters(book, cfg);
+
+    final title = cfg?.cover.title.isNotEmpty == true ? cfg!.cover.title : book.title;
+    final subtitle = cfg?.cover.subtitle.isNotEmpty == true ? cfg!.cover.subtitle : book.subtitle;
+    final author = cfg?.cover.author.isNotEmpty == true ? cfg!.cover.author : 'InkWright Author';
+
     final pdf = pw.Document(
-      title: _sanitizeForPdf(book.title),
-      author: 'InkWright Studio',
+      title: _sanitizeForPdf(title),
+      author: _sanitizeForPdf(author),
     );
 
-    // Cover Page
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(60),
-        build: (pw.Context context) {
-          return pw.Center(
-            child: pw.Column(
-              mainAxisAlignment: pw.MainAxisAlignment.center,
-              children: [
-                pw.Container(
-                  width: 72,
-                  height: 90,
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey800, width: 2),
-                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+    if (includeEditorialElements) {
+      // Cover Page
+      if (cfg != null) {
+      final hexBg = cfg.cover.backgroundColorHex;
+      final hexText = cfg.cover.textColorHex;
+      final bgColor = PdfColor(
+        ((hexBg >> 16) & 0xFF) / 255.0,
+        ((hexBg >> 8) & 0xFF) / 255.0,
+        (hexBg & 0xFF) / 255.0,
+      );
+      final textColor = PdfColor(
+        ((hexText >> 16) & 0xFF) / 255.0,
+        ((hexText >> 8) & 0xFF) / 255.0,
+        (hexText & 0xFF) / 255.0,
+      );
+
+      pw.MemoryImage? coverImg;
+      if (cfg.cover.imagePath != null && cfg.cover.imagePath!.isNotEmpty) {
+        try {
+          final file = File(cfg.cover.imagePath!);
+          if (file.existsSync()) {
+            coverImg = pw.MemoryImage(file.readAsBytesSync());
+          }
+        } catch (_) {}
+      }
+
+      pw.MainAxisAlignment alignment;
+      switch (cfg.cover.textPosition) {
+        case CoverTextPosition.top:
+          alignment = pw.MainAxisAlignment.start;
+          break;
+        case CoverTextPosition.bottom:
+          alignment = pw.MainAxisAlignment.end;
+          break;
+        case CoverTextPosition.center:
+        default:
+          alignment = pw.MainAxisAlignment.center;
+          break;
+      }
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: pw.EdgeInsets.zero,
+          build: (pw.Context context) {
+            return pw.Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: bgColor,
+              child: pw.Stack(
+                children: [
+                  if (coverImg != null)
+                    pw.Positioned.fill(
+                      child: pw.Image(coverImg, fit: pw.BoxFit.cover),
+                    ),
+                  if (coverImg != null)
+                    pw.Positioned.fill(
+                      child: pw.Container(
+                        color: const PdfColor(0, 0, 0, 0.45),
+                      ),
+                    ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 56, vertical: 70),
+                    child: pw.Column(
+                      mainAxisAlignment: alignment,
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
+                      children: [
+                        pw.Text(
+                          _sanitizeForPdf(title),
+                          style: pw.TextStyle(
+                            fontSize: 32,
+                            fontWeight: pw.FontWeight.bold,
+                            color: textColor,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                        if (subtitle.isNotEmpty) ...[
+                          pw.SizedBox(height: 12),
+                          pw.Text(
+                            _sanitizeForPdf(subtitle),
+                            style: pw.TextStyle(
+                              fontSize: 16,
+                              fontStyle: pw.FontStyle.italic,
+                              color: textColor,
+                            ),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ],
+                        pw.SizedBox(height: 28),
+                        pw.Container(
+                          width: 80,
+                          height: 2,
+                          color: textColor,
+                        ),
+                        pw.SizedBox(height: 24),
+                        pw.Text(
+                          _sanitizeForPdf(author),
+                          style: pw.TextStyle(
+                            fontSize: 18,
+                            fontWeight: pw.FontWeight.bold,
+                            letterSpacing: 2,
+                            color: textColor,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                        pw.SizedBox(height: 20),
+                        pw.Text(
+                          '${book.currentWordCount} palabras • ${compiledChapters.length} capítulos',
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            color: textColor,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
-                  child: pw.Center(
-                    child: pw.Text(
-                      'IW',
-                      style: pw.TextStyle(
-                        fontSize: 26,
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.grey800,
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    } else {
+      // Classic default cover
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(60),
+          build: (pw.Context context) {
+            return pw.Center(
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                children: [
+                  pw.Container(
+                    width: 72,
+                    height: 90,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey800, width: 2),
+                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                    ),
+                    child: pw.Center(
+                      child: pw.Text(
+                        'IW',
+                        style: pw.TextStyle(
+                          fontSize: 26,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey800,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                pw.SizedBox(height: 28),
-                pw.Text(
-                  _sanitizeForPdf(book.title),
-                  style: pw.TextStyle(
-                    fontSize: 28,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                if (book.subtitle.isNotEmpty) ...[
-                  pw.SizedBox(height: 10),
+                  pw.SizedBox(height: 28),
                   pw.Text(
-                    _sanitizeForPdf(book.subtitle),
+                    _sanitizeForPdf(book.title),
                     style: pw.TextStyle(
-                      fontSize: 16,
+                      fontSize: 28,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                  if (book.subtitle.isNotEmpty) ...[
+                    pw.SizedBox(height: 10),
+                    pw.Text(
+                      _sanitizeForPdf(book.subtitle),
+                      style: pw.TextStyle(
+                        fontSize: 16,
+                        fontStyle: pw.FontStyle.italic,
+                        color: PdfColors.grey700,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ],
+                  pw.SizedBox(height: 40),
+                  pw.Container(
+                    width: 120,
+                    height: 1,
+                    color: PdfColors.grey400,
+                  ),
+                  pw.SizedBox(height: 20),
+                  pw.Text(
+                    'Género: ${_sanitizeForPdf(book.genre)}',
+                    style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+                  ),
+                  pw.SizedBox(height: 6),
+                  pw.Text(
+                    '${book.currentWordCount} palabras | ${book.chapters.length} capítulos',
+                    style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+                  ),
+                  pw.SizedBox(height: 40),
+                  pw.Text(
+                    'Generado con InkWright Sanctuary',
+                    style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    // Copyright Page
+    if (cfg != null && cfg.copyrightNotice.trim().isNotEmpty) {
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(72),
+          build: (pw.Context context) {
+            return pw.Column(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  _sanitizeForPdf(title),
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  _sanitizeForPdf(author),
+                  style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+                ),
+                pw.SizedBox(height: 16),
+                pw.Divider(color: PdfColors.grey400),
+                pw.SizedBox(height: 14),
+                pw.Text(
+                  _sanitizeForPdf(cfg.copyrightNotice.trim()),
+                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700, lineSpacing: 2),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Text(
+                  'Compilado y diagramado con InkWright Sanctuary Editorial',
+                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    }
+
+    // Dedication Page
+    if (cfg != null && cfg.dedication.trim().isNotEmpty) {
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(90),
+          build: (pw.Context context) {
+            return pw.Center(
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Text(
+                    _sanitizeForPdf(cfg.dedication.trim()),
+                    style: pw.TextStyle(
+                      fontSize: 15,
                       fontStyle: pw.FontStyle.italic,
-                      color: PdfColors.grey700,
+                      lineSpacing: 4,
+                      color: PdfColors.grey800,
                     ),
                     textAlign: pw.TextAlign.center,
                   ),
                 ],
-                pw.SizedBox(height: 40),
-                pw.Container(
-                  width: 120,
-                  height: 1,
-                  color: PdfColors.grey400,
-                ),
-                pw.SizedBox(height: 20),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    // Table of Contents Page
+    if (cfg?.includeTableOfContents == true) {
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.symmetric(horizontal: 54, vertical: 60),
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
                 pw.Text(
-                  'Genero: ${_sanitizeForPdf(book.genre)}',
-                  style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+                  'Índice de Contenido',
+                  style: pw.TextStyle(
+                    fontSize: 22,
+                    fontWeight: pw.FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
                 ),
-                pw.SizedBox(height: 6),
-                pw.Text(
-                  '${book.currentWordCount} palabras | ${book.chapters.length} capitulos',
-                  style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
-                ),
-                pw.SizedBox(height: 40),
-                pw.Text(
-                  'Generado con InkWright Sanctuary',
-                  style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500),
-                ),
+                pw.SizedBox(height: 12),
+                pw.Divider(color: PdfColors.grey400),
+                pw.SizedBox(height: 16),
+                ...compiledChapters.map((item) {
+                  return pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 6),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Expanded(
+                          child: pw.Text(
+                            _sanitizeForPdf(item.displayHeader),
+                            style: pw.TextStyle(
+                              fontSize: 11,
+                              fontWeight: item.chapter.chapterType != ChapterType.chapter
+                                  ? pw.FontWeight.bold
+                                  : pw.FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                        pw.Text(
+                          '${item.chapter.wordCount} palabras',
+                          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
               ],
-            ),
-          );
-        },
-      ),
-    );
+            );
+          },
+        ),
+      );
+    }
 
     // Optional Dramatis Personae PDF Section
     if (characters != null && characters.isNotEmpty) {
@@ -446,7 +905,7 @@ class ExportService {
               alignment: pw.Alignment.centerRight,
               margin: const pw.EdgeInsets.only(bottom: 16),
               child: pw.Text(
-                '${_sanitizeForPdf(book.title)} - Dramatis Personae',
+                '${_sanitizeForPdf(title)} - Dramatis Personae',
                 style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
               ),
             );
@@ -489,10 +948,7 @@ class ExportService {
                 ],
                 if (c.writtenBiography.isNotEmpty) ...[
                   pw.SizedBox(height: 4),
-                  pw.Text(
-                    _sanitizeForPdf(c.writtenBiography),
-                    style: const pw.TextStyle(fontSize: 10, lineSpacing: 2),
-                  ),
+                  ..._convertMarkdownToPdfWidgets(c.writtenBiography),
                 ],
                 pw.SizedBox(height: 14),
               ]),
@@ -513,7 +969,7 @@ class ExportService {
               alignment: pw.Alignment.centerRight,
               margin: const pw.EdgeInsets.only(bottom: 16),
               child: pw.Text(
-                '${_sanitizeForPdf(book.title)} - Apendice del Codice',
+                '${_sanitizeForPdf(title)} - Apendice del Codice',
                 style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
               ),
             );
@@ -542,10 +998,7 @@ class ExportService {
                 ],
                 if (e.description.isNotEmpty) ...[
                   pw.SizedBox(height: 4),
-                  pw.Text(
-                    _sanitizeForPdf(e.description),
-                    style: const pw.TextStyle(fontSize: 10, lineSpacing: 2),
-                  ),
+                  ..._convertMarkdownToPdfWidgets(e.description),
                 ],
                 pw.SizedBox(height: 14),
               ]),
@@ -554,9 +1007,11 @@ class ExportService {
         ),
       );
     }
+    }
 
     // Chapters
-    for (final chapter in book.chapters) {
+    for (final item in compiledChapters) {
+      final chapter = item.chapter;
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
@@ -567,7 +1022,7 @@ class ExportService {
               alignment: pw.Alignment.centerRight,
               margin: const pw.EdgeInsets.only(bottom: 16),
               child: pw.Text(
-                '${_sanitizeForPdf(book.title)} - Capitulo ${chapter.chapterNumber}',
+                '${_sanitizeForPdf(title)} - ${_sanitizeForPdf(item.displayHeader)}',
                 style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
               ),
             );
@@ -583,31 +1038,16 @@ class ExportService {
             );
           },
           build: (pw.Context context) {
-            final paragraphs = chapter.content
-                .split('\n\n')
-                .map((p) => _sanitizeForPdf(p.trim()))
-                .where((p) => p.isNotEmpty)
-                .toList();
-
             return [
               pw.SizedBox(height: 20),
               pw.Text(
-                'Capitulo ${chapter.chapterNumber}',
-                style: pw.TextStyle(
-                  fontSize: 13,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.grey700,
-                ),
-              ),
-              pw.SizedBox(height: 4),
-              pw.Text(
-                _sanitizeForPdf(chapter.title),
+                _sanitizeForPdf(item.displayHeader),
                 style: pw.TextStyle(
                   fontSize: 22,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
-              if (chapter.povCharacter.isNotEmpty) ...[
+              if (includeEditorialElements && chapter.povCharacter.isNotEmpty) ...[
                 pw.SizedBox(height: 4),
                 pw.Text(
                   'Punto de vista (POV): ${_sanitizeForPdf(chapter.povCharacter)}',
@@ -621,19 +1061,7 @@ class ExportService {
               pw.SizedBox(height: 14),
               pw.Divider(color: PdfColors.grey300),
               pw.SizedBox(height: 14),
-              ...paragraphs.map(
-                (p) => pw.Padding(
-                  padding: const pw.EdgeInsets.only(bottom: 12),
-                  child: pw.Text(
-                    p,
-                    textAlign: pw.TextAlign.justify,
-                    style: const pw.TextStyle(
-                      fontSize: 11,
-                      lineSpacing: 3,
-                    ),
-                  ),
-                ),
-              ),
+              ..._convertMarkdownToPdfWidgets(chapter.content),
             ];
           },
         ),
@@ -666,12 +1094,393 @@ class ExportService {
     return buffer.toString();
   }
 
+  /// Converts Markdown text into native PDF widgets (headings, blockquotes, lists, dialogue, paragraphs)
+  static List<pw.Widget> _convertMarkdownToPdfWidgets(String content) {
+    if (content.trim().isEmpty) return [];
+
+    final lines = content.split(RegExp(r'\r?\n'));
+    final List<pw.Widget> widgets = [];
+    final List<String> currentParagraphLines = [];
+
+    void flushParagraph() {
+      if (currentParagraphLines.isEmpty) return;
+      final fullText = currentParagraphLines.join(' ').trim();
+      currentParagraphLines.clear();
+      if (fullText.isEmpty) return;
+
+      widgets.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 10),
+          child: pw.RichText(
+            textAlign: pw.TextAlign.justify,
+            text: pw.TextSpan(
+              children: _parseInlineToPdfSpans(
+                fullText,
+                baseStyle: const pw.TextStyle(
+                  fontSize: 11,
+                  lineSpacing: 3,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final trimmed = line.trim();
+
+      if (trimmed.isEmpty) {
+        flushParagraph();
+        continue;
+      }
+
+      // 1. Headings (#, ##, ###, ####)
+      if (trimmed.startsWith('# ') ||
+          trimmed.startsWith('## ') ||
+          trimmed.startsWith('### ') ||
+          trimmed.startsWith('#### ')) {
+        flushParagraph();
+        int level = 1;
+        if (trimmed.startsWith('#### ')) {
+          level = 4;
+        } else if (trimmed.startsWith('### ')) {
+          level = 3;
+        } else if (trimmed.startsWith('## ')) {
+          level = 2;
+        }
+
+        final titleText = trimmed.substring(level + 1).trim();
+        final fontSize = level == 1 ? 16.0 : (level == 2 ? 14.0 : (level == 3 ? 12.5 : 11.5));
+        final topPad = level == 1 ? 14.0 : (level == 2 ? 11.0 : 8.0);
+
+        widgets.add(
+          pw.Padding(
+            padding: pw.EdgeInsets.only(top: topPad, bottom: 5),
+            child: pw.RichText(
+              text: pw.TextSpan(
+                children: _parseInlineToPdfSpans(
+                  titleText,
+                  baseStyle: pw.TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: pw.FontWeight.bold,
+                    color: level <= 2 ? PdfColors.grey900 : PdfColors.grey800,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // 2. Scene separators (***, ---, ___)
+      if (trimmed == '***' || trimmed == '---' || trimmed == '___') {
+        flushParagraph();
+        widgets.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 12),
+            child: pw.Center(
+              child: pw.Text(
+                '*  *  *',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.grey500,
+                  letterSpacing: 3,
+                ),
+              ),
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // 3. Blockquotes (> quote)
+      if (trimmed.startsWith('> ') || trimmed == '>') {
+        flushParagraph();
+        final quoteText = trimmed == '>' ? '' : trimmed.substring(2).trim();
+        widgets.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(left: 10, top: 3, bottom: 6),
+            child: pw.Container(
+              decoration: const pw.BoxDecoration(
+                border: pw.Border(left: pw.BorderSide(color: PdfColors.grey400, width: 2.5)),
+              ),
+              padding: const pw.EdgeInsets.only(left: 8, top: 2, bottom: 2),
+              child: pw.RichText(
+                text: pw.TextSpan(
+                  children: _parseInlineToPdfSpans(
+                    quoteText,
+                    baseStyle: const pw.TextStyle(
+                      fontSize: 10.5,
+                      fontStyle: pw.FontStyle.italic,
+                      color: PdfColors.grey700,
+                      lineSpacing: 2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // 4. Checklist items (- [ ] or - [x])
+      if (trimmed.startsWith('- [ ] ') || trimmed.startsWith('- [x] ') || trimmed.startsWith('- [X] ')) {
+        flushParagraph();
+        final isChecked = trimmed.startsWith('- [x] ') || trimmed.startsWith('- [X] ');
+        final itemText = trimmed.substring(6).trim();
+        widgets.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(left: 12, bottom: 4),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  isChecked ? '[x] ' : '[ ] ',
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+                pw.Expanded(
+                  child: pw.RichText(
+                    text: pw.TextSpan(
+                      children: _parseInlineToPdfSpans(
+                        itemText,
+                        baseStyle: pw.TextStyle(
+                          fontSize: 11,
+                          lineSpacing: 2,
+                          color: isChecked ? PdfColors.grey600 : PdfColors.black,
+                          decoration: isChecked ? pw.TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // 5. Bullet lists (- item, * item, + item)
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('+ ')) {
+        flushParagraph();
+        final itemText = trimmed.substring(2).trim();
+        widgets.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(left: 12, bottom: 4),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  '- ',
+                  style: pw.TextStyle(
+                    fontSize: 11,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+                pw.Expanded(
+                  child: pw.RichText(
+                    text: pw.TextSpan(
+                      children: _parseInlineToPdfSpans(
+                        itemText,
+                        baseStyle: const pw.TextStyle(fontSize: 11, lineSpacing: 2),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // 6. Numbered lists (1. item, 2. item)
+      final numMatch = RegExp(r'^(\d+)\.\s+(.*)$').firstMatch(trimmed);
+      if (numMatch != null) {
+        flushParagraph();
+        final numPrefix = numMatch.group(1)!;
+        final itemText = numMatch.group(2)!.trim();
+        widgets.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(left: 12, bottom: 4),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  '$numPrefix. ',
+                  style: pw.TextStyle(
+                    fontSize: 11,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.grey800,
+                  ),
+                ),
+                pw.Expanded(
+                  child: pw.RichText(
+                    text: pw.TextSpan(
+                      children: _parseInlineToPdfSpans(
+                        itemText,
+                        baseStyle: const pw.TextStyle(fontSize: 11, lineSpacing: 2),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // 7. Spanish narrative dialogue turns (em-dash lines get individual paragraph spacing)
+      if (trimmed.startsWith('—') || trimmed.startsWith('--')) {
+        flushParagraph();
+        widgets.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 8),
+            child: pw.RichText(
+              textAlign: pw.TextAlign.justify,
+              text: pw.TextSpan(
+                children: _parseInlineToPdfSpans(
+                  trimmed,
+                  baseStyle: const pw.TextStyle(fontSize: 11, lineSpacing: 3),
+                ),
+              ),
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // 8. Normal prose lines (accumulate into current paragraph)
+      currentParagraphLines.add(trimmed);
+    }
+
+    flushParagraph();
+    return widgets;
+  }
+
+  /// Parses inline Markdown tokens (bold, italic, strike, code, highlight) into native PDF TextSpans
+  static List<pw.TextSpan> _parseInlineToPdfSpans(
+    String rawText, {
+    required pw.TextStyle baseStyle,
+  }) {
+    final text = _sanitizeForPdf(rawText);
+    if (text.isEmpty) return [];
+
+    final matches = _docInlineRegex.allMatches(text);
+    if (matches.isEmpty) {
+      return [pw.TextSpan(text: text, style: baseStyle)];
+    }
+
+    final List<pw.TextSpan> spans = [];
+    int lastIndex = 0;
+
+    for (final m in matches) {
+      if (m.start > lastIndex) {
+        final pre = text.substring(lastIndex, m.start);
+        spans.add(pw.TextSpan(text: pre, style: baseStyle));
+      }
+
+      final matched = m.group(0)!;
+      if (matched.startsWith('***') && matched.endsWith('***')) {
+        final inner = matched.substring(3, matched.length - 3);
+        spans.add(pw.TextSpan(
+          text: inner,
+          style: baseStyle.copyWith(fontWeight: pw.FontWeight.bold, fontStyle: pw.FontStyle.italic),
+        ));
+      } else if (matched.startsWith('___') && matched.endsWith('___')) {
+        final inner = matched.substring(3, matched.length - 3);
+        spans.add(pw.TextSpan(
+          text: inner,
+          style: baseStyle.copyWith(fontWeight: pw.FontWeight.bold, fontStyle: pw.FontStyle.italic),
+        ));
+      } else if (matched.startsWith('**') && matched.endsWith('**')) {
+        final inner = matched.substring(2, matched.length - 2);
+        spans.add(pw.TextSpan(
+          text: inner,
+          style: baseStyle.copyWith(fontWeight: pw.FontWeight.bold),
+        ));
+      } else if (matched.startsWith('__') && matched.endsWith('__')) {
+        final inner = matched.substring(2, matched.length - 2);
+        spans.add(pw.TextSpan(
+          text: inner,
+          style: baseStyle.copyWith(fontWeight: pw.FontWeight.bold),
+        ));
+      } else if (matched.startsWith('*') && matched.endsWith('*')) {
+        final inner = matched.substring(1, matched.length - 1);
+        spans.add(pw.TextSpan(
+          text: inner,
+          style: baseStyle.copyWith(fontStyle: pw.FontStyle.italic),
+        ));
+      } else if (matched.startsWith('_') && matched.endsWith('_')) {
+        final inner = matched.substring(1, matched.length - 1);
+        spans.add(pw.TextSpan(
+          text: inner,
+          style: baseStyle.copyWith(fontStyle: pw.FontStyle.italic),
+        ));
+      } else if (matched.startsWith('~~') && matched.endsWith('~~')) {
+        final inner = matched.substring(2, matched.length - 2);
+        spans.add(pw.TextSpan(
+          text: inner,
+          style: baseStyle.copyWith(decoration: pw.TextDecoration.lineThrough),
+        ));
+      } else if (matched.startsWith('`') && matched.endsWith('`')) {
+        final inner = matched.substring(1, matched.length - 1);
+        spans.add(pw.TextSpan(
+          text: inner,
+          style: baseStyle.copyWith(
+            fontSize: (baseStyle.fontSize ?? 11) * 0.9,
+            color: PdfColors.blueGrey800,
+          ),
+        ));
+      } else if (matched.startsWith('==') && matched.endsWith('==')) {
+        final inner = matched.substring(2, matched.length - 2);
+        spans.add(pw.TextSpan(
+          text: inner,
+          style: baseStyle.copyWith(
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.amber900,
+          ),
+        ));
+      } else {
+        spans.add(pw.TextSpan(text: matched, style: baseStyle));
+      }
+
+      lastIndex = m.end;
+    }
+
+    if (lastIndex < text.length) {
+      final post = text.substring(lastIndex);
+      spans.add(pw.TextSpan(text: post, style: baseStyle));
+    }
+
+    return spans;
+  }
+
   /// Generates a genuine Microsoft Word (.docx) Open XML archive
   static List<int> generateDocx(
     BookModel book, {
     List<CharacterModel>? characters,
     List<CodexEntryModel>? codexEntries,
+    BookCompilationConfig? compilationConfig,
+    bool includeEditorialElements = true,
   }) {
+    final cfg = compilationConfig ?? book.compilationConfig;
+    final compiledChapters = getCompiledChapters(book, cfg);
+    final title = cfg?.cover.title.isNotEmpty == true ? cfg!.cover.title : book.title;
+    final subtitle = cfg?.cover.subtitle.isNotEmpty == true ? cfg!.cover.subtitle : book.subtitle;
+    final author = cfg?.cover.author.isNotEmpty == true ? cfg!.cover.author : 'InkWright Author';
+
     final archive = Archive();
 
     // 1. [Content_Types].xml
@@ -725,27 +1534,62 @@ class ExportService {
     docBuffer.writeln('<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">');
     docBuffer.writeln('<w:body>');
 
-    // Book Title
-    docBuffer.writeln('<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="2400" w:after="200"/></w:pPr>');
-    docBuffer.writeln('<w:r><w:rPr><w:b/><w:sz w:val="56"/><w:szCs w:val="56"/></w:rPr>');
-    docBuffer.writeln('<w:t>${_xmlEscape(book.title)}</w:t></w:r></w:p>');
+    if (includeEditorialElements) {
+      // Book Title
+      docBuffer.writeln('<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="2400" w:after="200"/></w:pPr>');
+      docBuffer.writeln('<w:r><w:rPr><w:b/><w:sz w:val="56"/><w:szCs w:val="56"/></w:rPr>');
+      docBuffer.writeln('<w:t>${_xmlEscape(title)}</w:t></w:r></w:p>');
 
     // Subtitle
-    if (book.subtitle.isNotEmpty) {
-      docBuffer.writeln('<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="400"/></w:pPr>');
+    if (subtitle.isNotEmpty) {
+      docBuffer.writeln('<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="300"/></w:pPr>');
       docBuffer.writeln('<w:r><w:rPr><w:i/><w:sz w:val="32"/><w:szCs w:val="32"/><w:color w:val="555555"/></w:rPr>');
-      docBuffer.writeln('<w:t>${_xmlEscape(book.subtitle)}</w:t></w:r></w:p>');
+      docBuffer.writeln('<w:t>${_xmlEscape(subtitle)}</w:t></w:r></w:p>');
     }
+
+    // Author
+    docBuffer.writeln('<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="300"/></w:pPr>');
+    docBuffer.writeln('<w:r><w:rPr><w:b/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr>');
+    docBuffer.writeln('<w:t>${_xmlEscape("Por: $author")}</w:t></w:r></w:p>');
 
     // Metadata
     docBuffer.writeln('<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="200"/></w:pPr>');
     docBuffer.writeln('<w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/><w:color w:val="777777"/></w:rPr>');
-    docBuffer.writeln('<w:t>${_xmlEscape("Género: ${book.genre}  •  ${book.currentWordCount} palabras  •  ${book.chapters.length} capítulos")}</w:t></w:r></w:p>');
+    docBuffer.writeln('<w:t>${_xmlEscape("Género: ${book.genre}  •  ${book.currentWordCount} palabras  •  ${compiledChapters.length} capítulos")}</w:t></w:r></w:p>');
 
     // Synopsis
     if (book.synopsis.isNotEmpty) {
       docBuffer.writeln('<w:p><w:pPr><w:spacing w:before="400" w:after="400"/></w:pPr>');
       docBuffer.writeln('<w:r><w:rPr><w:i/></w:rPr><w:t>${_xmlEscape("Sinopsis: ${book.synopsis}")}</w:t></w:r></w:p>');
+    }
+
+    // Dedication in Word
+    if (cfg != null && cfg.dedication.trim().isNotEmpty) {
+      docBuffer.writeln('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+      docBuffer.writeln('<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="3600" w:after="400"/></w:pPr>');
+      docBuffer.writeln('<w:r><w:rPr><w:i/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr>');
+      docBuffer.writeln('<w:t>${_xmlEscape("«${cfg.dedication.trim()}»")}</w:t></w:r></w:p>');
+    }
+
+    // Copyright in Word
+    if (cfg != null && cfg.copyrightNotice.trim().isNotEmpty) {
+      docBuffer.writeln('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+      docBuffer.writeln('<w:p><w:pPr><w:jc w:val="left"/><w:spacing w:before="6000" w:after="200"/></w:pPr>');
+      docBuffer.writeln('<w:r><w:rPr><w:sz w:val="18"/><w:szCs w:val="18"/><w:color w:val="777777"/></w:rPr>');
+      docBuffer.writeln('<w:t>${_xmlEscape(cfg.copyrightNotice.trim())}</w:t></w:r></w:p>');
+    }
+
+    // Table of contents in Word
+    if (cfg?.includeTableOfContents == true) {
+      docBuffer.writeln('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+      docBuffer.writeln('<w:p><w:pPr><w:spacing w:before="400" w:after="240"/></w:pPr>');
+      docBuffer.writeln('<w:r><w:rPr><w:b/><w:sz w:val="36"/><w:szCs w:val="36"/></w:rPr>');
+      docBuffer.writeln('<w:t>${_xmlEscape("Índice de Contenido")}</w:t></w:r></w:p>');
+      for (final item in compiledChapters) {
+        docBuffer.writeln('<w:p><w:pPr><w:spacing w:after="120"/></w:pPr>');
+        docBuffer.writeln('<w:r><w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>');
+        docBuffer.writeln('<w:t>${_xmlEscape(item.displayHeader)}</w:t></w:r></w:p>');
+      }
     }
 
     // Optional Characters Section (Word)
@@ -803,18 +1647,23 @@ class ExportService {
         }
       }
     }
+    }
 
     // Chapters
-    for (final ch in book.chapters) {
+    for (int i = 0; i < compiledChapters.length; i++) {
+      final item = compiledChapters[i];
+      final ch = item.chapter;
       // Page break before chapter
-      docBuffer.writeln('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+      if (includeEditorialElements || i > 0) {
+        docBuffer.writeln('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+      }
 
       // Chapter Title
       docBuffer.writeln('<w:p><w:pPr><w:spacing w:before="400" w:after="160"/></w:pPr>');
       docBuffer.writeln('<w:r><w:rPr><w:b/><w:sz w:val="36"/><w:szCs w:val="36"/></w:rPr>');
-      docBuffer.writeln('<w:t>${_xmlEscape("Capítulo ${ch.chapterNumber}: ${ch.title}")}</w:t></w:r></w:p>');
+      docBuffer.writeln('<w:t>${_xmlEscape(item.displayHeader)}</w:t></w:r></w:p>');
 
-      if (ch.povCharacter.isNotEmpty) {
+      if (includeEditorialElements && ch.povCharacter.isNotEmpty) {
         docBuffer.writeln('<w:p><w:pPr><w:spacing w:after="240"/></w:pPr>');
         docBuffer.writeln('<w:r><w:rPr><w:i/><w:sz w:val="20"/><w:szCs w:val="20"/><w:color w:val="666666"/></w:rPr>');
         docBuffer.writeln('<w:t>${_xmlEscape("POV: ${ch.povCharacter}")}</w:t></w:r></w:p>');
@@ -844,7 +1693,21 @@ class ExportService {
     BookModel book, {
     List<CharacterModel>? characters,
     List<CodexEntryModel>? codexEntries,
+    BookCompilationConfig? compilationConfig,
+    bool includeEditorialElements = true,
   }) {
+    final cfg = compilationConfig ?? book.compilationConfig;
+    final compiledChapters = getCompiledChapters(book, cfg);
+    final title = cfg?.cover.title.isNotEmpty == true ? cfg!.cover.title : book.title;
+    final subtitle = cfg?.cover.subtitle.isNotEmpty == true ? cfg!.cover.subtitle : book.subtitle;
+    final author = cfg?.cover.author.isNotEmpty == true ? cfg!.cover.author : 'InkWright Author';
+
+    final bool hasCover = includeEditorialElements;
+    final bool hasDedication = includeEditorialElements && cfg != null && cfg.dedication.trim().isNotEmpty;
+    final bool hasCopyright = includeEditorialElements && cfg != null && cfg.copyrightNotice.trim().isNotEmpty;
+    final bool hasChars = includeEditorialElements && characters != null && characters.isNotEmpty;
+    final bool hasCodex = includeEditorialElements && codexEntries != null && codexEntries.isNotEmpty;
+
     final archive = Archive();
 
     // 1. mimetype (MUST be first and uncompressed)
@@ -922,35 +1785,99 @@ p {
 }
 blockquote {
   font-style: italic;
-  margin: 1em 2em;
+  margin: 1em 1.5em;
+  padding-left: 1em;
+  border-left: 3px solid #ccc;
   color: #444;
+}
+.scene-break {
+  text-align: center;
+  margin: 1.5em 0;
+  letter-spacing: 0.3em;
+  font-weight: bold;
+  color: #777;
+}
+ul, ol {
+  margin: 0.5em 0 1em 2em;
+  padding: 0;
+}
+li {
+  margin-bottom: 0.3em;
+  text-indent: 0;
+}
+code {
+  font-family: monospace;
+  font-size: 0.9em;
+  background-color: #eee;
+  padding: 1px 4px;
+}
+mark {
+  background-color: #ffe066;
+  padding: 1px 3px;
 }
 ''';
     archive.addFile(ArchiveFile('OEBPS/style.css', cssContent.length, utf8.encode(cssContent)));
 
     // 4. OEBPS/titlepage.xhtml
-    final titlePageBuffer = StringBuffer();
-    titlePageBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
-    titlePageBuffer.writeln('<!DOCTYPE html>');
-    titlePageBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="es">');
-    titlePageBuffer.writeln('<head><title>${_xmlEscape(book.title)}</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
-    titlePageBuffer.writeln('<body>');
-    titlePageBuffer.writeln('<div style="text-align:center; padding-top: 20%;">');
-    titlePageBuffer.writeln('<h1>${_xmlEscape(book.title)}</h1>');
-    if (book.subtitle.isNotEmpty) {
-      titlePageBuffer.writeln('<p class="subtitle">${_xmlEscape(book.subtitle)}</p>');
+    if (hasCover) {
+      final titlePageBuffer = StringBuffer();
+      titlePageBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
+      titlePageBuffer.writeln('<!DOCTYPE html>');
+      titlePageBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="es">');
+      titlePageBuffer.writeln('<head><title>${_xmlEscape(title)}</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
+      titlePageBuffer.writeln('<body>');
+      titlePageBuffer.writeln('<div style="text-align:center; padding-top: 20%;">');
+      titlePageBuffer.writeln('<h1>${_xmlEscape(title)}</h1>');
+      if (subtitle.isNotEmpty) {
+        titlePageBuffer.writeln('<p class="subtitle">${_xmlEscape(subtitle)}</p>');
+      }
+      titlePageBuffer.writeln('<p style="font-weight: bold; margin-top: 1.2em;">Por: ${_xmlEscape(author)}</p>');
+      titlePageBuffer.writeln('<div style="margin: 2em auto; width: 60px; height: 1px; background-color: #999;"></div>');
+      titlePageBuffer.writeln('<p class="meta">Género: ${_xmlEscape(book.genre)}</p>');
+      titlePageBuffer.writeln('<p class="meta">${book.currentWordCount} palabras • ${compiledChapters.length} capítulos</p>');
+      if (book.synopsis.isNotEmpty) {
+        titlePageBuffer.writeln('<div style="margin: 2em 10%; font-style: italic; text-align: justify;"><p class="noindent"><strong>Sinopsis:</strong> ${_xmlEscape(book.synopsis)}</p></div>');
+      }
+      titlePageBuffer.writeln('<p class="meta" style="margin-top: 3em; font-size: 0.8em;">Compilado con Ink &amp; Wright Sanctuary</p>');
+      titlePageBuffer.writeln('</div>');
+      titlePageBuffer.writeln('</body></html>');
+      final titlePageXml = titlePageBuffer.toString();
+      archive.addFile(ArchiveFile('OEBPS/titlepage.xhtml', titlePageXml.length, utf8.encode(titlePageXml)));
     }
-    titlePageBuffer.writeln('<div style="margin: 2em auto; width: 60px; height: 1px; background-color: #999;"></div>');
-    titlePageBuffer.writeln('<p class="meta">Género: ${_xmlEscape(book.genre)}</p>');
-    titlePageBuffer.writeln('<p class="meta">${book.currentWordCount} palabras • ${book.chapters.length} capítulos</p>');
-    if (book.synopsis.isNotEmpty) {
-      titlePageBuffer.writeln('<div style="margin: 2em 10%; font-style: italic; text-align: justify;"><p class="noindent"><strong>Sinopsis:</strong> ${_xmlEscape(book.synopsis)}</p></div>');
+
+    // Optional Dedication (OEBPS/dedication.xhtml)
+    if (hasDedication) {
+      final dedBuffer = StringBuffer();
+      dedBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
+      dedBuffer.writeln('<!DOCTYPE html>');
+      dedBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" lang="es">');
+      dedBuffer.writeln('<head><title>Dedicatoria</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
+      dedBuffer.writeln('<body>');
+      dedBuffer.writeln('<div style="text-align:center; padding-top: 25%; font-style: italic; margin: 0 10%;">');
+      dedBuffer.writeln('<p class="noindent">«${_xmlEscape(cfg.dedication.trim())}»</p>');
+      dedBuffer.writeln('</div>');
+      dedBuffer.writeln('</body></html>');
+      final dedXml = dedBuffer.toString();
+      archive.addFile(ArchiveFile('OEBPS/dedication.xhtml', dedXml.length, utf8.encode(dedXml)));
     }
-    titlePageBuffer.writeln('<p class="meta" style="margin-top: 3em; font-size: 0.8em;">Compilado con Ink &amp; Wright</p>');
-    titlePageBuffer.writeln('</div>');
-    titlePageBuffer.writeln('</body></html>');
-    final titlePageXml = titlePageBuffer.toString();
-    archive.addFile(ArchiveFile('OEBPS/titlepage.xhtml', titlePageXml.length, utf8.encode(titlePageXml)));
+
+    // Optional Copyright (OEBPS/copyright.xhtml)
+    if (hasCopyright) {
+      final crBuffer = StringBuffer();
+      crBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
+      crBuffer.writeln('<!DOCTYPE html>');
+      crBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" lang="es">');
+      crBuffer.writeln('<head><title>Créditos</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
+      crBuffer.writeln('<body>');
+      crBuffer.writeln('<div style="padding-top: 40%; font-size: 0.85em; color: #555; text-align: center;">');
+      crBuffer.writeln('<p class="noindent">${_xmlEscape(title)}</p>');
+      crBuffer.writeln('<p class="noindent">${_xmlEscape(author)}</p>');
+      crBuffer.writeln('<p class="noindent" style="margin-top: 2em;">${_xmlEscape(cfg.copyrightNotice.trim())}</p>');
+      crBuffer.writeln('</div>');
+      crBuffer.writeln('</body></html>');
+      final crXml = crBuffer.toString();
+      archive.addFile(ArchiveFile('OEBPS/copyright.xhtml', crXml.length, utf8.encode(crXml)));
+    }
 
     // Optional Dramatis Personae (OEBPS/characters.xhtml)
     final bool hasChars = characters != null && characters.isNotEmpty;
@@ -975,7 +1902,7 @@ blockquote {
           charsBuffer.writeln('<p class="noindent"><strong>Motivación:</strong> ${_xmlEscape(c.motivation)}</p>');
         }
         if (c.writtenBiography.isNotEmpty) {
-          charsBuffer.writeln('<p>${_xmlEscape(c.writtenBiography)}</p>');
+          charsBuffer.writeln(_convertMarkdownToEpubHtml(c.writtenBiography));
         }
         charsBuffer.writeln('</div>');
       }
@@ -1001,7 +1928,7 @@ blockquote {
           codexBuffer.writeln('<blockquote>${_xmlEscape(e.role)}</blockquote>');
         }
         if (e.description.isNotEmpty) {
-          codexBuffer.writeln('<p>${_xmlEscape(e.description)}</p>');
+          codexBuffer.writeln(_convertMarkdownToEpubHtml(e.description));
         }
         codexBuffer.writeln('</div>');
       }
@@ -1011,22 +1938,20 @@ blockquote {
     }
 
     // Chapters (OEBPS/chapter_1.xhtml, ...)
-    for (int i = 0; i < book.chapters.length; i++) {
-      final ch = book.chapters[i];
+    for (int i = 0; i < compiledChapters.length; i++) {
+      final item = compiledChapters[i];
+      final ch = item.chapter;
       final chBuffer = StringBuffer();
       chBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
       chBuffer.writeln('<!DOCTYPE html>');
       chBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" lang="es">');
-      chBuffer.writeln('<head><title>${_xmlEscape(ch.title)}</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
+      chBuffer.writeln('<head><title>${_xmlEscape(item.displayHeader)}</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
       chBuffer.writeln('<body>');
-      chBuffer.writeln('<h2>Capítulo ${ch.chapterNumber}: ${_xmlEscape(ch.title)}</h2>');
-      if (ch.povCharacter.isNotEmpty) {
+      chBuffer.writeln('<h2>${_xmlEscape(item.displayHeader)}</h2>');
+      if (includeEditorialElements && ch.povCharacter.isNotEmpty) {
         chBuffer.writeln('<p class="pov">POV: ${_xmlEscape(ch.povCharacter)}</p>');
       }
-      final paragraphs = ch.content.split('\n\n').map((p) => p.trim()).where((p) => p.isNotEmpty);
-      for (final p in paragraphs) {
-        chBuffer.writeln('<p>${_xmlEscape(p)}</p>');
-      }
+      chBuffer.write(_convertMarkdownToEpubHtml(ch.content));
       chBuffer.writeln('</body></html>');
       final chXml = chBuffer.toString();
       archive.addFile(ArchiveFile('OEBPS/chapter_${i + 1}.xhtml', chXml.length, utf8.encode(chXml)));
@@ -1042,16 +1967,24 @@ blockquote {
     navBuffer.writeln('<nav epub:type="toc" id="toc">');
     navBuffer.writeln('<h2>Índice</h2>');
     navBuffer.writeln('<ol>');
-    navBuffer.writeln('<li><a href="titlepage.xhtml">Portada</a></li>');
+    if (hasCover) {
+      navBuffer.writeln('<li><a href="titlepage.xhtml">Portada</a></li>');
+    }
+    if (hasDedication) {
+      navBuffer.writeln('<li><a href="dedication.xhtml">Dedicatoria</a></li>');
+    }
+    if (hasCopyright) {
+      navBuffer.writeln('<li><a href="copyright.xhtml">Créditos</a></li>');
+    }
     if (hasChars) {
       navBuffer.writeln('<li><a href="characters.xhtml">Dramatis Personae</a></li>');
     }
     if (hasCodex) {
       navBuffer.writeln('<li><a href="codex.xhtml">Apéndice del Códice</a></li>');
     }
-    for (int i = 0; i < book.chapters.length; i++) {
-      final ch = book.chapters[i];
-      navBuffer.writeln('<li><a href="chapter_${i + 1}.xhtml">Capítulo ${ch.chapterNumber}: ${_xmlEscape(ch.title)}</a></li>');
+    for (int i = 0; i < compiledChapters.length; i++) {
+      final item = compiledChapters[i];
+      navBuffer.writeln('<li><a href="chapter_${i + 1}.xhtml">${_xmlEscape(item.displayHeader)}</a></li>');
     }
     navBuffer.writeln('</ol>');
     navBuffer.writeln('</nav>');
@@ -1064,10 +1997,21 @@ blockquote {
     ncxBuffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
     ncxBuffer.writeln('<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">');
     ncxBuffer.writeln('<head><meta name="dtb:uid" content="urn:uuid:${book.id}"/></head>');
-    ncxBuffer.writeln('<docTitle><text>${_xmlEscape(book.title)}</text></docTitle>');
+    ncxBuffer.writeln('<docTitle><text>${_xmlEscape(title)}</text></docTitle>');
     ncxBuffer.writeln('<navMap>');
-    int playOrder = 1;
-    ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Portada</text></navLabel><content src="titlepage.xhtml"/></navPoint>');
+    int playOrder = 0;
+    if (hasCover) {
+      playOrder++;
+      ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Portada</text></navLabel><content src="titlepage.xhtml"/></navPoint>');
+    }
+    if (hasDedication) {
+      playOrder++;
+      ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Dedicatoria</text></navLabel><content src="dedication.xhtml"/></navPoint>');
+    }
+    if (hasCopyright) {
+      playOrder++;
+      ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Créditos</text></navLabel><content src="copyright.xhtml"/></navPoint>');
+    }
     if (hasChars) {
       playOrder++;
       ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Dramatis Personae</text></navLabel><content src="characters.xhtml"/></navPoint>');
@@ -1076,10 +2020,10 @@ blockquote {
       playOrder++;
       ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Apéndice del Códice</text></navLabel><content src="codex.xhtml"/></navPoint>');
     }
-    for (int i = 0; i < book.chapters.length; i++) {
+    for (int i = 0; i < compiledChapters.length; i++) {
       playOrder++;
-      final ch = book.chapters[i];
-      ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Capítulo ${ch.chapterNumber}: ${_xmlEscape(ch.title)}</text></navLabel><content src="chapter_${i + 1}.xhtml"/></navPoint>');
+      final item = compiledChapters[i];
+      ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>${_xmlEscape(item.displayHeader)}</text></navLabel><content src="chapter_${i + 1}.xhtml"/></navPoint>');
     }
     ncxBuffer.writeln('</navMap>');
     ncxBuffer.writeln('</ncx>');
@@ -1092,9 +2036,9 @@ blockquote {
     opfBuffer.writeln('<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="3.0">');
     opfBuffer.writeln('<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">');
     opfBuffer.writeln('<dc:identifier id="BookId">urn:uuid:${book.id}</dc:identifier>');
-    opfBuffer.writeln('<dc:title>${_xmlEscape(book.title)}</dc:title>');
+    opfBuffer.writeln('<dc:title>${_xmlEscape(title)}</dc:title>');
     opfBuffer.writeln('<dc:language>es</dc:language>');
-    opfBuffer.writeln('<dc:creator>Ink &amp; Wright Author</dc:creator>');
+    opfBuffer.writeln('<dc:creator>${_xmlEscape(author)}</dc:creator>');
     opfBuffer.writeln('<dc:publisher>Ink &amp; Wright Sanctuary</dc:publisher>');
     if (book.synopsis.isNotEmpty) {
       opfBuffer.writeln('<dc:description>${_xmlEscape(book.synopsis)}</dc:description>');
@@ -1106,27 +2050,43 @@ blockquote {
     opfBuffer.writeln('<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>');
     opfBuffer.writeln('<item id="css" href="style.css" media-type="text/css"/>');
     opfBuffer.writeln('<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>');
-    opfBuffer.writeln('<item id="titlepage" href="titlepage.xhtml" media-type="application/xhtml+xml"/>');
+    if (hasCover) {
+      opfBuffer.writeln('<item id="titlepage" href="titlepage.xhtml" media-type="application/xhtml+xml"/>');
+    }
+    if (hasDedication) {
+      opfBuffer.writeln('<item id="dedication" href="dedication.xhtml" media-type="application/xhtml+xml"/>');
+    }
+    if (hasCopyright) {
+      opfBuffer.writeln('<item id="copyright" href="copyright.xhtml" media-type="application/xhtml+xml"/>');
+    }
     if (hasChars) {
       opfBuffer.writeln('<item id="characters" href="characters.xhtml" media-type="application/xhtml+xml"/>');
     }
     if (hasCodex) {
       opfBuffer.writeln('<item id="codex" href="codex.xhtml" media-type="application/xhtml+xml"/>');
     }
-    for (int i = 0; i < book.chapters.length; i++) {
+    for (int i = 0; i < compiledChapters.length; i++) {
       opfBuffer.writeln('<item id="chap_${i + 1}" href="chapter_${i + 1}.xhtml" media-type="application/xhtml+xml"/>');
     }
     opfBuffer.writeln('</manifest>');
 
     opfBuffer.writeln('<spine toc="ncx">');
-    opfBuffer.writeln('<itemref idref="titlepage"/>');
+    if (hasCover) {
+      opfBuffer.writeln('<itemref idref="titlepage"/>');
+    }
+    if (hasDedication) {
+      opfBuffer.writeln('<itemref idref="dedication"/>');
+    }
+    if (hasCopyright) {
+      opfBuffer.writeln('<itemref idref="copyright"/>');
+    }
     if (hasChars) {
       opfBuffer.writeln('<itemref idref="characters"/>');
     }
     if (hasCodex) {
       opfBuffer.writeln('<itemref idref="codex"/>');
     }
-    for (int i = 0; i < book.chapters.length; i++) {
+    for (int i = 0; i < compiledChapters.length; i++) {
       opfBuffer.writeln('<itemref idref="chap_${i + 1}"/>');
     }
     opfBuffer.writeln('</spine>');
@@ -1135,6 +2095,200 @@ blockquote {
     archive.addFile(ArchiveFile('OEBPS/content.opf', opfXml.length, utf8.encode(opfXml)));
 
     return ZipEncoder().encode(archive);
+  }
+
+  /// Converts Markdown text into native semantic XHTML (paragraphs, headings, blockquotes, lists, dialogue) for EPUB and HTML
+  static String _convertMarkdownToEpubHtml(String content) {
+    if (content.trim().isEmpty) return '';
+
+    final lines = content.split(RegExp(r'\r?\n'));
+    final buffer = StringBuffer();
+    final List<String> currentParagraphLines = [];
+    String? currentListType; // 'ul' or 'ol'
+
+    void flushParagraph() {
+      if (currentParagraphLines.isEmpty) return;
+      final fullText = currentParagraphLines.join(' ').trim();
+      currentParagraphLines.clear();
+      if (fullText.isEmpty) return;
+
+      buffer.writeln('<p>${_parseInlineToHtml(fullText)}</p>');
+    }
+
+    void closeList() {
+      if (currentListType != null) {
+        buffer.writeln('</$currentListType>');
+        currentListType = null;
+      }
+    }
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final trimmed = line.trim();
+
+      if (trimmed.isEmpty) {
+        flushParagraph();
+        closeList();
+        continue;
+      }
+
+      // 1. Headings (#, ##, ###, ####)
+      if (trimmed.startsWith('# ') ||
+          trimmed.startsWith('## ') ||
+          trimmed.startsWith('### ') ||
+          trimmed.startsWith('#### ')) {
+        flushParagraph();
+        closeList();
+        int level = 1;
+        if (trimmed.startsWith('#### ')) {
+          level = 4;
+        } else if (trimmed.startsWith('### ')) {
+          level = 3;
+        } else if (trimmed.startsWith('## ')) {
+          level = 2;
+        }
+
+        final titleText = trimmed.substring(level + 1).trim();
+        final tag = level == 1 ? 'h3' : (level == 2 ? 'h4' : 'h5');
+        buffer.writeln('<$tag>${_parseInlineToHtml(titleText)}</$tag>');
+        continue;
+      }
+
+      // 2. Scene separators (***, ---, ___)
+      if (trimmed == '***' || trimmed == '---' || trimmed == '___') {
+        flushParagraph();
+        closeList();
+        buffer.writeln('<div class="scene-break">*  *  *</div>');
+        continue;
+      }
+
+      // 3. Blockquotes (> quote)
+      if (trimmed.startsWith('> ') || trimmed == '>') {
+        flushParagraph();
+        closeList();
+        final quoteText = trimmed == '>' ? '' : trimmed.substring(2).trim();
+        buffer.writeln('<blockquote><p class="noindent">${_parseInlineToHtml(quoteText)}</p></blockquote>');
+        continue;
+      }
+
+      // 4. Checklist items (- [ ] or - [x])
+      if (trimmed.startsWith('- [ ] ') || trimmed.startsWith('- [x] ') || trimmed.startsWith('- [X] ')) {
+        flushParagraph();
+        if (currentListType != 'ul') {
+          closeList();
+          buffer.writeln('<ul style="list-style-type:none; padding-left:1em;">');
+          currentListType = 'ul';
+        }
+        final isChecked = trimmed.startsWith('- [x] ') || trimmed.startsWith('- [X] ');
+        final itemText = trimmed.substring(6).trim();
+        final box = isChecked ? '☑ ' : '☐ ';
+        buffer.writeln('<li>$box${_parseInlineToHtml(itemText)}</li>');
+        continue;
+      }
+
+      // 5. Bullet lists (- item, * item, + item)
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('+ ')) {
+        flushParagraph();
+        if (currentListType != 'ul') {
+          closeList();
+          buffer.writeln('<ul>');
+          currentListType = 'ul';
+        }
+        final itemText = trimmed.substring(2).trim();
+        buffer.writeln('<li>${_parseInlineToHtml(itemText)}</li>');
+        continue;
+      }
+
+      // 6. Numbered lists (1. item, 2. item)
+      final numMatch = RegExp(r'^\d+\.\s+(.*)$').firstMatch(trimmed);
+      if (numMatch != null) {
+        flushParagraph();
+        if (currentListType != 'ol') {
+          closeList();
+          buffer.writeln('<ol>');
+          currentListType = 'ol';
+        }
+        final itemText = numMatch.group(1)!.trim();
+        buffer.writeln('<li>${_parseInlineToHtml(itemText)}</li>');
+        continue;
+      }
+
+      // If we reach regular prose, close any active list
+      closeList();
+
+      // 7. Spanish dialogue turns (em-dash lines get individual paragraph)
+      if (trimmed.startsWith('—') || trimmed.startsWith('--')) {
+        flushParagraph();
+        buffer.writeln('<p>${_parseInlineToHtml(trimmed)}</p>');
+        continue;
+      }
+
+      // 8. Normal prose line
+      currentParagraphLines.add(trimmed);
+    }
+
+    flushParagraph();
+    closeList();
+    return buffer.toString();
+  }
+
+  /// Parses inline Markdown tokens (bold, italic, strike, code, highlight) into XHTML tags for EPUB
+  static String _parseInlineToHtml(String text) {
+    if (text.isEmpty) return '';
+
+    final matches = _docInlineRegex.allMatches(text);
+    if (matches.isEmpty) {
+      return _xmlEscape(text);
+    }
+
+    final buffer = StringBuffer();
+    int lastIndex = 0;
+
+    for (final m in matches) {
+      if (m.start > lastIndex) {
+        buffer.write(_xmlEscape(text.substring(lastIndex, m.start)));
+      }
+
+      final matched = m.group(0)!;
+      if (matched.startsWith('***') && matched.endsWith('***')) {
+        final inner = matched.substring(3, matched.length - 3);
+        buffer.write('<strong><em>${_xmlEscape(inner)}</em></strong>');
+      } else if (matched.startsWith('___') && matched.endsWith('___')) {
+        final inner = matched.substring(3, matched.length - 3);
+        buffer.write('<strong><em>${_xmlEscape(inner)}</em></strong>');
+      } else if (matched.startsWith('**') && matched.endsWith('**')) {
+        final inner = matched.substring(2, matched.length - 2);
+        buffer.write('<strong>${_xmlEscape(inner)}</strong>');
+      } else if (matched.startsWith('__') && matched.endsWith('__')) {
+        final inner = matched.substring(2, matched.length - 2);
+        buffer.write('<strong>${_xmlEscape(inner)}</strong>');
+      } else if (matched.startsWith('*') && matched.endsWith('*')) {
+        final inner = matched.substring(1, matched.length - 1);
+        buffer.write('<em>${_xmlEscape(inner)}</em>');
+      } else if (matched.startsWith('_') && matched.endsWith('_')) {
+        final inner = matched.substring(1, matched.length - 1);
+        buffer.write('<em>${_xmlEscape(inner)}</em>');
+      } else if (matched.startsWith('~~') && matched.endsWith('~~')) {
+        final inner = matched.substring(2, matched.length - 2);
+        buffer.write('<del>${_xmlEscape(inner)}</del>');
+      } else if (matched.startsWith('`') && matched.endsWith('`')) {
+        final inner = matched.substring(1, matched.length - 1);
+        buffer.write('<code>${_xmlEscape(inner)}</code>');
+      } else if (matched.startsWith('==') && matched.endsWith('==')) {
+        final inner = matched.substring(2, matched.length - 2);
+        buffer.write('<mark>${_xmlEscape(inner)}</mark>');
+      } else {
+        buffer.write(_xmlEscape(matched));
+      }
+
+      lastIndex = m.end;
+    }
+
+    if (lastIndex < text.length) {
+      buffer.write(_xmlEscape(text.substring(lastIndex)));
+    }
+
+    return buffer.toString();
   }
 
   static String _xmlEscape(String text) {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/editor_controller.dart';
 import '../theme/app_theme.dart';
@@ -64,11 +65,24 @@ class CloudBackupService {
       await Clipboard.setData(ClipboardData(text: backupJson));
 
       // Abrir el selector nativo de compartir para que el usuario elija "Guardar en Drive"
-      await Printing.sharePdf(
-        bytes: Uint8List.fromList(utf8.encode(backupJson)),
-        filename: filename,
-        subject: 'Copia de Seguridad Ink & Wright en Google Drive',
-      );
+      final bytes = Uint8List.fromList(utf8.encode(backupJson));
+      try {
+        final xFile = XFile.fromData(
+          bytes,
+          name: filename,
+          mimeType: 'application/json',
+        );
+        await Share.shareXFiles(
+          [xFile],
+          subject: 'Copia de Seguridad Ink & Wright en Google Drive',
+        );
+      } catch (_) {
+        await Printing.sharePdf(
+          bytes: bytes,
+          filename: filename,
+          subject: 'Copia de Seguridad Ink & Wright en Google Drive',
+        );
+      }
 
       if (!silent && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

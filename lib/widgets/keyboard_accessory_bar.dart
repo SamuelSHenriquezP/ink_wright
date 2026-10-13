@@ -9,9 +9,10 @@ class KeyboardAccessoryBar extends StatelessWidget {
   final VoidCallback? onUndo;
   final VoidCallback? onRedo;
   final bool canUndo;
-  final bool canRedo;
   final VoidCallback? onAnnotateSelection;
   final VoidCallback? onFindReplace;
+  final VoidCallback? onOpenSynonyms;
+  final VoidCallback? onOpenBookmarks;
   final VoidCallback? onOpenOptionsSheet;
   final VoidCallback? onCloseKeyboard;
 
@@ -31,6 +32,8 @@ class KeyboardAccessoryBar extends StatelessWidget {
     this.canRedo = false,
     this.onAnnotateSelection,
     this.onFindReplace,
+    this.onOpenSynonyms,
+    this.onOpenBookmarks,
     this.onOpenOptionsSheet,
     this.onCloseKeyboard,
     this.onToggleZenMode,
@@ -237,6 +240,22 @@ class KeyboardAccessoryBar extends StatelessWidget {
                       icon: Icons.find_replace_rounded,
                       tooltip: 'Buscar y Reemplazar',
                       onTap: onFindReplace!,
+                      textPrimary: textPrimary,
+                      keyBg: keyBg,
+                    ),
+                  if (onOpenSynonyms != null)
+                    _buildIconKey(
+                      icon: Icons.menu_book_rounded,
+                      tooltip: 'Diccionario de Sinónimos',
+                      onTap: onOpenSynonyms!,
+                      textPrimary: textPrimary,
+                      keyBg: keyBg,
+                    ),
+                  if (onOpenBookmarks != null)
+                    _buildIconKey(
+                      icon: Icons.bookmark_border_rounded,
+                      tooltip: 'Marcadores del Capítulo',
+                      onTap: onOpenBookmarks!,
                       textPrimary: textPrimary,
                       keyBg: keyBg,
                     ),

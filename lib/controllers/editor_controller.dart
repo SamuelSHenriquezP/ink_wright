@@ -13,6 +13,8 @@ import '../models/character_model.dart';
 import '../models/character_relationship_model.dart';
 import '../models/sprint_history_model.dart';
 import '../models/revision_comment_model.dart';
+import '../models/chapter_bookmark_model.dart';
+import '../models/book_compilation_config_model.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'markdown_editing_controller.dart';
 import '../services/persistence_service.dart';
@@ -20,6 +22,7 @@ import '../services/import_service.dart';
 import '../services/initial_sample_data_service.dart';
 import '../services/chapter_operations_service.dart';
 import '../services/mind_map_layout_service.dart';
+import '../services/worldbuilding_service.dart';
 
 class EditorController extends ChangeNotifier {
   final PersistenceService _persistenceService = PersistenceService();
@@ -789,13 +792,30 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool deleteChapter(String chapterId) {
+  /// Soft-deletes a chapter by moving it to the trash
+  bool trashChapter(String chapterId) {
     if (_activeBook.chapters.length <= 1) {
       return false;
     }
 
+    final targetIndex = _activeBook.chapters.indexWhere((c) => c.id == chapterId);
+    if (targetIndex == -1) return false;
+
+    ChapterModel chapterToTrash = _activeBook.chapters[targetIndex];
+    if (_activeChapter.id == chapterId) {
+      chapterToTrash = chapterToTrash.copyWith(
+        content: textEditingController.text,
+        lastEdited: DateTime.now(),
+      );
+    }
+
     final reindexed = ChapterOperationsService.removeAndReindex(_activeBook.chapters, chapterId);
-    _activeBook = _activeBook.copyWith(chapters: reindexed);
+    final updatedTrashed = [chapterToTrash, ..._activeBook.trashedChapters];
+
+    _activeBook = _activeBook.copyWith(
+      chapters: reindexed,
+      trashedChapters: updatedTrashed,
+    );
     _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
 
     if (_activeChapter.id == chapterId) {
@@ -805,6 +825,144 @@ class EditorController extends ChangeNotifier {
       notifyListeners();
     }
     return true;
+  }
+
+  /// Backward-compatible alias for trashChapter
+  bool deleteChapter(String chapterId) => trashChapter(chapterId);
+
+  /// Restores a chapter from the trash
+  bool restoreChapter(String chapterId) {
+    final targetIndex = _activeBook.trashedChapters.indexWhere((c) => c.id == chapterId);
+    if (targetIndex == -1) return false;
+
+    final targetChapter = _activeBook.trashedChapters[targetIndex];
+    final remainingTrashed = _activeBook.trashedChapters.where((c) => c.id != chapterId).toList();
+
+    final restoredChapter = targetChapter.copyWith(
+      chapterNumber: _activeBook.chapters.length + 1,
+      lastEdited: DateTime.now(),
+    );
+
+    final updatedChapters = [..._activeBook.chapters, restoredChapter];
+
+    _activeBook = _activeBook.copyWith(
+      chapters: updatedChapters,
+      trashedChapters: remainingTrashed,
+    );
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+    return true;
+  }
+
+  /// Permanently deletes a chapter from trash
+  bool permanentlyDeleteChapter(String chapterId) {
+    final remainingTrashed = _activeBook.trashedChapters.where((c) => c.id != chapterId).toList();
+    _activeBook = _activeBook.copyWith(trashedChapters: remainingTrashed);
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+    return true;
+  }
+
+  /// Empties all chapters currently in trash
+  void emptyTrash() {
+    if (_activeBook.trashedChapters.isEmpty) return;
+    _activeBook = _activeBook.copyWith(trashedChapters: const []);
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  /// Adds a bookmark to a chapter
+  void addBookmark(
+    String chapterId, {
+    required int charOffset,
+    required String previewText,
+    String? label,
+    int? colorHex,
+  }) {
+    final index = _activeBook.chapters.indexWhere((c) => c.id == chapterId);
+    if (index == -1) return;
+
+    final target = _activeBook.chapters[index];
+    final newBookmark = ChapterBookmarkModel(
+      id: 'bm_${DateTime.now().millisecondsSinceEpoch}',
+      label: label ?? 'Marcador ${target.bookmarks.length + 1}',
+      charOffset: charOffset,
+      previewText: previewText.length > 50 ? '${previewText.substring(0, 50)}...' : previewText,
+      createdAt: DateTime.now(),
+      colorHex: colorHex,
+    );
+
+    final updatedBookmarks = [...target.bookmarks, newBookmark];
+    final updatedChapter = target.copyWith(bookmarks: updatedBookmarks);
+
+    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
+    updatedChapters[index] = updatedChapter;
+
+    _activeBook = _activeBook.copyWith(chapters: updatedChapters);
+    if (_activeChapter.id == chapterId) {
+      _activeChapter = updatedChapter;
+    }
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  /// Removes a bookmark from a chapter
+  void removeBookmark(String chapterId, String bookmarkId) {
+    final index = _activeBook.chapters.indexWhere((c) => c.id == chapterId);
+    if (index == -1) return;
+
+    final target = _activeBook.chapters[index];
+    final updatedBookmarks = target.bookmarks.where((b) => b.id != bookmarkId).toList();
+    final updatedChapter = target.copyWith(bookmarks: updatedBookmarks);
+
+    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
+    updatedChapters[index] = updatedChapter;
+
+    _activeBook = _activeBook.copyWith(chapters: updatedChapters);
+    if (_activeChapter.id == chapterId) {
+      _activeChapter = updatedChapter;
+    }
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  /// Updates the publication compilation configuration for the active book
+  void updateCompilationConfig(BookCompilationConfig config) {
+    _activeBook = _activeBook.copyWith(compilationConfig: config);
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  /// Sets the type of a chapter (regular, prologue, epilogue)
+  void setChapterType(String chapterId, ChapterType type) {
+    final index = _activeBook.chapters.indexWhere((c) => c.id == chapterId);
+    if (index == -1) return;
+
+    final target = _activeBook.chapters[index];
+    final updatedChapter = target.copyWith(chapterType: type);
+
+    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
+    updatedChapters[index] = updatedChapter;
+
+    _activeBook = _activeBook.copyWith(chapters: updatedChapters);
+    if (_activeChapter.id == chapterId) {
+      _activeChapter = updatedChapter;
+    }
+    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+
+    _saveCurrentData(debounced: false);
+    notifyListeners();
   }
 
   /// Splits the specified chapter at [splitPosition] into two chapters.
@@ -1053,64 +1211,39 @@ class EditorController extends ChangeNotifier {
   // --- CHARACTERS ACTIONS ---
 
   void addCharacter(CharacterModel character) {
-    final scoped = character.bookId.isEmpty ? character.copyWith(bookId: _activeBook.id) : character;
-    _characters.insert(0, scoped);
+    _characters = WorldbuildingService.addCharacter(_characters, character, _activeBook.id);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void updateCharacter(CharacterModel updated) {
-    _characters = _characters.map((c) => c.id == updated.id ? updated : c).toList();
+    _characters = WorldbuildingService.updateCharacter(_characters, updated);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void deleteCharacter(String characterId) {
-    _characters.removeWhere((c) => c.id == characterId);
+    final result = WorldbuildingService.deleteCharacter(_characters, _relationships, characterId);
+    _characters = result.$1;
+    _relationships = result.$2;
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void insertCharacterToEditor(CharacterModel character) {
-    final buffer = StringBuffer();
-    buffer.writeln('\n\n## Ficha de Personaje: ${character.name}');
-    buffer.writeln('**Rol:** ${character.role} | **Arquetipo:** ${character.archetype}');
-    if (character.quote.isNotEmpty) {
-      buffer.writeln('> ${character.quote}');
-    }
-    if (character.traits.isNotEmpty) {
-      buffer.writeln('**Rasgos:** ${character.traits.join(', ')}');
-    }
-    if (character.motivation.isNotEmpty) {
-      buffer.writeln('**Motivación:** ${character.motivation}');
-    }
-    if (character.flawOrGhost.isNotEmpty) {
-      buffer.writeln('**Conflicto / Fantasma:** ${character.flawOrGhost}');
-    }
-    if (character.writtenBiography.isNotEmpty) {
-      buffer.writeln('\n### Biografía & Trasfondo\n${character.writtenBiography}');
-    }
-    buffer.writeln('\n');
-    insertTextToEditor(buffer.toString());
+    insertTextToEditor(WorldbuildingService.formatCharacterSheet(character));
   }
 
   // --- IDEAS ACTIONS ---
 
   void addIdea(IdeaSnippetModel idea) {
-    final scoped = idea.bookId.isEmpty ? idea.copyWith(bookId: _activeBook.id) : idea;
-    _ideas.insert(0, scoped);
+    _ideas = WorldbuildingService.addIdea(_ideas, idea, _activeBook.id);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void updateIdea(IdeaSnippetModel updated) {
-    _ideas = _ideas.map((item) {
-      if (item.id == updated.id) {
-        final bookId = updated.bookId.isNotEmpty ? updated.bookId : item.bookId;
-        return updated.copyWith(bookId: bookId.isNotEmpty ? bookId : _activeBook.id);
-      }
-      return item;
-    }).toList();
+    _ideas = WorldbuildingService.updateIdea(_ideas, updated, _activeBook.id);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -1122,18 +1255,13 @@ class EditorController extends ChangeNotifier {
   }
 
   void toggleIdeaPin(String ideaId) {
-    _ideas = _ideas.map((item) {
-      if (item.id == ideaId) {
-        return item.copyWith(isPinned: !item.isPinned);
-      }
-      return item;
-    }).toList();
+    _ideas = WorldbuildingService.toggleIdeaPin(_ideas, ideaId);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void insertIdeaToEditor(IdeaSnippetModel idea) {
-    insertTextToEditor('\n\n/* Fragmento de Idea: ${idea.title} */\n${idea.content}\n\n');
+    insertTextToEditor(WorldbuildingService.formatIdeaSnippet(idea));
   }
 
   void insertTextToEditor(String snippetText) {
@@ -1158,20 +1286,13 @@ class EditorController extends ChangeNotifier {
   // --- CODEX ACTIONS ---
 
   void addCodexEntry(CodexEntryModel entry) {
-    final scoped = entry.bookId.isEmpty ? entry.copyWith(bookId: _activeBook.id) : entry;
-    _codexEntries.insert(0, scoped);
+    _codexEntries = WorldbuildingService.addCodexEntry(_codexEntries, entry, _activeBook.id);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void updateCodexEntry(CodexEntryModel updated) {
-    _codexEntries = _codexEntries.map((item) {
-      if (item.id == updated.id) {
-        final bookId = updated.bookId.isNotEmpty ? updated.bookId : item.bookId;
-        return updated.copyWith(bookId: bookId.isNotEmpty ? bookId : _activeBook.id);
-      }
-      return item;
-    }).toList();
+    _codexEntries = WorldbuildingService.updateCodexEntry(_codexEntries, updated, _activeBook.id);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -1183,12 +1304,7 @@ class EditorController extends ChangeNotifier {
   }
 
   void toggleCodexPin(String entryId) {
-    _codexEntries = _codexEntries.map((item) {
-      if (item.id == entryId) {
-        return item.copyWith(isPinned: !item.isPinned);
-      }
-      return item;
-    }).toList();
+    _codexEntries = WorldbuildingService.toggleCodexPin(_codexEntries, entryId);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -1291,18 +1407,13 @@ class EditorController extends ChangeNotifier {
   // --- CHARACTER RELATIONSHIPS ---
 
   void addRelationship(CharacterRelationshipModel relationship) {
-    final scoped = relationship.bookId.isEmpty
-        ? relationship.copyWith(bookId: _activeBook.id)
-        : relationship;
-    _relationships.insert(0, scoped);
+    _relationships = WorldbuildingService.addRelationship(_relationships, relationship, _activeBook.id);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void updateRelationship(CharacterRelationshipModel updated) {
-    _relationships = _relationships
-        .map((r) => r.id == updated.id ? updated : r)
-        .toList();
+    _relationships = WorldbuildingService.updateRelationship(_relationships, updated);
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -1314,11 +1425,11 @@ class EditorController extends ChangeNotifier {
   }
 
   List<CharacterRelationshipModel> relationshipsForCharacter(String characterId) {
-    return _relationships
-        .where((r) =>
-            r.bookId == _activeBook.id &&
-            (r.fromCharacterId == characterId || r.toCharacterId == characterId))
-        .toList();
+    return WorldbuildingService.filterRelationshipsForCharacter(
+      allRelationships: _relationships,
+      bookId: _activeBook.id,
+      characterId: characterId,
+    );
   }
 
   // --- SPRINT HISTORY ---

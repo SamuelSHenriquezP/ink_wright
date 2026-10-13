@@ -1,6 +1,13 @@
 import '../formatters/writer_text_formatter.dart';
 import 'chapter_snapshot_model.dart';
 import 'revision_comment_model.dart';
+import 'chapter_bookmark_model.dart';
+
+enum ChapterType {
+  chapter,
+  prologue,
+  epilogue,
+}
 
 class ChapterModel {
   final String id;
@@ -12,8 +19,10 @@ class ChapterModel {
   final bool isCompleted;
   final String notes;
   final String povCharacter;
+  final ChapterType chapterType;
   final List<ChapterSnapshotModel> snapshots;
   final List<RevisionCommentModel> comments;
+  final List<ChapterBookmarkModel> bookmarks;
 
   ChapterModel({
     required this.id,
@@ -25,8 +34,10 @@ class ChapterModel {
     this.isCompleted = false,
     this.notes = '',
     this.povCharacter = '',
+    this.chapterType = ChapterType.chapter,
     this.snapshots = const [],
     this.comments = const [],
+    this.bookmarks = const [],
   });
 
   int get wordCount => WriterTextFormatter.countWords(content);
@@ -50,8 +61,10 @@ class ChapterModel {
     bool? isCompleted,
     String? notes,
     String? povCharacter,
+    ChapterType? chapterType,
     List<ChapterSnapshotModel>? snapshots,
     List<RevisionCommentModel>? comments,
+    List<ChapterBookmarkModel>? bookmarks,
   }) {
     return ChapterModel(
       id: id ?? this.id,
@@ -63,8 +76,10 @@ class ChapterModel {
       isCompleted: isCompleted ?? this.isCompleted,
       notes: notes ?? this.notes,
       povCharacter: povCharacter ?? this.povCharacter,
+      chapterType: chapterType ?? this.chapterType,
       snapshots: snapshots ?? this.snapshots,
       comments: comments ?? this.comments,
+      bookmarks: bookmarks ?? this.bookmarks,
     );
   }
 
@@ -79,8 +94,10 @@ class ChapterModel {
       'isCompleted': isCompleted,
       'notes': notes,
       'povCharacter': povCharacter,
+      'chapterType': chapterType.name,
       'snapshots': snapshots.map((s) => s.toMap()).toList(),
       'comments': comments.map((c) => c.toMap()).toList(),
+      'bookmarks': bookmarks.map((b) => b.toMap()).toList(),
     };
   }
 
@@ -97,12 +114,20 @@ class ChapterModel {
       isCompleted: map['isCompleted'] as bool? ?? false,
       notes: map['notes'] as String? ?? '',
       povCharacter: map['povCharacter'] as String? ?? '',
+      chapterType: ChapterType.values.firstWhere(
+        (t) => t.name == (map['chapterType'] as String? ?? ''),
+        orElse: () => ChapterType.chapter,
+      ),
       snapshots: (map['snapshots'] as List<dynamic>?)
               ?.map((item) => ChapterSnapshotModel.fromMap(item as Map<String, dynamic>))
               .toList() ??
           const [],
       comments: (map['comments'] as List<dynamic>?)
               ?.map((item) => RevisionCommentModel.fromMap(item as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      bookmarks: (map['bookmarks'] as List<dynamic>?)
+              ?.map((item) => ChapterBookmarkModel.fromMap(item as Map<String, dynamic>))
               .toList() ??
           const [],
     );

@@ -12,6 +12,7 @@ import '../widgets/chapter_history_sheet.dart';
 import '../widgets/chapter_drawer.dart';
 import '../widgets/editor_options_sheet.dart';
 import '../widgets/export_manuscript_dialog.dart';
+import '../widgets/compiler/book_compiler_modal.dart';
 import '../widgets/writing_sprint_dialog.dart';
 import '../widgets/chapter_metrics_view.dart';
 import '../widgets/revision_sidebar.dart';
@@ -21,6 +22,9 @@ import '../widgets/editor/zen_find_replace_bar.dart';
 import '../widgets/editor/zen_selection_note_sheet.dart';
 import '../widgets/editor/zen_speed_dial_fab.dart';
 import '../widgets/editor/prose_inspector_sheet.dart';
+import '../widgets/editor/synonyms_sheet.dart';
+import '../widgets/editor/chapter_bookmarks_sheet.dart';
+import '../widgets/chapters/chapter_trash_sheet.dart';
 import '../widgets/dashboard/dashboard_tutorial_sheet.dart';
 import '../services/cloud_backup_service.dart';
 import '../formatters/writer_text_formatter.dart';
@@ -119,35 +123,41 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
     final screenWidth = MediaQuery.of(context).size.width;
     final maxW = controller.maxEditorWidth == double.infinity ? screenWidth : controller.maxEditorWidth;
     final textWidth = (screenWidth - 48).clamp(100.0, maxW - 48);
+    final lineHeightPx = controller.fontSize * controller.lineHeight;
 
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: _getEditorFontTextStyle(
-          controller.selectedFontFamily,
-          controller.fontSize,
-          controller.lineHeight,
-          controller.isDarkMode,
+    double cursorY = 88.0;
+    if (clamped > 0) {
+      // High-performance: layout only the portion up to the caret instead of the entire manuscript
+      final textUpToCaret = text.substring(0, clamped);
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: textUpToCaret,
+          style: _getEditorFontTextStyle(
+            controller.selectedFontFamily,
+            controller.fontSize,
+            controller.lineHeight,
+            controller.isDarkMode,
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout(maxWidth: textWidth);
-    final caretOffset = textPainter.getOffsetForCaret(
-      TextPosition(offset: clamped),
-      Rect.zero,
-    );
-    textPainter.dispose();
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout(maxWidth: textWidth);
+      cursorY = textPainter.height - (lineHeightPx / 2) + 88.0;
+      textPainter.dispose();
+    }
 
     // 88.0 accounts for chapter header ("CAPÍTULO X", word count, title input, margins)
-    final cursorY = caretOffset.dy + 88.0;
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 100;
     final accessoryBarHeight = (!controller.isZenMode && isKeyboardOpen) ? 48.0 : 0.0;
     final viewportHeight = _scrollController.position.viewportDimension;
     final visibleHeight = (viewportHeight - accessoryBarHeight).clamp(100.0, double.infinity);
-    final lineHeightPx = controller.fontSize * controller.lineHeight;
     final targetScroll = (cursorY - (visibleHeight / 2) + (lineHeightPx / 2))
         .clamp(0.0, _scrollController.position.maxScrollExtent);
+
+    // Skip jitter / redundant micro-animations
+    if ((targetScroll - _scrollController.offset).abs() < 1.5) {
+      return;
+    }
 
     if (animated) {
       _scrollController.animateTo(
@@ -190,6 +200,10 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
 
   void _openExportDialog(BuildContext context, bool isDark) {
     ExportManuscriptDialog.show(context, isDark: isDark);
+  }
+
+  void _openCompilerModal(BuildContext context, EditorController controller, bool isDark) {
+    BookCompilerModal.show(context, controller, isDark);
   }
 
   void _openSprintDialog(BuildContext context, bool isDark) {
@@ -506,6 +520,84 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
     );
   }
 
+  void _openSynonymsSheet(BuildContext context, EditorController controller, bool isDark) {
+    final text = controller.textEditingController.text;
+    final selection = controller.textEditingController.selection;
+
+    String? targetWord;
+    int? wordStart;
+    int? wordEnd;
+
+    if (selection.isValid && !selection.isCollapsed && selection.start >= 0 && selection.end <= text.length) {
+      targetWord = text.substring(selection.start, selection.end).trim();
+      wordStart = selection.start;
+      wordEnd = selection.end;
+    } else if (selection.isValid && selection.isCollapsed && selection.baseOffset >= 0 && selection.baseOffset <= text.length) {
+      final offset = selection.baseOffset;
+      int start = offset;
+      while (start > 0 && RegExp(r'[\wáéíóúüñÁÉÍÓÚÜÑ]').hasMatch(text[start - 1])) {
+        start--;
+      }
+      int end = offset;
+      while (end < text.length && RegExp(r'[\wáéíóúüñÁÉÍÓÚÜÑ]').hasMatch(text[end])) {
+        end++;
+      }
+      if (start < end) {
+        targetWord = text.substring(start, end);
+        wordStart = start;
+        wordEnd = end;
+      }
+    }
+
+    SynonymsSheet.show(
+      context: context,
+      initialWord: targetWord,
+      isDark: isDark,
+      onReplaceWord: (replacement) {
+        if (wordStart != null && wordEnd != null && wordStart >= 0 && wordEnd <= controller.textEditingController.text.length) {
+          final curText = controller.textEditingController.text;
+          final newText = curText.replaceRange(wordStart, wordEnd, replacement);
+          controller.textEditingController.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: wordStart + replacement.length),
+          );
+        } else {
+          WriterTextFormatter.insertAtCursor(controller.textEditingController, replacement);
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Reemplazado por «$replacement».'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
+    );
+  }
+
+  void _openBookmarksSheet(BuildContext context, EditorController controller, bool isDark) {
+    final selection = controller.textEditingController.selection;
+    final currentOffset = selection.isValid ? selection.baseOffset : 0;
+
+    ChapterBookmarksSheet.show(
+      context: context,
+      chapter: controller.activeChapter,
+      controller: controller,
+      isDark: isDark,
+      currentCursorOffset: currentOffset,
+      onJumpToBookmark: (offset) {
+        final text = controller.textEditingController.text;
+        final safeOffset = offset.clamp(0, text.length);
+        controller.textEditingController.selection = TextSelection.collapsed(offset: safeOffset);
+        controller.focusNode.requestFocus();
+        _scrollOffsetToCursor(safeOffset, controller, animated: true);
+      },
+    );
+  }
+
+  void _openTrashSheet(BuildContext context, EditorController controller, bool isDark) {
+    ChapterTrashSheet.show(context, controller, isDark);
+  }
+
   void _openEditorOptionsMenu(
     BuildContext context,
     EditorController controller,
@@ -535,6 +627,9 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
       onNewChapter: () => _showNewChapterDialog(context, controller, isDark),
       onWritingSprint: () => _openSprintDialog(context, isDark),
       onMuseAssistant: () => _openContextDrawer(context, isDark),
+      onSynonyms: () => _openSynonymsSheet(context, controller, isDark),
+      onBookmarks: () => _openBookmarksSheet(context, controller, isDark),
+      onTrash: () => _openTrashSheet(context, controller, isDark),
       onToggleReadOnly: () {
         setState(() {
           _isReadOnly = !_isReadOnly;
@@ -556,6 +651,9 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
       },
       onFindReplace: () {
         if (!_showFindReplace) _toggleFindReplace();
+      },
+      onCompiler: () {
+        _openCompilerModal(context, controller, isDark);
       },
       onExport: () {
         _openExportDialog(context, isDark);
@@ -1147,6 +1245,8 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                     onRedo: () => controller.redo(),
                     onAnnotateSelection: () => _annotateSelection(context, controller, isDark),
                     onFindReplace: _toggleFindReplace,
+                    onOpenSynonyms: () => _openSynonymsSheet(context, controller, isDark),
+                    onOpenBookmarks: () => _openBookmarksSheet(context, controller, isDark),
                   ),
                 ),
 

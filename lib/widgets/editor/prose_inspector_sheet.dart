@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../controllers/editor_controller.dart';
 import '../../services/prose_style_analyzer_service.dart';
+import 'synonyms_sheet.dart';
 
 /// Modal bottom sheet that presents a Hemingway-style prose critique for the active chapter.
 class ProseInspectorSheet extends StatefulWidget {
@@ -455,6 +456,40 @@ class _ProseInspectorSheetState extends State<ProseInspectorSheet> {
                 ),
               ),
               const Spacer(),
+              if (issue.matchedText.trim().split(' ').length <= 3) ...[
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: textPrimary,
+                    side: BorderSide(color: borderSubtle),
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    minimumSize: const Size(0, 28),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  ),
+                  icon: const Icon(Icons.menu_book_rounded, size: 12),
+                  label: const Text('Sinónimos', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    widget.onJumpToIssue(issue.startIndex, issue.endIndex);
+                    SynonymsSheet.show(
+                      context: context,
+                      initialWord: issue.matchedText,
+                      isDark: isDark,
+                      onReplaceWord: (replacement) {
+                        final text = widget.controller.textEditingController.text;
+                        if (issue.startIndex >= 0 && issue.endIndex <= text.length) {
+                          final newText = text.replaceRange(issue.startIndex, issue.endIndex, replacement);
+                          widget.controller.textEditingController.value = TextEditingValue(
+                            text: newText,
+                            selection: TextSelection.collapsed(offset: issue.startIndex + replacement.length),
+                          );
+                        }
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(width: 4),
+              ],
               TextButton.icon(
                 style: TextButton.styleFrom(
                   visualDensity: VisualDensity.compact,

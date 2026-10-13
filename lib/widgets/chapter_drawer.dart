@@ -7,6 +7,7 @@ import '../controllers/editor_controller.dart';
 import '../formatters/writer_text_formatter.dart';
 import 'import_manuscript_dialog.dart';
 import 'chapters/new_chapter_modal.dart';
+import 'chapters/chapter_trash_sheet.dart';
 import '../screens/corkboard_screen.dart';
 
 class ChapterDrawer extends StatelessWidget {
@@ -200,6 +201,44 @@ class ChapterDrawer extends StatelessWidget {
                               border: Border.all(color: borderSubtle),
                             ),
                             child: Icon(Icons.file_download_outlined, size: 20, color: textPrimary),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: 'Papelera de Capítulos (${book.trashedChapters.length})',
+                        child: InkWell(
+                          onTap: () {
+                            ChapterTrashSheet.show(context, controller, isDark);
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: borderSubtle),
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(Icons.delete_outline_rounded, size: 19, color: textPrimary),
+                                if (book.trashedChapters.isNotEmpty)
+                                  Positioned(
+                                    top: 7,
+                                    right: 7,
+                                    child: Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.redAccent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

@@ -6,6 +6,7 @@ import '../controllers/editor_controller.dart';
 import '../models/chapter_model.dart';
 import '../models/chapter_snapshot_model.dart';
 import '../formatters/writer_text_formatter.dart';
+import 'chapter_diff_viewer_modal.dart';
 
 class ChapterHistorySheet extends StatelessWidget {
   final ChapterModel chapter;
@@ -111,7 +112,33 @@ class ChapterHistorySheet extends StatelessWidget {
     );
   }
 
-  void _showPreviewDialog(BuildContext context, ChapterSnapshotModel snapshot) {
+  void _openDiffViewer(
+    BuildContext context,
+    EditorController controller,
+    ChapterModel liveChapter,
+    ChapterSnapshotModel snapshot,
+  ) {
+    final currentText = liveChapter.id == controller.activeChapter.id
+        ? controller.textEditingController.text
+        : liveChapter.content;
+
+    ChapterDiffViewerModal.show(
+      context: context,
+      snapshot: snapshot,
+      currentText: currentText,
+      chapterTitle: liveChapter.title,
+      chapterId: liveChapter.id,
+      controller: controller,
+      isDark: isDark,
+    );
+  }
+
+  void _showPreviewDialog(
+    BuildContext context,
+    EditorController controller,
+    ChapterModel liveChapter,
+    ChapterSnapshotModel snapshot,
+  ) {
     final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
@@ -172,6 +199,18 @@ class ChapterHistorySheet extends StatelessWidget {
           ),
         ),
         actions: [
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: textPrimary,
+              side: BorderSide(color: borderSubtle),
+            ),
+            icon: const Icon(Icons.difference_outlined, size: 15),
+            label: const Text('Comparar (Diff)', style: TextStyle(fontSize: 12)),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _openDiffViewer(context, controller, liveChapter, snapshot);
+            },
+          ),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               foregroundColor: textPrimary,
@@ -538,15 +577,28 @@ class ChapterHistorySheet extends StatelessWidget {
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: textPrimary,
                                     side: BorderSide(color: borderSubtle),
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                    visualDensity: VisualDensity.compact,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  icon: const Icon(Icons.difference_outlined, size: 14),
+                                  label: const Text('Diff', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                  onPressed: () => _openDiffViewer(context, controller, liveChapter, snapshot),
+                                ),
+                                const SizedBox(width: 6),
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: textPrimary,
+                                    side: BorderSide(color: borderSubtle),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                                     visualDensity: VisualDensity.compact,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
                                   icon: const Icon(Icons.visibility_outlined, size: 14),
                                   label: const Text('Ver', style: TextStyle(fontSize: 11)),
-                                  onPressed: () => _showPreviewDialog(context, snapshot),
+                                  onPressed: () => _showPreviewDialog(context, controller, liveChapter, snapshot),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 6),
                                 ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: isDark ? Colors.white : Colors.black,

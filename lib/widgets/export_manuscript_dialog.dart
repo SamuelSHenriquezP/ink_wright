@@ -8,6 +8,7 @@ import '../controllers/editor_controller.dart';
 import '../services/export_service.dart';
 import '../services/cloud_backup_service.dart';
 import 'import_manuscript_dialog.dart';
+import 'compiler/book_compiler_modal.dart';
 
 class ExportManuscriptDialog extends StatefulWidget {
   final bool isDark;
@@ -32,7 +33,9 @@ class ExportManuscriptDialog extends StatefulWidget {
 
 class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
   String _selectedFormat = 'Documento PDF (.pdf)';
-  bool _includeCharacters = true;
+  bool _exportOnlyActiveChapter = false;
+  bool _includeEditorialElements = false;
+  bool _includeCharacters = false;
   bool _includeCodex = false;
 
   final List<String> _formats = [
@@ -40,15 +43,20 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
     'Microsoft Word (.docx)',
     'Libro Electrónico EPUB (.epub)',
     'Markdown (.md)',
-    'Texto Plano (.txt)',
     'Documento HTML (.html)',
+    'Solo Texto (.txt)',
   ];
   final List<String> _fonts = ['Lora', 'Merriweather', 'Playfair Display', 'JetBrains Mono'];
 
   Future<void> _handleExport(BuildContext context, EditorController controller) async {
     try {
-      final book = controller.activeBook;
-      final baseFilename = book.title.replaceAll(' ', '_').toLowerCase();
+      final activeChapter = controller.activeChapter;
+      final book = _exportOnlyActiveChapter
+          ? controller.activeBook.copyWith(chapters: [activeChapter])
+          : controller.activeBook;
+      final baseFilename = _exportOnlyActiveChapter
+          ? '${controller.activeBook.title}_cap_${activeChapter.chapterNumber}'.replaceAll(' ', '_').toLowerCase()
+          : controller.activeBook.title.replaceAll(' ', '_').toLowerCase();
       final characters = _includeCharacters ? controller.characters : null;
       final codexEntries = _includeCodex ? controller.codexEntries : null;
 
@@ -61,6 +69,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
             book,
             characters: characters,
             codexEntries: codexEntries,
+            includeEditorialElements: _includeEditorialElements,
           ),
         );
         return;
@@ -72,6 +81,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
           book,
           characters: characters,
           codexEntries: codexEntries,
+          includeEditorialElements: _includeEditorialElements,
         );
         Navigator.of(context).pop();
         final xFile = XFile.fromData(
@@ -95,6 +105,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
           book,
           characters: characters,
           codexEntries: codexEntries,
+          includeEditorialElements: _includeEditorialElements,
         );
         Navigator.of(context).pop();
         final xFile = XFile.fromData(
@@ -112,7 +123,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
         return;
       }
 
-      // 4. Text-based exports (Markdown, TXT, HTML) -> Clipboard + Modal
+      // 4. Text-based exports (Solo Texto, Markdown, TXT, HTML) -> Clipboard + Modal
       String exportedContent = '';
       String filename = baseFilename;
 
@@ -122,32 +133,31 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
             book,
             characters: characters,
             codexEntries: codexEntries,
+            includeEditorialElements: _includeEditorialElements,
           );
           filename += '.md';
-          break;
-        case 'Texto Plano (.txt)':
-          exportedContent = ExportService.exportToPlainText(
-            book,
-            characters: characters,
-            codexEntries: codexEntries,
-          );
-          filename += '.txt';
           break;
         case 'Documento HTML (.html)':
           exportedContent = ExportService.exportToHtml(
             book,
             characters: characters,
             codexEntries: codexEntries,
+            includeEditorialElements: _includeEditorialElements,
           );
           filename += '.html';
           break;
+        case 'Solo Texto (.txt)':
+        case 'Texto Plano con Portada (.txt)':
+        case 'Texto Plano (.txt)':
         default:
-          exportedContent = ExportService.exportToMarkdown(
+          exportedContent = ExportService.exportToPlainText(
             book,
             characters: characters,
             codexEntries: codexEntries,
+            rawTextOnly: !_includeEditorialElements,
+            includeEditorialElements: _includeEditorialElements,
           );
-          filename += '.md';
+          filename += '.txt';
           break;
       }
 
@@ -330,6 +340,121 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                       ),
                     ),
 
+                    const SizedBox(height: 14),
+
+                    // Compilador Editorial Banner
+                    InkWell(
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        BookCompilerModal.show(context, controller, widget.isDark);
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: widget.isDark
+                                ? [const Color(0xFF27272A), const Color(0xFF18181B)]
+                                : [const Color(0xFFF4F4F5), const Color(0xFFE4E4E7)],
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: widget.isDark ? const Color(0xFF3F3F46) : const Color(0xFFD4D4D8),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: widget.isDark
+                                    ? Colors.white.withValues(alpha: 0.1)
+                                    : Colors.black.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.auto_stories_rounded,
+                                size: 20,
+                                color: widget.isDark ? Colors.white : Colors.black,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Compilador Editorial Profesional',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Diseña portada RGB, dedicatoria, índice y tipos de capítulos',
+                                    style: TextStyle(fontSize: 11, color: textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    Text(
+                      'Alcance de Exportación',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: Text('Obra completa ($totalChapters caps)'),
+                          selected: !_exportOnlyActiveChapter,
+                          selectedColor: widget.isDark ? Colors.white : Colors.black,
+                          backgroundColor: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          labelStyle: TextStyle(
+                            fontSize: 12,
+                            fontWeight: !_exportOnlyActiveChapter ? FontWeight.w700 : FontWeight.w500,
+                            color: !_exportOnlyActiveChapter
+                                ? (widget.isDark ? Colors.black : Colors.white)
+                                : textSecondary,
+                          ),
+                          onSelected: (val) {
+                            if (val) setState(() => _exportOnlyActiveChapter = false);
+                          },
+                        ),
+                        ChoiceChip(
+                          label: Text('Solo capítulo actual (Cap. ${controller.activeChapter.chapterNumber})'),
+                          selected: _exportOnlyActiveChapter,
+                          selectedColor: widget.isDark ? Colors.white : Colors.black,
+                          backgroundColor: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          labelStyle: TextStyle(
+                            fontSize: 12,
+                            fontWeight: _exportOnlyActiveChapter ? FontWeight.w700 : FontWeight.w500,
+                            color: _exportOnlyActiveChapter
+                                ? (widget.isDark ? Colors.black : Colors.white)
+                                : textSecondary,
+                          ),
+                          onSelected: (val) {
+                            if (val) setState(() => _exportOnlyActiveChapter = true);
+                          },
+                        ),
+                      ],
+                    ),
+
                     const SizedBox(height: 18),
 
                     Text(
@@ -407,7 +532,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                     const SizedBox(height: 18),
 
                     Text(
-                      'Contenido Adicional',
+                      'Modo de Exportación (Añadidos Editoriales)',
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
                     ),
 
@@ -417,38 +542,102 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        FilterChip(
-                          label: const Text('Personajes (Dramatis Personae)'),
-                          selected: _includeCharacters,
+                        ChoiceChip(
+                          avatar: const Icon(Icons.notes_rounded, size: 16),
+                          label: const Text('Solo Texto (Sin añadidos editoriales)'),
+                          selected: !_includeEditorialElements,
                           selectedColor: widget.isDark ? Colors.white : Colors.black,
                           backgroundColor: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           labelStyle: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: _includeCharacters ? FontWeight.w700 : FontWeight.w500,
-                            color: _includeCharacters
+                            fontSize: 12,
+                            fontWeight: !_includeEditorialElements ? FontWeight.w700 : FontWeight.w500,
+                            color: !_includeEditorialElements
                                 ? (widget.isDark ? Colors.black : Colors.white)
                                 : textSecondary,
                           ),
-                          onSelected: (val) => setState(() => _includeCharacters = val),
+                          onSelected: (val) {
+                            if (val) setState(() => _includeEditorialElements = false);
+                          },
                         ),
-                        FilterChip(
-                          label: const Text('Códice de Mundo'),
-                          selected: _includeCodex,
+                        ChoiceChip(
+                          avatar: const Icon(Icons.auto_stories_rounded, size: 16),
+                          label: const Text('Edición Completa (Con portada, dedicatoria e índice)'),
+                          selected: _includeEditorialElements,
                           selectedColor: widget.isDark ? Colors.white : Colors.black,
                           backgroundColor: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           labelStyle: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: _includeCodex ? FontWeight.w700 : FontWeight.w500,
-                            color: _includeCodex
+                            fontSize: 12,
+                            fontWeight: _includeEditorialElements ? FontWeight.w700 : FontWeight.w500,
+                            color: _includeEditorialElements
                                 ? (widget.isDark ? Colors.black : Colors.white)
                                 : textSecondary,
                           ),
-                          onSelected: (val) => setState(() => _includeCodex = val),
+                          onSelected: (val) {
+                            if (val) setState(() => _includeEditorialElements = true);
+                          },
                         ),
                       ],
                     ),
+
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 4),
+                      child: Text(
+                        !_includeEditorialElements
+                            ? 'Exportará únicamente los capítulos y la prosa en formato $_selectedFormat sin portada, dedicatorias, créditos ni metadatos.'
+                            : 'Exportará el manuscrito en formato $_selectedFormat con maquetación editorial completa (portada, dedicatoria, índice y metadatos).',
+                        style: TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: textSecondary),
+                      ),
+                    ),
+
+                    if (_includeEditorialElements) ...[
+                      const SizedBox(height: 14),
+
+                      Text(
+                        'Contenido Adicional',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          FilterChip(
+                            label: const Text('Personajes (Dramatis Personae)'),
+                            selected: _includeCharacters,
+                            selectedColor: widget.isDark ? Colors.white : Colors.black,
+                            backgroundColor: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            labelStyle: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: _includeCharacters ? FontWeight.w700 : FontWeight.w500,
+                              color: _includeCharacters
+                                  ? (widget.isDark ? Colors.black : Colors.white)
+                                  : textSecondary,
+                            ),
+                            onSelected: (val) => setState(() => _includeCharacters = val),
+                          ),
+                          FilterChip(
+                            label: const Text('Códice de Mundo'),
+                            selected: _includeCodex,
+                            selectedColor: widget.isDark ? Colors.white : Colors.black,
+                            backgroundColor: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            labelStyle: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: _includeCodex ? FontWeight.w700 : FontWeight.w500,
+                              color: _includeCodex
+                                  ? (widget.isDark ? Colors.black : Colors.white)
+                                  : textSecondary,
+                            ),
+                            onSelected: (val) => setState(() => _includeCodex = val),
+                          ),
+                        ],
+                      ),
+                    ],
 
                     const SizedBox(height: 24),
 
@@ -473,15 +662,52 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                       ),
                       label: Text(
                         _selectedFormat.contains('PDF')
-                            ? 'Previsualizar / Guardar en PDF'
+                            ? (!_includeEditorialElements ? 'Exportar Solo Texto en PDF' : 'Previsualizar / Guardar en PDF')
                             : _selectedFormat.contains('Word')
-                                ? 'Exportar a Microsoft Word (.docx)'
+                                ? (!_includeEditorialElements ? 'Exportar Solo Texto en Word (.docx)' : 'Exportar a Microsoft Word (.docx)')
                                 : _selectedFormat.contains('EPUB')
-                                    ? 'Exportar a Libro EPUB (.epub)'
-                                    : 'Copiar Manuscrito ($_selectedFormat)',
+                                    ? (!_includeEditorialElements ? 'Exportar Solo Texto en EPUB' : 'Exportar a Libro EPUB (.epub)')
+                                    : (!_includeEditorialElements ? 'Copiar Solo Texto ($_selectedFormat)' : 'Copiar Manuscrito ($_selectedFormat)'),
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       onPressed: () => _handleExport(context, controller),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Quick Button: Copiar Solo Texto Directamente
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: textPrimary,
+                        minimumSize: const Size(double.infinity, 44),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        side: BorderSide(color: borderSubtle),
+                      ),
+                      icon: const Icon(Icons.copy_all_rounded, size: 18),
+                      label: const Text(
+                        'Copiar Solo Texto (Sin más ni menos)',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
+                      onPressed: () async {
+                        final targetBook = _exportOnlyActiveChapter
+                            ? controller.activeBook.copyWith(chapters: [controller.activeChapter])
+                            : controller.activeBook;
+                        final text = ExportService.exportRawText(
+                          targetBook,
+                          includeChapterHeaders: !_exportOnlyActiveChapter,
+                        );
+                        await Clipboard.setData(ClipboardData(text: text));
+                        if (!context.mounted) return;
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(_exportOnlyActiveChapter
+                                ? 'Texto puro del capítulo copiado al portapapeles.'
+                                : 'Texto puro de la obra copiado al portapapeles (sin metadatos ni portadas).'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
                     ),
 
                     const SizedBox(height: 28),

@@ -332,6 +332,17 @@ class MarkdownEditingController extends TextEditingController {
   ) {
     if (text.isEmpty) return;
 
+    // Fast path: avoid expensive regex execution on regular sentences without formatting tokens
+    if (!text.contains('*') &&
+        !text.contains('_') &&
+        !text.contains('~') &&
+        !text.contains('`') &&
+        !text.contains('=') &&
+        !text.contains('«')) {
+      spans.add(TextSpan(text: text, style: currentStyle));
+      return;
+    }
+
     final matches = _inlineRegex.allMatches(text);
     if (matches.isEmpty) {
       spans.add(TextSpan(text: text, style: currentStyle));

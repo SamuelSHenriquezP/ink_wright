@@ -18,6 +18,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
   final VoidCallback onTypography;
   final VoidCallback onStats;
   final VoidCallback onGoToDashboard;
+  final VoidCallback? onCompiler;
   final VoidCallback? onContinuousReader;
   final VoidCallback? onProseInspector;
   final VoidCallback? onRevisionNotes;
@@ -29,6 +30,9 @@ class EditorOptionsMenuSheet extends StatelessWidget {
   final VoidCallback? onNewChapter;
   final VoidCallback? onWritingSprint;
   final VoidCallback? onMuseAssistant;
+  final VoidCallback? onSynonyms;
+  final VoidCallback? onBookmarks;
+  final VoidCallback? onTrash;
   final bool hasNextChapter;
   final bool hasPreviousChapter;
 
@@ -49,6 +53,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     required this.onTypography,
     required this.onStats,
     required this.onGoToDashboard,
+    this.onCompiler,
     this.onContinuousReader,
     this.onProseInspector,
     this.onRevisionNotes,
@@ -60,6 +65,9 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     this.onNewChapter,
     this.onWritingSprint,
     this.onMuseAssistant,
+    this.onSynonyms,
+    this.onBookmarks,
+    this.onTrash,
     this.hasNextChapter = false,
     this.hasPreviousChapter = false,
   });
@@ -81,6 +89,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     required VoidCallback onTypography,
     required VoidCallback onStats,
     required VoidCallback onGoToDashboard,
+    VoidCallback? onCompiler,
     VoidCallback? onContinuousReader,
     VoidCallback? onProseInspector,
     VoidCallback? onRevisionNotes,
@@ -92,6 +101,9 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     VoidCallback? onNewChapter,
     VoidCallback? onWritingSprint,
     VoidCallback? onMuseAssistant,
+    VoidCallback? onSynonyms,
+    VoidCallback? onBookmarks,
+    VoidCallback? onTrash,
     bool hasNextChapter = false,
     bool hasPreviousChapter = false,
   }) {
@@ -115,6 +127,7 @@ class EditorOptionsMenuSheet extends StatelessWidget {
         onTypography: onTypography,
         onStats: onStats,
         onGoToDashboard: onGoToDashboard,
+        onCompiler: onCompiler,
         onContinuousReader: onContinuousReader,
         onProseInspector: onProseInspector,
         onRevisionNotes: onRevisionNotes,
@@ -126,6 +139,9 @@ class EditorOptionsMenuSheet extends StatelessWidget {
         onNewChapter: onNewChapter,
         onWritingSprint: onWritingSprint,
         onMuseAssistant: onMuseAssistant,
+        onSynonyms: onSynonyms,
+        onBookmarks: onBookmarks,
+        onTrash: onTrash,
         hasNextChapter: hasNextChapter,
         hasPreviousChapter: hasPreviousChapter,
       ),
@@ -230,6 +246,16 @@ class EditorOptionsMenuSheet extends StatelessWidget {
           onFindReplace();
         },
       ),
+      if (onCompiler != null)
+        _MenuItem(
+          icon: Icons.auto_stories_rounded,
+          title: 'Compilador Editorial',
+          subtitle: 'Portada, dedicatoria, índice y publicación',
+          onTap: () {
+            Navigator.of(context).pop();
+            onCompiler!();
+          },
+        ),
       _MenuItem(
         icon: Icons.ios_share_rounded,
         title: 'Exportar Manuscrito',
@@ -237,6 +263,14 @@ class EditorOptionsMenuSheet extends StatelessWidget {
         onTap: () {
           Navigator.of(context).pop();
           onExport();
+        },
+      ),
+      _MenuItem(
+        icon: Icons.notes_rounded,
+        title: 'Copiar Solo Texto',
+        subtitle: 'Copiar únicamente la prosa sin metadatos',
+        onTap: () {
+          _copyToClipboard(context, chapterContent.trim(), 'Texto del capítulo');
         },
       ),
       _MenuItem(
@@ -346,9 +380,39 @@ class EditorOptionsMenuSheet extends StatelessWidget {
           onStats();
         },
       ),
-      if (onTutorial != null)
+      if (onSynonyms != null)
         _MenuItem(
           icon: Icons.menu_book_rounded,
+          title: 'Sinónimos Literarios',
+          subtitle: 'Diccionario estilístico offline',
+          onTap: () {
+            Navigator.of(context).pop();
+            onSynonyms!();
+          },
+        ),
+      if (onBookmarks != null)
+        _MenuItem(
+          icon: Icons.bookmark_border_rounded,
+          title: 'Marcadores',
+          subtitle: 'Puntos de retorno rápido',
+          onTap: () {
+            Navigator.of(context).pop();
+            onBookmarks!();
+          },
+        ),
+      if (onTrash != null)
+        _MenuItem(
+          icon: Icons.delete_outline_rounded,
+          title: 'Papelera de Capítulos',
+          subtitle: 'Capítulos archivados y restauración',
+          onTap: () {
+            Navigator.of(context).pop();
+            onTrash!();
+          },
+        ),
+      if (onTutorial != null)
+        _MenuItem(
+          icon: Icons.help_outline_rounded,
           title: 'Guía y Tutorial',
           subtitle: 'Manual de cada herramienta',
           onTap: () {

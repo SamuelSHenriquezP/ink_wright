@@ -3,6 +3,7 @@ import '../../controllers/editor_controller.dart';
 import '../../models/idea_snippet_model.dart';
 import '../../models/codex_entry_model.dart';
 import '../../theme/app_theme.dart';
+import 'synonyms_sheet.dart';
 
 class ZenSelectionNoteSheet {
   static void show({
@@ -57,6 +58,54 @@ class ZenSelectionNoteSheet {
                   ),
                 ),
                 const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.bookmark_add_outlined),
+                  title: Text('Fijar Marcapáginas aquí', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Guarda este punto para volver a él con 1 toque más adelante', style: TextStyle(color: textSecondary, fontSize: 12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    controller.addBookmark(
+                      controller.activeChapter.id,
+                      charOffset: selection.start,
+                      previewText: selectedText,
+                      label: selectedText.length > 25 ? '${selectedText.substring(0, 25)}...' : selectedText,
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Marcapáginas fijado en esta posición.'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.menu_book_rounded),
+                  title: Text('Buscar Sinónimos Literarios', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Encuentra alternativas estilísticas y matices para esta palabra', style: TextStyle(color: textSecondary, fontSize: 12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    SynonymsSheet.show(
+                      context: context,
+                      initialWord: selectedText,
+                      isDark: isDark,
+                      onReplaceWord: (replacement) {
+                        final newText = fullText.replaceRange(selection.start, selection.end, replacement);
+                        controller.textEditingController.value = TextEditingValue(
+                          text: newText,
+                          selection: TextSelection.collapsed(offset: selection.start + replacement.length),
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Reemplazado por «$replacement».'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
                 ListTile(
                   leading: const Icon(Icons.lightbulb_outline_rounded),
                   title: Text('Guardar como Idea / Nota', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600)),

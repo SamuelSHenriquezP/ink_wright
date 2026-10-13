@@ -1,4 +1,5 @@
 import 'chapter_model.dart';
+import 'book_compilation_config_model.dart';
 
 enum BookStatus {
   outlining,
@@ -16,6 +17,8 @@ class BookModel {
   final int coverColorHex;
   final int targetWordCount;
   final List<ChapterModel> chapters;
+  final List<ChapterModel> trashedChapters;
+  final BookCompilationConfig? compilationConfig;
   final DateTime lastEdited;
   final BookStatus status;
   final List<String> tags;
@@ -30,6 +33,8 @@ class BookModel {
     required this.coverColorHex,
     required this.targetWordCount,
     required this.chapters,
+    this.trashedChapters = const [],
+    this.compilationConfig,
     required this.lastEdited,
     required this.status,
     required this.tags,
@@ -59,6 +64,8 @@ class BookModel {
     int? coverColorHex,
     int? targetWordCount,
     List<ChapterModel>? chapters,
+    List<ChapterModel>? trashedChapters,
+    BookCompilationConfig? compilationConfig,
     DateTime? lastEdited,
     BookStatus? status,
     List<String>? tags,
@@ -73,6 +80,8 @@ class BookModel {
       coverColorHex: coverColorHex ?? this.coverColorHex,
       targetWordCount: targetWordCount ?? this.targetWordCount,
       chapters: chapters ?? this.chapters,
+      trashedChapters: trashedChapters ?? this.trashedChapters,
+      compilationConfig: compilationConfig ?? this.compilationConfig,
       lastEdited: lastEdited ?? this.lastEdited,
       status: status ?? this.status,
       tags: tags ?? this.tags,
@@ -90,6 +99,8 @@ class BookModel {
       'coverColorHex': coverColorHex,
       'targetWordCount': targetWordCount,
       'chapters': chapters.map((c) => c.toMap()).toList(),
+      'trashedChapters': trashedChapters.map((c) => c.toMap()).toList(),
+      'compilationConfig': compilationConfig?.toMap(),
       'lastEdited': lastEdited.toIso8601String(),
       'status': status.name,
       'tags': tags,
@@ -110,6 +121,16 @@ class BookModel {
               ?.map((c) => ChapterModel.fromMap(c as Map<String, dynamic>))
               .toList() ??
           [],
+      trashedChapters: (map['trashedChapters'] as List<dynamic>?)
+              ?.map((c) => ChapterModel.fromMap(c as Map<String, dynamic>))
+              .toList() ??
+          [],
+      compilationConfig: map['compilationConfig'] != null
+          ? BookCompilationConfig.fromMap(
+              map['compilationConfig'] as Map<String, dynamic>,
+              defaultTitle: map['title'] as String? ?? '',
+            )
+          : null,
       lastEdited: map['lastEdited'] != null
           ? DateTime.tryParse(map['lastEdited'] as String) ?? DateTime.now()
           : DateTime.now(),

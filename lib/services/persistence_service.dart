@@ -14,6 +14,8 @@ import '../models/sprint_history_model.dart';
 class PersistenceService {
   static const String _keyBooks = 'ink_wright_books';
   static const String _keyBooksBackup = 'ink_wright_books_backup';
+  static const String _keyBooksIndex = 'ink_wright_books_index';
+  static const String _keyBookPrefix = 'ink_wright_book_';
   static const String _keyIdeas = 'ink_wright_ideas';
   static const String _keyCodex = 'ink_wright_codex';
   static const String _keyMindMap = 'ink_wright_mind_map';
@@ -40,26 +42,57 @@ class PersistenceService {
   bool get isSaving => _isSaving;
   DateTime? get lastSaved => _lastSaved;
 
-  // Load All Books
+  // Load All Books (with automatic migration from legacy monolithic storage to partitioned storage)
   Future<List<BookModel>?> loadBooks() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // 1. Try modern partitioned book storage first
+      final indexList = prefs.getStringList(_keyBooksIndex);
+      if (indexList != null && indexList.isNotEmpty) {
+        final List<BookModel> partitionedBooks = [];
+        for (final bookId in indexList) {
+          final bookJson = prefs.getString('$_keyBookPrefix$bookId');
+          if (bookJson != null && bookJson.isNotEmpty) {
+            try {
+              final map = jsonDecode(bookJson) as Map<String, dynamic>;
+              partitionedBooks.add(BookModel.fromMap(map));
+            } catch (e) {
+              debugPrint('Error decoding book $bookId: $e');
+            }
+          }
+        }
+        if (partitionedBooks.isNotEmpty) {
+          return partitionedBooks;
+        }
+      }
+
+      // 2. Fallback to legacy single-string books storage & auto-migrate
       final jsonString = prefs.getString(_keyBooks);
       if (jsonString != null && jsonString.isNotEmpty) {
         try {
           final List<dynamic> list = jsonDecode(jsonString) as List<dynamic>;
-          return list.map((item) => BookModel.fromMap(item as Map<String, dynamic>)).toList();
+          final books = list.map((item) => BookModel.fromMap(item as Map<String, dynamic>)).toList();
+          if (books.isNotEmpty) {
+            // Auto-migrate to partitioned storage in background
+            unawaited(_migrateToPartitioned(prefs, books));
+            return books;
+          }
         } catch (e) {
           debugPrint('Error loading primary books: $e. Falling back to backup...');
         }
       }
 
-      // Try backup if primary failed or empty
+      // 3. Fallback to legacy backup string
       final backupString = prefs.getString(_keyBooksBackup);
       if (backupString != null && backupString.isNotEmpty) {
         try {
           final List<dynamic> list = jsonDecode(backupString) as List<dynamic>;
-          return list.map((item) => BookModel.fromMap(item as Map<String, dynamic>)).toList();
+          final books = list.map((item) => BookModel.fromMap(item as Map<String, dynamic>)).toList();
+          if (books.isNotEmpty) {
+            unawaited(_migrateToPartitioned(prefs, books));
+            return books;
+          }
         } catch (e) {
           debugPrint('Error loading backup books: $e');
         }
@@ -68,6 +101,21 @@ class PersistenceService {
       return null;
     } catch (e) {
       return null;
+    }
+  }
+
+  /// Internal auto-migration helper to partition existing books
+  Future<void> _migrateToPartitioned(SharedPreferences prefs, List<BookModel> books) async {
+    try {
+      final List<String> bookIds = [];
+      for (final book in books) {
+        bookIds.add(book.id);
+        await prefs.setString('$_keyBookPrefix${book.id}', jsonEncode(book.toMap()));
+      }
+      await prefs.setStringList(_keyBooksIndex, bookIds);
+      debugPrint('Successfully migrated ${books.length} books to partitioned document store.');
+    } catch (e) {
+      debugPrint('Error during storage auto-migration: $e');
     }
   }
 
@@ -232,8 +280,16 @@ class PersistenceService {
         await prefs.setString(_keyBooksBackup, existingBooks);
       }
 
+      // Write partitioned books & index for high performance & scalability
+      final List<String> bookIds = books.map((b) => b.id).toList();
+      final List<Future<bool>> partitionedSaves = [
+        prefs.setStringList(_keyBooksIndex, bookIds),
+        ...books.map((b) => prefs.setString('$_keyBookPrefix${b.id}', jsonEncode(b.toMap()))),
+      ];
+
       await Future.wait([
         prefs.setString(_keyBooks, booksJson),
+        ...partitionedSaves,
         prefs.setString(_keyIdeas, ideasJson),
         prefs.setString(_keyCodex, codexJson),
         prefs.setString(_keyMindMap, mindMapJson),
@@ -260,6 +316,17 @@ class PersistenceService {
       debugPrint('Error in saveAllData: $e');
     } finally {
       _isSaving = false;
+    }
+  }
+
+  /// High-performance saving of a single book without serializing the whole library
+  Future<void> saveBook(BookModel book) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('$_keyBookPrefix${book.id}', jsonEncode(book.toMap()));
+      _lastSaved = DateTime.now();
+    } catch (e) {
+      debugPrint('Error saving single book ${book.id}: $e');
     }
   }
 

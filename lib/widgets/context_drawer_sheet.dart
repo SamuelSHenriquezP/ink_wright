@@ -661,8 +661,8 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: widget.isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
-        title: const Text('¿Eliminar capítulo?'),
-        content: Text('Se eliminará "${chapter.title}" y su contenido no podrá recuperarse.'),
+        title: const Text('¿Mover capítulo a la papelera?'),
+        content: Text('«${chapter.title}» se moverá a la papelera. Podrás restaurarlo o recuperarlo en cualquier momento.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -670,14 +670,22 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.redAccent,
               foregroundColor: Colors.white,
             ),
             onPressed: () {
-              controller.deleteChapter(chapter.id);
+              final ok = controller.trashChapter(chapter.id);
               Navigator.of(ctx).pop();
+              if (ok) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('«${chapter.title}» movido a la papelera.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
             },
-            child: const Text('Eliminar'),
+            child: const Text('Mover a Papelera'),
           ),
         ],
       ),
