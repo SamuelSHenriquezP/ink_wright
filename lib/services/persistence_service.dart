@@ -31,6 +31,7 @@ class PersistenceService {
   static const String _keyTypewriterMode = 'ink_wright_typewriter_mode';
   static const String _keySprintHistory = 'ink_wright_sprint_history';
   static const String _keyRelationships = 'ink_wright_relationships';
+  static const String _keyContinuityAuditor = 'ink_continuity_auditor_enabled';
   static const String _keyAutoBackup = 'ink_wright_auto_backup_json';
   static const String _keyAutoBackupTimestamp = 'ink_wright_auto_backup_timestamp';
 
@@ -229,6 +230,7 @@ class PersistenceService {
         'lineHeight': prefs.getDouble(_keyLineHeight) ?? 1.65,
         'maxEditorWidth': prefs.getDouble(_keyMaxEditorWidth) ?? 720.0,
         'typewriterMode': prefs.getBool(_keyTypewriterMode) ?? false,
+        'continuityAuditorEnabled': prefs.getBool(_keyContinuityAuditor) ?? false,
       };
     } catch (e) {
       return {
@@ -240,6 +242,7 @@ class PersistenceService {
         'lineHeight': 1.65,
         'maxEditorWidth': 720.0,
         'typewriterMode': false,
+        'continuityAuditorEnabled': false,
       };
     }
   }
@@ -262,6 +265,7 @@ class PersistenceService {
     double? lineHeight,
     double? maxEditorWidth,
     bool? typewriterMode,
+    bool? continuityAuditorEnabled,
   }) async {
     _isSaving = true;
     try {
@@ -309,6 +313,7 @@ class PersistenceService {
         if (lineHeight != null) prefs.setDouble(_keyLineHeight, lineHeight),
         if (maxEditorWidth != null) prefs.setDouble(_keyMaxEditorWidth, maxEditorWidth),
         if (typewriterMode != null) prefs.setBool(_keyTypewriterMode, typewriterMode),
+        if (continuityAuditorEnabled != null) prefs.setBool(_keyContinuityAuditor, continuityAuditorEnabled),
       ]);
 
       _lastSaved = DateTime.now();
@@ -360,6 +365,7 @@ class PersistenceService {
     double? lineHeight,
     double? maxEditorWidth,
     bool? typewriterMode,
+    bool? continuityAuditorEnabled,
     Duration debounceDuration = const Duration(milliseconds: 800),
     VoidCallback? onSaved,
   }) {
@@ -382,6 +388,7 @@ class PersistenceService {
         lineHeight: lineHeight,
         maxEditorWidth: maxEditorWidth,
         typewriterMode: typewriterMode,
+        continuityAuditorEnabled: continuityAuditorEnabled,
       );
       onSaved?.call();
     };
@@ -410,6 +417,7 @@ class PersistenceService {
     double? lineHeight,
     double? maxEditorWidth,
     bool? typewriterMode,
+    bool? continuityAuditorEnabled,
   }) {
     final payload = {
       'format': 'inkwright_backup',
@@ -430,6 +438,7 @@ class PersistenceService {
         'lineHeight': lineHeight ?? 1.65,
         'maxEditorWidth': maxEditorWidth ?? 720.0,
         'typewriterMode': typewriterMode ?? false,
+        'continuityAuditorEnabled': continuityAuditorEnabled ?? false,
       },
     };
     return const JsonEncoder.withIndent('  ').convert(payload);

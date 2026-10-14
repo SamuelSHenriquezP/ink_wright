@@ -205,7 +205,7 @@ class _NewChapterModalState extends State<NewChapterModal> {
                     children: [
                       _buildPovChip(
                         label: 'Sin asignar',
-                        emoji: '👤',
+                        icon: Icons.person_outline_rounded,
                         isSelected: _selectedPovCharacter.isEmpty,
                         onTap: () => setState(() => _selectedPovCharacter = ''),
                         isDark: isDark,
@@ -219,8 +219,8 @@ class _NewChapterModalState extends State<NewChapterModal> {
                           padding: const EdgeInsets.only(right: 8),
                           child: _buildPovChip(
                             label: c.name,
-                            emoji: c.avatarEmoji,
-                            isSelected: isSelected,
+                            icon: Icons.person_rounded,
+isSelected: isSelected,
                             onTap: () => setState(() => _selectedPovCharacter = c.name),
                             isDark: isDark,
                             textPrimary: textPrimary,
@@ -316,7 +316,7 @@ class _NewChapterModalState extends State<NewChapterModal> {
 
   Widget _buildPovChip({
     required String label,
-    required String emoji,
+    required IconData icon,
     required bool isSelected,
     required VoidCallback onTap,
     required bool isDark,
@@ -344,7 +344,7 @@ class _NewChapterModalState extends State<NewChapterModal> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 13)),
+            Icon(icon, size: 14, color: textPrimary),
             const SizedBox(width: 6),
             Text(
               label,

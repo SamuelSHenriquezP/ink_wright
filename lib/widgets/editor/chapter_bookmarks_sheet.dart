@@ -163,21 +163,24 @@ class ChapterBookmarksSheet extends StatelessWidget {
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
 
-    // Get live updated chapter
-    final liveChapter = controller.activeBook.chapters.firstWhere(
-      (c) => c.id == chapter.id,
-      orElse: () => chapter,
-    );
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        // Get live updated chapter
+        final liveChapter = controller.activeBook.chapters.firstWhere(
+          (c) => c.id == chapter.id,
+          orElse: () => chapter,
+        );
 
-    final bookmarks = liveChapter.bookmarks;
+        final bookmarks = liveChapter.bookmarks;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.70,
-      decoration: BoxDecoration(
-        color: bgCard,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
-        border: Border.all(color: borderSubtle),
-      ),
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.70,
+          decoration: BoxDecoration(
+            color: bgCard,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+            border: Border.all(color: borderSubtle),
+          ),
       child: Column(
         children: [
           // Drag Handle
@@ -395,6 +398,8 @@ class ChapterBookmarksSheet extends StatelessWidget {
         ],
       ),
     );
+  },
+);
   }
 }
 

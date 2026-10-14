@@ -21,10 +21,10 @@ void showActManagementSheet({
   final customNameCtrl = TextEditingController();
 
   final standardOptions = [
-    (PlotAct.prologue, 'Prólogo: Introducción', '📜', 'Establece el trasfondo o la premisa inicial antes del Acto I'),
-    (PlotAct.act4Fallout, 'Acto IV: Revelación y Caída', '🌪️', 'Consecuencias del clímax, caída de máscaras y giros inesperados'),
-    (PlotAct.act5Resolution, 'Acto V: Desenlace Final', '🏆', 'Estructura clásica en 5 actos: resolución épica o catarsis'),
-    (PlotAct.epilogue, 'Epílogo: Conclusión', '🕊️', 'Cierre emocional o vistazo al futuro de los personajes tras la historia'),
+    (PlotAct.prologue, 'Prólogo: Introducción', Icons.history_edu_rounded, 'Establece el trasfondo o la premisa inicial antes del Acto I'),
+    (PlotAct.act4Fallout, 'Acto IV: Revelación y Caída', Icons.thunderstorm_rounded, 'Consecuencias del clímax, caída de máscaras y giros inesperados'),
+    (PlotAct.act5Resolution, 'Acto V: Desenlace Final', Icons.emoji_events_rounded, 'Estructura clásica en 5 actos: resolución épica o catarsis'),
+    (PlotAct.epilogue, 'Epílogo: Conclusión', Icons.bookmark_added_rounded, 'Cierre emocional o vistazo al futuro de los personajes tras la historia'),
   ];
 
   showModalBottomSheet(
@@ -80,7 +80,7 @@ void showActManagementSheet({
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: borderSubtle),
                           ),
-                          child: const Text('📑', style: TextStyle(fontSize: 22)),
+                          child: Icon(Icons.layers_rounded, size: 22, color: textPrimary),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -155,7 +155,7 @@ void showActManagementSheet({
                             ),
                             child: Row(
                               children: [
-                                Text(emoji, style: const TextStyle(fontSize: 22)),
+                                Icon(emoji, size: 22, color: textPrimary),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
@@ -316,7 +316,7 @@ void showActManagementSheet({
                                     ),
                                     child: Row(
                                       children: [
-                                        Text(item.emoji, style: const TextStyle(fontSize: 16)),
+                                        Icon(item.iconData, size: 16, color: textPrimary),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(

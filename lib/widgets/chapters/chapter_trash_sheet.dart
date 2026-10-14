@@ -95,15 +95,18 @@ class ChapterTrashSheet extends StatelessWidget {
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
 
-    final trashed = controller.activeBook.trashedChapters;
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        final trashed = controller.activeBook.trashedChapters;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.72,
-      decoration: BoxDecoration(
-        color: bgCard,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
-        border: Border.all(color: borderSubtle),
-      ),
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.72,
+          decoration: BoxDecoration(
+            color: bgCard,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+            border: Border.all(color: borderSubtle),
+          ),
       child: Column(
         children: [
           // Drag Handle
@@ -304,6 +307,8 @@ class ChapterTrashSheet extends StatelessWidget {
         ],
       ),
     );
+  },
+);
   }
 }
 

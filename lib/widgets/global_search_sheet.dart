@@ -153,10 +153,10 @@ class _GlobalSearchSheetState extends State<GlobalSearchSheet> {
         results.add(
           _SearchResultItem(
             category: 'Notas & Ideas',
-            title: '${idea.categoryIcon} ${idea.title}',
+            title: idea.title,
             subtitle: idea.categoryLabel,
             snippet: snippet,
-            icon: Icons.lightbulb_outline_rounded,
+            icon: idea.iconData,
             onTap: () {
               Navigator.of(context).pop();
             },

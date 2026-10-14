@@ -61,6 +61,8 @@ class MindMapNodeModel {
 
   String get typeLabel => type.label;
 
+  IconData get iconData => type.iconData;
+
   Color get nodeColor => Color(colorHex);
 
   MindMapNodeModel copyWith({
@@ -134,7 +136,7 @@ class MindMapNodeModel {
       dy: (map['dy'] as num?)?.toDouble() ?? 0.0,
       connectedToIds: (map['connectedToIds'] as List<dynamic>?)?.map((c) => c.toString()).toList() ?? [],
       colorHex: map['colorHex'] as int? ?? 0xFF18181B,
-      iconEmoji: map['iconEmoji'] as String? ?? '📌',
+      iconEmoji: map['iconEmoji'] as String? ?? '',
       linkedChapterId: map['linkedChapterId'] as String?,
     );
   }
@@ -191,30 +193,32 @@ extension PlotActExtension on PlotAct {
     }
   }
 
-  String get defaultEmoji {
+  IconData get iconData {
     switch (this) {
       case PlotAct.prologue:
-        return '📜';
+        return Icons.history_edu_rounded;
       case PlotAct.act1Exposition:
-        return '📖';
+        return Icons.explore_rounded;
       case PlotAct.act2RisingAction:
-        return '⚡';
+        return Icons.trending_up_rounded;
       case PlotAct.midpoint:
-        return '🔄';
+        return Icons.sync_alt_rounded;
       case PlotAct.act3Climax:
-        return '🔥';
+        return Icons.local_fire_department_rounded;
       case PlotAct.act4Fallout:
-        return '🌪️';
+        return Icons.thunderstorm_rounded;
       case PlotAct.act5Resolution:
-        return '🏆';
+        return Icons.emoji_events_rounded;
       case PlotAct.resolution:
-        return '✨';
+        return Icons.auto_awesome_rounded;
       case PlotAct.epilogue:
-        return '🕊️';
+        return Icons.bookmark_added_rounded;
       case PlotAct.custom:
-        return '🎭';
+        return Icons.theater_comedy_rounded;
     }
   }
+
+  String get defaultEmoji => '';
 }
 
 extension PlotNodeTypeExtension on PlotNodeType {
@@ -230,6 +234,21 @@ extension PlotNodeTypeExtension on PlotNodeType {
         return 'Códice / Lore';
       case PlotNodeType.turningPoint:
         return 'Punto de Giro';
+    }
+  }
+
+  IconData get iconData {
+    switch (this) {
+      case PlotNodeType.mainPlot:
+        return Icons.timeline_rounded;
+      case PlotNodeType.subplot:
+        return Icons.alt_route_rounded;
+      case PlotNodeType.characterArc:
+        return Icons.person_rounded;
+      case PlotNodeType.worldLore:
+        return Icons.auto_stories_rounded;
+      case PlotNodeType.turningPoint:
+        return Icons.bolt_rounded;
     }
   }
 }
@@ -254,12 +273,9 @@ class TimelineActItem {
     return act.shortLabel;
   }
 
-  String get emoji {
-    if (act == PlotAct.custom) {
-      return '🎭';
-    }
-    return act.defaultEmoji;
-  }
+  IconData get iconData => act == PlotAct.custom ? Icons.theater_comedy_rounded : act.iconData;
+
+  String get emoji => '';
 
   String get id {
     if (act == PlotAct.custom) {

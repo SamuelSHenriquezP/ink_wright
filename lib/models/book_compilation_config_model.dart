@@ -78,6 +78,12 @@ class BookCoverConfig {
   }
 }
 
+enum EditorialPreset {
+  classic,
+  modern,
+  manuscriptSubmission,
+}
+
 class BookCompilationConfig {
   final BookCoverConfig cover;
   final String dedication;
@@ -85,6 +91,12 @@ class BookCompilationConfig {
   final bool includeTableOfContents;
   final Map<String, String> customChapterTitles;
   final List<String> excludedChapterIds;
+  final List<String> orderedChapterIds;
+  final EditorialPreset preset;
+  final String sceneSeparator;
+  final String authorBio;
+  final String acknowledgments;
+  final String authorSocials;
 
   const BookCompilationConfig({
     required this.cover,
@@ -93,6 +105,12 @@ class BookCompilationConfig {
     this.includeTableOfContents = true,
     this.customChapterTitles = const {},
     this.excludedChapterIds = const [],
+    this.orderedChapterIds = const [],
+    this.preset = EditorialPreset.classic,
+    this.sceneSeparator = '* * *',
+    this.authorBio = '',
+    this.acknowledgments = '',
+    this.authorSocials = '',
   });
 
   BookCompilationConfig copyWith({
@@ -102,6 +120,12 @@ class BookCompilationConfig {
     bool? includeTableOfContents,
     Map<String, String>? customChapterTitles,
     List<String>? excludedChapterIds,
+    List<String>? orderedChapterIds,
+    EditorialPreset? preset,
+    String? sceneSeparator,
+    String? authorBio,
+    String? acknowledgments,
+    String? authorSocials,
   }) {
     return BookCompilationConfig(
       cover: cover ?? this.cover,
@@ -110,6 +134,12 @@ class BookCompilationConfig {
       includeTableOfContents: includeTableOfContents ?? this.includeTableOfContents,
       customChapterTitles: customChapterTitles ?? this.customChapterTitles,
       excludedChapterIds: excludedChapterIds ?? this.excludedChapterIds,
+      orderedChapterIds: orderedChapterIds ?? this.orderedChapterIds,
+      preset: preset ?? this.preset,
+      sceneSeparator: sceneSeparator ?? this.sceneSeparator,
+      authorBio: authorBio ?? this.authorBio,
+      acknowledgments: acknowledgments ?? this.acknowledgments,
+      authorSocials: authorSocials ?? this.authorSocials,
     );
   }
 
@@ -121,13 +151,19 @@ class BookCompilationConfig {
       'includeTableOfContents': includeTableOfContents,
       'customChapterTitles': customChapterTitles,
       'excludedChapterIds': excludedChapterIds,
+      'orderedChapterIds': orderedChapterIds,
+      'preset': preset.name,
+      'sceneSeparator': sceneSeparator,
+      'authorBio': authorBio,
+      'acknowledgments': acknowledgments,
+      'authorSocials': authorSocials,
     };
   }
 
   factory BookCompilationConfig.fromMap(Map<String, dynamic> map, {String defaultTitle = '', String defaultAuthor = ''}) {
     return BookCompilationConfig(
       cover: map['cover'] != null
-          ? BookCoverConfig.fromMap(map['cover'] as Map<String, dynamic>)
+          ? BookCoverConfig.fromMap(Map<String, dynamic>.from(map['cover'] as Map))
           : BookCoverConfig(title: defaultTitle, author: defaultAuthor),
       dedication: map['dedication'] as String? ?? '',
       copyrightNotice: map['copyrightNotice'] as String? ?? '',
@@ -139,6 +175,18 @@ class BookCompilationConfig {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
+      orderedChapterIds: (map['orderedChapterIds'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      preset: EditorialPreset.values.firstWhere(
+        (p) => p.name == (map['preset'] as String? ?? ''),
+        orElse: () => EditorialPreset.classic,
+      ),
+      sceneSeparator: map['sceneSeparator'] as String? ?? '* * *',
+      authorBio: map['authorBio'] as String? ?? '',
+      acknowledgments: map['acknowledgments'] as String? ?? '',
+      authorSocials: map['authorSocials'] as String? ?? '',
     );
   }
 }

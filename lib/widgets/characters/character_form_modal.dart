@@ -48,11 +48,6 @@ class _CharacterFormModalState extends State<CharacterFormModal> with SingleTick
   late String _selectedRole;
   late String _selectedEmoji;
 
-  static const List<String> _availableEmojis = [
-    '👤', '🕵️‍♀️', '🧙‍♂️', '⚔️', '👑', '🦉', '🎭', '🛡️', '🌙', '🖋️',
-    '👁️', '⚡', '🗝️', '💀', '🔥', '✨', '🧝', '🧛', '🏹', '🐺'
-  ];
-
   static const List<String> _roleOptions = [
     'Protagonista',
     'Antagonista',
@@ -83,7 +78,7 @@ class _CharacterFormModalState extends State<CharacterFormModal> with SingleTick
     _quoteCtrl = TextEditingController(text: init?.quote ?? '');
 
     _selectedRole = init?.role ?? 'Protagonista';
-    _selectedEmoji = init?.avatarEmoji ?? '👤';
+    _selectedEmoji = init?.avatarEmoji ?? '';
   }
 
   @override
@@ -202,7 +197,7 @@ class _CharacterFormModalState extends State<CharacterFormModal> with SingleTick
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: borderSubtle),
                     ),
-                    child: Text(_selectedEmoji, style: const TextStyle(fontSize: 22)),
+                    child: Icon(Icons.person_rounded, size: 22, color: textPrimary),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -276,45 +271,6 @@ class _CharacterFormModalState extends State<CharacterFormModal> with SingleTick
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Avatar o Símbolo',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary),
-                        ),
-                        const SizedBox(height: 8),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          child: Row(
-                            children: _availableEmojis.map((e) {
-                              final isChosen = e == _selectedEmoji;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: InkWell(
-                                  onTap: () => setState(() => _selectedEmoji = e),
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
-                                    width: 40,
-                                    height: 40,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: isChosen
-                                          ? (isDark ? Colors.white24 : Colors.black12)
-                                          : (isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02)),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: isChosen ? (isDark ? Colors.white : Colors.black) : borderSubtle,
-                                        width: isChosen ? 1.5 : 1,
-                                      ),
-                                    ),
-                                    child: Text(e, style: const TextStyle(fontSize: 20)),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
                         Text(
                           'Nombre del Personaje *',
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary),

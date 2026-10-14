@@ -513,7 +513,7 @@ class _ManuscriptReaderScreenState extends State<ManuscriptReaderScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             alignment: Alignment.center,
-                            child: Text(book.coverEmoji, style: const TextStyle(fontSize: 34)),
+                            child: Icon(Icons.auto_stories_rounded, size: 32, color: colors.textPrimary),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -644,9 +644,10 @@ class _ManuscriptReaderScreenState extends State<ManuscriptReaderScreen> {
                                           Container(width: 40, height: 1, color: colors.borderSubtle),
                                           Padding(
                                             padding: const EdgeInsets.symmetric(horizontal: 14),
-                                            child: Text(
-                                              '❦',
-                                              style: TextStyle(color: colors.textSecondary, fontSize: 14),
+                                            child: Icon(
+                                              Icons.more_horiz_rounded,
+                                              size: 16,
+                                              color: colors.textSecondary,
                                             ),
                                           ),
                                           Container(width: 40, height: 1, color: colors.borderSubtle),

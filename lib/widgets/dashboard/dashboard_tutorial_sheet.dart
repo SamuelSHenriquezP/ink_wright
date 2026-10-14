@@ -48,7 +48,7 @@ class DashboardTutorialSheet {
                       color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text('🖋️', style: TextStyle(fontSize: 22)),
+                    child: Icon(Icons.history_edu_rounded, size: 22, color: textPrimary),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -107,7 +107,7 @@ class DashboardTutorialSheet {
                         icon: Icons.auto_awesome_rounded,
                         title: 'Inspector de Prosa y Ritmo Narrativo',
                         description:
-                            'Ubicado en el botón [✨ Inspector] junto a las métricas del capítulo. Analiza en tiempo real:\n• Legibilidad Fernández-Huerta (0-100) y promedio de palabras por frase.\n• Adverbios en -mente para sustituirlos por verbos más vivaces.\n• Oraciones densas (>32 palabras) para dosificar la cadencia.\n• Ecos acústicos (palabras repetidas en un mismo párrafo).\n• Muletillas de relleno (realmente, prácticamente, simplemente...).\n• Clichés literarios (en un abrir y cerrar de ojos, frío sepulcral...).\n• Voz pasiva débil para favorecer construcciones activas dinámicas.\n• Párrafos densos (>100 palabras) para oxigenar la lectura en pantalla.',
+                            'Ubicado en el botón [Inspector] junto a las métricas del capítulo. Analiza en tiempo real:\n• Legibilidad Fernández-Huerta (0-100) y promedio de palabras por frase.\n• Adverbios en -mente para sustituirlos por verbos más vivaces.\n• Oraciones densas (>32 palabras) para dosificar la cadencia.\n• Ecos acústicos (palabras repetidas en un mismo párrafo).\n• Muletillas de relleno (realmente, prácticamente, simplemente...).\n• Clichés literarios (en un abrir y cerrar de ojos, frío sepulcral...).\n• Voz pasiva débil para favorecer construcciones activas dinámicas.\n• Párrafos densos (>100 palabras) para oxigenar la lectura en pantalla.',
                         badge: 'Destacado',
                         isDark: isDark,
                         borderSubtle: borderSubtle,

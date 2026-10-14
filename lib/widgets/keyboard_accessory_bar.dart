@@ -192,8 +192,8 @@ class KeyboardAccessoryBar extends StatelessWidget {
                     textPrimary: textPrimary,
                     keyBg: keyBg,
                   ),
-                  _buildKeyButton(
-                    label: '☑',
+                  _buildIconKey(
+                    icon: Icons.check_box_outlined,
                     tooltip: 'Lista de tareas (- [ ])',
                     onTap: () => WriterTextFormatter.insertCheckboxList(textController),
                     textPrimary: textPrimary,

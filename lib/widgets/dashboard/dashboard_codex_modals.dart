@@ -18,12 +18,7 @@ class DashboardCodexModals {
     final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
     final inputBg = isDark ? const Color(0xFF1E1E22) : const Color(0xFFF6F6F8);
 
-    String selectedEmoji = '📜';
-
-    const availableEmojis = [
-      '📜', '🏰', '🌲', '🌋', '🏛️', '🌌', '🗝️', '🗡️', '💍', '🔮',
-      '👑', '🛡️', '🎭', '⚖️', '🧙‍♂️', '👁️', '🐉', '🌙', '⚓', '🧪'
-    ];
+    String selectedEmoji = '';
 
     const suggestedCodexTraits = [
       'Antiguo', 'Prohibido', 'Sagrado', 'Místico', 'Oculto',
@@ -37,19 +32,6 @@ class DashboardCodexModals {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setState) {
-            String defaultEmojiForCategory(CodexType c) {
-              switch (c) {
-                case CodexType.character:
-                  return '🧙‍♂️';
-                case CodexType.location:
-                  return '🏰';
-                case CodexType.artifact:
-                  return '🗝️';
-                case CodexType.lore:
-                  return '📜';
-              }
-            }
-
             return Padding(
               padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
               child: Container(
@@ -92,7 +74,7 @@ class DashboardCodexModals {
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: borderSubtle),
                             ),
-                            child: Text(selectedEmoji, style: const TextStyle(fontSize: 22)),
+                            child: Icon(category.iconData, size: 22, color: textPrimary),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -158,7 +140,7 @@ class DashboardCodexModals {
                               child: Row(
                                 children: CodexType.values.map((c) {
                                   final isSelected = category == c;
-                                  final emoji = defaultEmojiForCategory(c);
+                                  
                                   String label;
                                   switch (c) {
                                     case CodexType.character:
@@ -180,7 +162,7 @@ class DashboardCodexModals {
                                       label: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text(emoji, style: const TextStyle(fontSize: 13)),
+                                          Icon(c.iconData, size: 14, color: isSelected ? (isDark ? Colors.black : Colors.white) : textPrimary),
                                           const SizedBox(width: 6),
                                           Text(label),
                                         ],
@@ -204,57 +186,10 @@ class DashboardCodexModals {
                                         if (selected) {
                                           setState(() {
                                             category = c;
-                                            selectedEmoji = defaultEmojiForCategory(c);
+                                            
                                           });
                                         }
                                       },
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // 2. Icon / Emoji Selector
-                            Text(
-                              'ÍCONO / SÍMBOLO DEL ELEMENTO',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: textSecondary,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              child: Row(
-                                children: availableEmojis.map((e) {
-                                  final isChosen = e == selectedEmoji;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: InkWell(
-                                      onTap: () => setState(() => selectedEmoji = e),
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Container(
-                                        width: 38,
-                                        height: 38,
-                                        alignment: Alignment.center,
-                                        decoration: BoxDecoration(
-                                          color: isChosen
-                                              ? (isDark ? Colors.white24 : Colors.black12)
-                                              : (isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02)),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: isChosen
-                                                ? (isDark ? Colors.white : Colors.black)
-                                                : borderSubtle,
-                                            width: isChosen ? 1.5 : 1,
-                                          ),
-                                        ),
-                                        child: Text(e, style: const TextStyle(fontSize: 18)),
-                                      ),
                                     ),
                                   );
                                 }).toList(),
@@ -539,7 +474,7 @@ class DashboardCodexModals {
                           color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Text(entry.avatarEmoji, style: const TextStyle(fontSize: 22)),
+                        child: Icon(entry.iconData, size: 22, color: textPrimary),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

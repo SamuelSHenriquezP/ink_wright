@@ -8,6 +8,8 @@ class RelationshipFormModal {
     BuildContext context,
     EditorController controller, {
     CharacterRelationshipModel? initialRelationship,
+    String? initialFromCharacterId,
+    String? initialToCharacterId,
   }) {
     final characters = controller.characters;
     if (characters.length < 2) {
@@ -21,9 +23,14 @@ class RelationshipFormModal {
     }
 
     final isEditing = initialRelationship != null;
-    String fromId = initialRelationship?.fromCharacterId ?? characters.first.id;
+    String fromId = initialRelationship?.fromCharacterId ??
+        initialFromCharacterId ??
+        characters.first.id;
     String toId = initialRelationship?.toCharacterId ??
-        (characters.length > 1 ? characters[1].id : characters.first.id);
+        initialToCharacterId ??
+        (characters.length > 1
+            ? (characters.first.id == fromId ? characters[1].id : characters.first.id)
+            : characters.first.id);
     RelationshipType selectedType = initialRelationship?.type ?? RelationshipType.aliado;
     int strength = initialRelationship?.strength ?? 3;
     bool isMutual = initialRelationship?.isMutual ?? true;
@@ -77,7 +84,13 @@ class RelationshipFormModal {
                       items: characters.map((c) {
                         return DropdownMenuItem(
                           value: c.id,
-                          child: Text('${c.avatarEmoji} ${c.name}', style: TextStyle(color: textPrimary, fontSize: 13)),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.person_rounded, size: 16, color: AppTheme.accentTeal),
+                              const SizedBox(width: 8),
+                              Text(c.name, style: TextStyle(color: textPrimary, fontSize: 13)),
+                            ],
+                          ),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -104,7 +117,13 @@ class RelationshipFormModal {
                       items: characters.map((c) {
                         return DropdownMenuItem(
                           value: c.id,
-                          child: Text('${c.avatarEmoji} ${c.name}', style: TextStyle(color: textPrimary, fontSize: 13)),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.person_rounded, size: 16, color: AppTheme.accentTeal),
+                              const SizedBox(width: 8),
+                              Text(c.name, style: TextStyle(color: textPrimary, fontSize: 13)),
+                            ],
+                          ),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -122,7 +141,11 @@ class RelationshipFormModal {
                     children: RelationshipType.values.map((type) {
                       final isSelected = selectedType == type;
                       return ChoiceChip(
-                        avatar: Text(type.icon, style: const TextStyle(fontSize: 13)),
+                        avatar: Icon(
+                          type.iconData,
+                          size: 14,
+                          color: isSelected ? Colors.white : Color(type.colorHex),
+                        ),
                         label: Text(type.label, style: const TextStyle(fontSize: 11)),
                         selected: isSelected,
                         selectedColor: Color(type.colorHex),

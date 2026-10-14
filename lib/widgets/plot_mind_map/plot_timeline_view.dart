@@ -330,7 +330,7 @@ class PlotTimelineView extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Text(node.iconEmoji, style: const TextStyle(fontSize: 20)),
+                Icon(node.iconData, size: 20, color: textPrimary),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -420,7 +420,7 @@ class PlotTimelineView extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(node.iconEmoji, style: const TextStyle(fontSize: 18)),
+                    Icon(node.iconData, size: 16, color: Color(node.colorHex)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

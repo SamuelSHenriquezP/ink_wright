@@ -12,6 +12,7 @@ class DashboardToolsTab extends StatelessWidget {
   final VoidCallback onOpenMuse;
   final VoidCallback onOpenSprint;
   final VoidCallback onOpenExport;
+  final VoidCallback onOpenCompiler;
   final VoidCallback onExportBackup;
 
   const DashboardToolsTab({
@@ -21,6 +22,7 @@ class DashboardToolsTab extends StatelessWidget {
     required this.onOpenMuse,
     required this.onOpenSprint,
     required this.onOpenExport,
+    required this.onOpenCompiler,
     required this.onExportBackup,
   });
 
@@ -183,6 +185,26 @@ class DashboardToolsTab extends StatelessWidget {
             Row(
               children: [
                 Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+                      foregroundColor: textPrimary,
+                      side: BorderSide(color: borderSubtle),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.auto_stories_rounded, size: 18),
+                    label: const Text('Compilar Obra Completa', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
+                    onPressed: onOpenCompiler,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: textPrimary,
@@ -205,7 +227,7 @@ class DashboardToolsTab extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
                     ),
                     icon: const Icon(Icons.ios_share_rounded, size: 17),
-                    label: const Text('Exportar Libro', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                    label: const Text('Exportar Rápido', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
                     onPressed: onOpenExport,
                   ),
                 ),

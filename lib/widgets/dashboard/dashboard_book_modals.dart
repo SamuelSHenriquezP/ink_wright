@@ -132,13 +132,9 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
   late final TextEditingController _subCtrl;
   late final TextEditingController _targetCtrl;
 
-  String _selectedEmoji = '📖';
+  String _selectedEmoji = '';
   String _selectedGenre = 'Ficción';
   bool _titleHasError = false;
-
-  static const List<String> _emojis = [
-    '📖', '🖋️', '📜', '🌑', '⚔️', '🕯️', '🗝️', '🌿', '🎭', '🌌', '👁️', '👑',
-  ];
 
   static const List<String> _genres = [
     'Ficción',
@@ -229,7 +225,7 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
                       border: Border.all(color: borderSubtle),
                     ),
                     alignment: Alignment.center,
-                    child: Text(_selectedEmoji, style: const TextStyle(fontSize: 22)),
+                    child: Icon(Icons.auto_stories_rounded, size: 22, color: isDark ? Colors.white : Colors.black),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -268,61 +264,6 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Selector de Emoji / Portada
-                    Text(
-                      'SÍMBOLO DE PORTADA',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                        color: textSecondary,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 44,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _emojis.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 8),
-                        itemBuilder: (context, i) {
-                          final emoji = _emojis[i];
-                          final isSelected = emoji == _selectedEmoji;
-                          return InkWell(
-                            onTap: () => setState(() => _selectedEmoji = emoji),
-                            borderRadius: BorderRadius.circular(8),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? (isDark ? Colors.white : Colors.black)
-                                    : accentBg,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? (isDark ? Colors.white : Colors.black)
-                                      : borderSubtle,
-                                  width: isSelected ? 1.5 : 1,
-                                ),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                emoji,
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  color: isSelected
-                                      ? (isDark ? Colors.black : Colors.white)
-                                      : null,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 16),
 
                     // Título del Libro
                     Text(

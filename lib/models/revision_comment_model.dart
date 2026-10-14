@@ -63,12 +63,12 @@ class RevisionCommentModel {
     return RevisionCommentModel(
       id: map['id'] as String? ?? '',
       chapterId: map['chapterId'] as String? ?? '',
-      charOffset: map['charOffset'] as int? ?? 0,
-      length: map['length'] as int? ?? 0,
+      charOffset: (map['charOffset'] as num?)?.toInt() ?? 0,
+      length: (map['length'] as num?)?.toInt() ?? 0,
       commentText: map['commentText'] as String? ?? '',
       highlightedText: map['highlightedText'] as String? ?? '',
       isResolved: map['isResolved'] as bool? ?? false,
-      colorHex: map['colorHex'] as int? ?? 0xFFFFC107,
+      colorHex: (map['colorHex'] as num?)?.toInt() ?? 0xFFFFC107,
       createdAt: map['createdAt'] != null
           ? DateTime.tryParse(map['createdAt'] as String) ?? DateTime.now()
           : DateTime.now(),

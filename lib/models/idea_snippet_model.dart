@@ -1,9 +1,43 @@
+import 'package:flutter/material.dart';
+
 enum IdeaCategory {
   character,
   worldbuilding,
   plotTwist,
   dialogue,
   general,
+}
+
+extension IdeaCategoryExtension on IdeaCategory {
+  String get label {
+    switch (this) {
+      case IdeaCategory.character:
+        return 'Personaje';
+      case IdeaCategory.worldbuilding:
+        return 'Mundo / Entorno';
+      case IdeaCategory.plotTwist:
+        return 'Giro de Trama';
+      case IdeaCategory.dialogue:
+        return 'Diálogo';
+      case IdeaCategory.general:
+        return 'Nota General';
+    }
+  }
+
+  IconData get iconData {
+    switch (this) {
+      case IdeaCategory.character:
+        return Icons.person_rounded;
+      case IdeaCategory.worldbuilding:
+        return Icons.public_rounded;
+      case IdeaCategory.plotTwist:
+        return Icons.bolt_rounded;
+      case IdeaCategory.dialogue:
+        return Icons.chat_bubble_outline_rounded;
+      case IdeaCategory.general:
+        return Icons.lightbulb_outline_rounded;
+    }
+  }
 }
 
 class IdeaSnippetModel {
@@ -29,35 +63,11 @@ class IdeaSnippetModel {
     required this.tags,
   });
 
-  String get categoryLabel {
-    switch (category) {
-      case IdeaCategory.character:
-        return 'Personaje';
-      case IdeaCategory.worldbuilding:
-        return 'Mundo / Entorno';
-      case IdeaCategory.plotTwist:
-        return 'Giro de Trama';
-      case IdeaCategory.dialogue:
-        return 'Diálogo';
-      case IdeaCategory.general:
-        return 'Nota General';
-    }
-  }
+  String get categoryLabel => category.label;
 
-  String get categoryIcon {
-    switch (category) {
-      case IdeaCategory.character:
-        return '👤';
-      case IdeaCategory.worldbuilding:
-        return '🗺️';
-      case IdeaCategory.plotTwist:
-        return '⚡';
-      case IdeaCategory.dialogue:
-        return '💬';
-      case IdeaCategory.general:
-        return '📝';
-    }
-  }
+  IconData get iconData => category.iconData;
+
+  String get categoryIcon => '';
 
   IdeaSnippetModel copyWith({
     String? id,

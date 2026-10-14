@@ -1,8 +1,38 @@
+import 'package:flutter/material.dart';
+
 enum CodexType {
   character,
   location,
   artifact,
   lore,
+}
+
+extension CodexTypeExtension on CodexType {
+  String get label {
+    switch (this) {
+      case CodexType.character:
+        return 'Personaje';
+      case CodexType.location:
+        return 'Lugar';
+      case CodexType.artifact:
+        return 'Objeto / Reliquia';
+      case CodexType.lore:
+        return 'Códice / Lore';
+    }
+  }
+
+  IconData get iconData {
+    switch (this) {
+      case CodexType.character:
+        return Icons.person_rounded;
+      case CodexType.location:
+        return Icons.place_rounded;
+      case CodexType.artifact:
+        return Icons.auto_awesome_rounded;
+      case CodexType.lore:
+        return Icons.menu_book_rounded;
+    }
+  }
 }
 
 class CodexEntryModel {
@@ -32,32 +62,11 @@ class CodexEntryModel {
     required this.createdAt,
   });
 
-  String get typeLabel {
-    switch (type) {
-      case CodexType.character:
-        return 'Personaje';
-      case CodexType.location:
-        return 'Lugar';
-      case CodexType.artifact:
-        return 'Objeto / Reliquia';
-      case CodexType.lore:
-        return 'Códice / Lore';
-    }
-  }
+  String get typeLabel => type.label;
 
-  String get defaultEmoji {
-    if (avatarEmoji.isNotEmpty) return avatarEmoji;
-    switch (type) {
-      case CodexType.character:
-        return '🧙‍♂️';
-      case CodexType.location:
-        return '🏰';
-      case CodexType.artifact:
-        return '🗝️';
-      case CodexType.lore:
-        return '📜';
-    }
-  }
+  IconData get iconData => type.iconData;
+
+  String get defaultEmoji => avatarEmoji;
 
   CodexEntryModel copyWith({
     String? id,
@@ -116,7 +125,7 @@ class CodexEntryModel {
       description: map['description'] as String? ?? '',
       traits: (map['traits'] as List<dynamic>?)?.map((t) => t.toString()).toList() ?? [],
       secrets: map['secrets'] as String? ?? '',
-      avatarEmoji: map['avatarEmoji'] as String? ?? '👤',
+      avatarEmoji: map['avatarEmoji'] as String? ?? '',
       isPinned: map['isPinned'] as bool? ?? false,
       createdAt: map['createdAt'] != null
           ? DateTime.tryParse(map['createdAt'] as String) ?? DateTime.now()

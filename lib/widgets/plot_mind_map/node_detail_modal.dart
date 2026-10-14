@@ -129,11 +129,20 @@ void showPlotConnectDialog(
                                         borderRadius: BorderRadius.circular(6),
                                         border: Border.all(color: borderSubtle),
                                       ),
-                                      child: Text(
-                                        '${node.iconEmoji} ${node.title}',
-                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: textPrimary),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(node.iconData, size: 12, color: textPrimary),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              node.title,
+                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: textPrimary),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -278,7 +287,7 @@ void showPlotConnectDialog(
                                   onUpdate();
                                   if (onNotify != null) {
                                     onNotify(
-                                      '¡Conectado! «${node.title}» ➔ «${target.title}»',
+                                      '¡Conectado! «${node.title}» -> «${target.title}»',
                                       icon: Icons.link_rounded,
                                     );
                                   }
@@ -306,7 +315,7 @@ void showPlotConnectDialog(
                                             width: 1.5,
                                           ),
                                         ),
-                                        child: Text(target.iconEmoji, style: const TextStyle(fontSize: 20)),
+                                        child: Icon(target.iconData, size: 20, color: accentColor),
                                       ),
                                       const SizedBox(width: 12),
                                       // Info
@@ -466,7 +475,7 @@ void showPlotNodeDetailModal({
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(currentNode.iconEmoji, style: const TextStyle(fontSize: 28)),
+                            Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: Color(currentNode.colorHex).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)), child: Icon(currentNode.iconData, size: 22, color: Color(currentNode.colorHex))),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -732,7 +741,7 @@ void showPlotNodeDetailModal({
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: targetAccent.withValues(alpha: 0.5)),
                               ),
-                              child: Text(target.iconEmoji, style: const TextStyle(fontSize: 16)),
+                              child: Icon(target.iconData, size: 16, color: targetAccent),
                             ),
                             const SizedBox(width: 10),
                             Expanded(

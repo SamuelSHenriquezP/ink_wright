@@ -114,20 +114,20 @@ class BookModel {
       title: map['title'] as String? ?? '',
       subtitle: map['subtitle'] as String? ?? '',
       genre: map['genre'] as String? ?? '',
-      coverEmoji: map['coverEmoji'] as String? ?? '📖',
-      coverColorHex: map['coverColorHex'] as int? ?? 0xFF18181B,
-      targetWordCount: map['targetWordCount'] as int? ?? 50000,
+      coverEmoji: map['coverEmoji'] as String? ?? '',
+      coverColorHex: (map['coverColorHex'] as num?)?.toInt() ?? 0xFF18181B,
+      targetWordCount: (map['targetWordCount'] as num?)?.toInt() ?? 50000,
       chapters: (map['chapters'] as List<dynamic>?)
-              ?.map((c) => ChapterModel.fromMap(c as Map<String, dynamic>))
+              ?.map((c) => ChapterModel.fromMap(Map<String, dynamic>.from(c as Map)))
               .toList() ??
           [],
       trashedChapters: (map['trashedChapters'] as List<dynamic>?)
-              ?.map((c) => ChapterModel.fromMap(c as Map<String, dynamic>))
+              ?.map((c) => ChapterModel.fromMap(Map<String, dynamic>.from(c as Map)))
               .toList() ??
           [],
       compilationConfig: map['compilationConfig'] != null
           ? BookCompilationConfig.fromMap(
-              map['compilationConfig'] as Map<String, dynamic>,
+              Map<String, dynamic>.from(map['compilationConfig'] as Map),
               defaultTitle: map['title'] as String? ?? '',
             )
           : null,

@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 enum RelationshipType {
   aliado,
   rival,
@@ -25,22 +27,24 @@ extension RelationshipTypeExtension on RelationshipType {
     }
   }
 
-  String get icon {
+  IconData get iconData {
     switch (this) {
       case RelationshipType.aliado:
-        return '🤝';
+        return Icons.handshake_rounded;
       case RelationshipType.rival:
-        return '⚔️';
+        return Icons.bolt_rounded;
       case RelationshipType.mentor:
-        return '🦉';
+        return Icons.school_rounded;
       case RelationshipType.romantico:
-        return '❤️';
+        return Icons.favorite_rounded;
       case RelationshipType.familiar:
-        return '👨‍👩‍👧';
+        return Icons.diversity_3_rounded;
       case RelationshipType.neutro:
-        return '🔘';
+        return Icons.adjust_rounded;
     }
   }
+
+  String get icon => '';
 
   int get colorHex {
     switch (this) {
@@ -58,6 +62,9 @@ extension RelationshipTypeExtension on RelationshipType {
         return 0xFF8A8A9A;
     }
   }
+
+  String get emoji => icon;
+  String get displayName => label;
 }
 
 class CharacterRelationshipModel {

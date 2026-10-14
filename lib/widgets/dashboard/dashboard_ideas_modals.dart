@@ -130,7 +130,7 @@ class DashboardIdeasModals {
                                 label: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(tempSnippet.categoryIcon, style: const TextStyle(fontSize: 13)),
+                                    Icon(tempSnippet.iconData, size: 14, color: isSelected ? (isDark ? Colors.black : Colors.white) : textPrimary),
                                     const SizedBox(width: 6),
                                     Text(
                                       tempSnippet.categoryLabel,

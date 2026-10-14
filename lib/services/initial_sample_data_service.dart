@@ -80,7 +80,7 @@ Pulsa el icono superior para abrir el panel lateral o vuelve al panel de inicio 
           chapterId: 'ch_tut_1',
           charOffset: 41,
           length: 42,
-          commentText: '💡 ¿Cómo funcionan las notas de revisión?\nPuedes seleccionar cualquier fragmento de texto en el editor y pulsar "Nueva Nota" para dejarte anotaciones editoriales, dudas de trama o erratas sin alterar tu texto original. Cuando termines, márcala como "Resolver".',
+          commentText: '¿Cómo funcionan las notas de revisión?\nPuedes seleccionar cualquier fragmento de texto en el editor y pulsar "Nueva Nota" para dejarte anotaciones editoriales, dudas de trama o erratas sin alterar tu texto original. Cuando termines, márcala como "Resolver".',
           highlightedText: 'un espacio minimalista en blanco y negro',
           createdAt: DateTime.now().subtract(const Duration(hours: 1)),
         ),
@@ -146,7 +146,7 @@ Cada libro en Ink & Wright tiene su propio **Mapa Mental independiente**. Lo que
       title: 'Capítulo 4: El Inspector de Prosa y Pulido de Estilo',
       content: '''# El Laboratorio del Estilo: Inspector de Prosa
 
-En la cabecera de cada capítulo encontrarás el botón `[✨ Inspector]` junto a las métricas de palabras y tiempo de lectura. Esta herramienta actúa como un editor profesional a tu lado.
+En la cabecera de cada capítulo encontrarás el botón `[Inspector]` junto a las métricas de palabras y tiempo de lectura. Esta herramienta actúa como un editor profesional a tu lado.
 
 ## ¿Qué analiza el Inspector en Vivo?
 
@@ -223,7 +223,7 @@ En la esquina superior derecha del editor tienes acceso directo a:
       status: BookStatus.drafting,
       chapters: [ch1, ch2, ch3, ch4, ch5],
       lastEdited: DateTime.now(),
-      coverEmoji: '🖋️',
+      coverEmoji: '',
       coverColorHex: 0xFF18181B,
       tags: ['Tutorial', 'Guía', 'Escritura Creativa'],
       synopsis:
@@ -263,7 +263,7 @@ En la esquina superior derecha del editor tienes acceso directo a:
         type: CodexType.location,
         role: 'Biblioteca Histórica Central',
         description: 'Un edificio laberíntico de piedra oscura donde se conservan los diarios perdidos de tres siglos de cronistas.',
-        avatarEmoji: '🏛️',
+        avatarEmoji: '',
         traits: ['Antiguo', 'Laberíntico', 'Silencioso'],
         secrets: 'Existe un pasadizo subterráneo que conecta con la cripta del gremio de cartógrafos.',
         createdAt: DateTime.now(),
@@ -276,7 +276,7 @@ En la esquina superior derecha del editor tienes acceso directo a:
         type: CodexType.artifact,
         role: 'Reliquia de Escritor',
         description: 'Una pluma tallada en una sola pieza de mineral oscuro. Quien escribe con ella no puede mentir en sus páginas.',
-        avatarEmoji: '✒️',
+        avatarEmoji: '',
         traits: ['Mágico', 'Incorruptible'],
         secrets: 'Perteneció a la primera cronista del reino antes de que su nombre fuera borrado de los registros.',
         createdAt: DateTime.now(),
@@ -296,7 +296,7 @@ En la esquina superior derecha del editor tienes acceso directo a:
         dy: 120,
         connectedToIds: ['node_tut_2'],
         colorHex: 0xFF18181B,
-        iconEmoji: '🖋️',
+        iconEmoji: '',
       ),
       MindMapNodeModel(
         id: 'node_tut_2',
@@ -309,7 +309,7 @@ En la esquina superior derecha del editor tienes acceso directo a:
         dy: 120,
         connectedToIds: ['node_tut_3'],
         colorHex: 0xFF27272A,
-        iconEmoji: '👤',
+        iconEmoji: '',
       ),
       MindMapNodeModel(
         id: 'node_tut_3',
@@ -322,7 +322,7 @@ En la esquina superior derecha del editor tienes acceso directo a:
         dy: 120,
         connectedToIds: [],
         colorHex: 0xFF18181B,
-        iconEmoji: '📖',
+        iconEmoji: '',
       ),
     ];
 
@@ -342,7 +342,7 @@ En la esquina superior derecha del editor tienes acceso directo a:
 
 A los veintiocho años, heredó el taller de su abuelo junto con un baúl de notas que nadie había logrado descifrar. Su vida cambió el día que encontró un pliego con el sello intacto del Gremio.''',
         quote: '«Los márgenes de los libros siempre revelan más que los textos impresos.»',
-        avatarEmoji: '🕵️‍♀️',
+        avatarEmoji: '',
         createdAt: DateTime.now(),
       ),
     ];

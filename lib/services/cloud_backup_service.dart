@@ -72,9 +72,12 @@ class CloudBackupService {
           name: filename,
           mimeType: 'application/json',
         );
-        await Share.shareXFiles(
-          [xFile],
-          subject: 'Copia de Seguridad Ink & Wright en Google Drive',
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [xFile],
+            fileNameOverrides: [filename],
+            subject: 'Copia de Seguridad Ink & Wright en Google Drive',
+          ),
         );
       } catch (_) {
         await Printing.sharePdf(
@@ -245,7 +248,7 @@ class CloudBackupService {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('💾 Manuscrito guardado. ¿Deseas asegurar tu copia en Google Drive?'),
+          content: const Text('Manuscrito guardado. ¿Deseas asegurar tu copia en Google Drive?'),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

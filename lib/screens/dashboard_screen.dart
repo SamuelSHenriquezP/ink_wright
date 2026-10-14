@@ -16,6 +16,8 @@ import '../widgets/dashboard/dashboard_manuscript_tab.dart';
 import '../widgets/dashboard/dashboard_metrics_tab.dart';
 import '../widgets/dashboard/dashboard_tools_tab.dart';
 import '../widgets/export_manuscript_dialog.dart';
+import '../widgets/compiler/book_compiler_modal.dart';
+import '../services/cloud_backup_service.dart';
 import '../widgets/global_search_sheet.dart';
 import '../widgets/muse_assistant_sheet.dart';
 import '../widgets/writing_sprint_dialog.dart';
@@ -78,38 +80,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ExportManuscriptDialog.show(context, isDark: isDark);
   }
 
+  void _openCompilerDialog(BuildContext context, EditorController controller, bool isDark) {
+    BookCompilerModal.show(context, controller, isDark);
+  }
+
   Future<void> _handleExportBackup(BuildContext context, EditorController controller, bool isDark) async {
-    try {
-      final backupJson = controller.exportBackupJson();
-      final dateStr = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
-      final filename = 'inkwright_backup_$dateStr.inkwright';
-
-      await Clipboard.setData(ClipboardData(text: backupJson));
-
-      await Printing.sharePdf(
-        bytes: Uint8List.fromList(utf8.encode(backupJson)),
-        filename: filename,
-      );
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Respaldo exportado exitosamente ($filename) y copiado al portapapeles.'),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al exportar respaldo: $e'),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
-      }
-    }
+    await CloudBackupService.uploadToCloudDrive(context, controller);
   }
 
   @override
@@ -204,6 +180,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          IconButton(
+                            icon: const Icon(Icons.auto_stories_rounded, size: 21),
+                            color: textSecondary,
+                            tooltip: 'Compilar Obra',
+                            onPressed: () => _openCompilerDialog(context, controller, isDark),
+                          ),
                           IconButton(
                             icon: Icon(
                               Icons.search_rounded,
@@ -332,7 +314,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Row(
                             children: [
-                              const Text('🗺️', style: TextStyle(fontSize: 26)),
+                              Icon(Icons.hub_rounded, size: 28, color: textPrimary),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -412,6 +394,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onOpenMuse: () => _openMuseStudio(context, isDark),
                   onOpenSprint: () => _openSprintDialog(context, isDark),
                   onOpenExport: () => _openExportDialog(context, isDark),
+                  onOpenCompiler: () => _openCompilerDialog(context, controller, isDark),
                   onExportBackup: () => _handleExportBackup(context, controller, isDark),
                 ),
               ],

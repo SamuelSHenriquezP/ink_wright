@@ -68,10 +68,7 @@ class BookCard extends StatelessWidget {
                         ),
                       ),
                       alignment: Alignment.center,
-                      child: Text(
-                        book.coverEmoji,
-                        style: const TextStyle(fontSize: 22),
-                      ),
+                      child: Icon(Icons.auto_stories_rounded, size: 24, color: textPrimary),
                     ),
 
                     Row(

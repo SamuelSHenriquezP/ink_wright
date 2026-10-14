@@ -558,7 +558,7 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                         controller.connectMindMapNodes(fromId, node.id);
                                         _showAestheticNotification(
                                           context,
-                                          '¡Conectado! «${fromNode.title}» ➔ «${node.title}»',
+                                          '¡Conectado! «${fromNode.title}» -> «${node.title}»',
                                           icon: Icons.link_rounded,
                                           isDark: isDark,
                                         );
@@ -663,7 +663,7 @@ class _PlotMindMapScreenState extends State<PlotMindMapScreen> {
                                           Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Text(node.iconEmoji, style: const TextStyle(fontSize: 16)),
+                                              Icon(node.iconData, size: 16, color: textPrimary),
                                               const SizedBox(width: 6),
                                               // Quick Edit text button
                                               InkWell(

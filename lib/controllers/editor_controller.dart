@@ -49,6 +49,7 @@ class EditorController extends ChangeNotifier {
   double _maxEditorWidth = 720.0;
   bool _isTypewriterMode = false;
   bool _isRevisionMode = false;
+  bool _isContinuityAuditorEnabled = false;
 
   // New: character relationships, sprint history
   List<CharacterRelationshipModel> _relationships = [];
@@ -123,6 +124,7 @@ class EditorController extends ChangeNotifier {
   double get maxEditorWidth => _maxEditorWidth;
   bool get isTypewriterMode => _isTypewriterMode;
   bool get isRevisionMode => _isRevisionMode;
+  bool get isContinuityAuditorEnabled => _isContinuityAuditorEnabled;
 
   // Relationships filtered per active book
   List<CharacterRelationshipModel> get relationships =>
@@ -235,6 +237,7 @@ class EditorController extends ChangeNotifier {
       _lineHeight = (prefs['lineHeight'] as num?)?.toDouble() ?? _lineHeight;
       _maxEditorWidth = (prefs['maxEditorWidth'] as num?)?.toDouble() ?? _maxEditorWidth;
       _isTypewriterMode = prefs['typewriterMode'] as bool? ?? _isTypewriterMode;
+      _isContinuityAuditorEnabled = prefs['continuityAuditorEnabled'] as bool? ?? _isContinuityAuditorEnabled;
 
       notifyListeners();
     } catch (_) {}
@@ -263,6 +266,8 @@ class EditorController extends ChangeNotifier {
         mindMapNodes: _mindMapNodes,
         characters: _characters,
         writerStats: _writerStats,
+        sprintHistory: _sprintHistory,
+        relationships: _relationships,
         activeBookId: _activeBook.id,
         activeChapterId: _activeChapter.id,
         isDarkMode: _isDarkMode,
@@ -271,6 +276,7 @@ class EditorController extends ChangeNotifier {
         lineHeight: _lineHeight,
         maxEditorWidth: _maxEditorWidth,
         typewriterMode: _isTypewriterMode,
+        continuityAuditorEnabled: _isContinuityAuditorEnabled,
         onSaved: () {
           _lastSavedTime = _persistenceService.lastSaved;
           _isSaving = false;
@@ -285,6 +291,8 @@ class EditorController extends ChangeNotifier {
         mindMapNodes: _mindMapNodes,
         characters: _characters,
         writerStats: _writerStats,
+        sprintHistory: _sprintHistory,
+        relationships: _relationships,
         activeBookId: _activeBook.id,
         activeChapterId: _activeChapter.id,
         isDarkMode: _isDarkMode,
@@ -293,6 +301,7 @@ class EditorController extends ChangeNotifier {
         lineHeight: _lineHeight,
         maxEditorWidth: _maxEditorWidth,
         typewriterMode: _isTypewriterMode,
+        continuityAuditorEnabled: _isContinuityAuditorEnabled,
       );
       _lastSavedTime = DateTime.now();
       _isSaving = false;
@@ -414,6 +423,19 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void toggleContinuityAuditor() {
+    _isContinuityAuditorEnabled = !_isContinuityAuditorEnabled;
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
+  void setContinuityAuditorEnabled(bool enabled) {
+    if (_isContinuityAuditorEnabled == enabled) return;
+    _isContinuityAuditorEnabled = enabled;
+    _saveCurrentData(debounced: false);
+    notifyListeners();
+  }
+
   /// Exports the entire library and settings as a clean .inkwright JSON payload
   String exportBackupJson() {
     return _persistenceService.generateBackupJson(
@@ -431,6 +453,7 @@ class EditorController extends ChangeNotifier {
       lineHeight: _lineHeight,
       maxEditorWidth: _maxEditorWidth,
       typewriterMode: _isTypewriterMode,
+      continuityAuditorEnabled: _isContinuityAuditorEnabled,
     );
   }
 
@@ -480,6 +503,7 @@ class EditorController extends ChangeNotifier {
     _lineHeight = (prefs['lineHeight'] as num?)?.toDouble() ?? _lineHeight;
     _maxEditorWidth = (prefs['maxEditorWidth'] as num?)?.toDouble() ?? _maxEditorWidth;
     _isTypewriterMode = prefs['typewriterMode'] as bool? ?? _isTypewriterMode;
+    _isContinuityAuditorEnabled = prefs['continuityAuditorEnabled'] as bool? ?? _isContinuityAuditorEnabled;
 
     textEditingController.removeListener(_onTextChanged);
     textEditingController.text = _activeChapter.content;
@@ -643,7 +667,7 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void createNewBook(String title, String subtitle, int targetWordCount, {String genre = 'Ficción', String coverEmoji = '📖'}) {
+  void createNewBook(String title, String subtitle, int targetWordCount, {String genre = 'Ficción', String coverEmoji = ''}) {
     final newBook = BookModel(
       id: 'b_${DateTime.now().millisecondsSinceEpoch}',
       title: title,
@@ -673,7 +697,7 @@ class EditorController extends ChangeNotifier {
       dy: 120,
       connectedToIds: [],
       colorHex: 0xFF18181B,
-      iconEmoji: '💡',
+      iconEmoji: '',
     );
     _mindMapNodes.add(starterNode);
 
@@ -710,7 +734,7 @@ class EditorController extends ChangeNotifier {
       status: BookStatus.drafting,
       chapters: chapters,
       lastEdited: DateTime.now(),
-      coverEmoji: '📚',
+      coverEmoji: '',
       coverColorHex: 0xFF18181B,
       tags: [data.genre.isNotEmpty ? data.genre : 'Ficción', 'Importado'],
       synopsis: data.synopsis,
@@ -732,7 +756,7 @@ class EditorController extends ChangeNotifier {
       dy: 120,
       connectedToIds: [],
       colorHex: 0xFF18181B,
-      iconEmoji: '📚',
+      iconEmoji: '',
     );
     _mindMapNodes.add(starterNode);
 

@@ -53,10 +53,7 @@ class CodexCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       alignment: Alignment.center,
-                      child: Text(
-                        entry.defaultEmoji,
-                        style: const TextStyle(fontSize: 18),
-                      ),
+                      child: Icon(entry.iconData, size: 18, color: textPrimary),
                     ),
                     const SizedBox(width: 10),
                     Column(

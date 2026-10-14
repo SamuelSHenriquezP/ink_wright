@@ -35,6 +35,15 @@ class ExportService {
     final excluded = cfg?.excludedChapterIds.toSet() ?? const <String>{};
     final active = book.chapters.where((c) => !excluded.contains(c.id)).toList();
 
+    if (cfg != null && cfg.orderedChapterIds.isNotEmpty) {
+      final orderMap = {for (int i = 0; i < cfg.orderedChapterIds.length; i++) cfg.orderedChapterIds[i]: i};
+      active.sort((a, b) {
+        final orderA = orderMap[a.id] ?? 999999;
+        final orderB = orderMap[b.id] ?? 999999;
+        return orderA.compareTo(orderB);
+      });
+    }
+
     final prologues = active.where((c) => c.chapterType == ChapterType.prologue).toList();
     final regulars = active.where((c) => c.chapterType == ChapterType.chapter).toList();
     final epilogues = active.where((c) => c.chapterType == ChapterType.epilogue).toList();
@@ -70,6 +79,13 @@ class ExportService {
     }
 
     return result;
+  }
+
+  /// Formats scene breaks in chapter text with the user's custom scene separator (e.g. * * *, * * *, ~ * ~)
+  static String formatChapterText(String rawText, BookCompilationConfig? cfg) {
+    if (cfg == null || cfg.sceneSeparator.trim().isEmpty) return rawText;
+    final sep = cfg.sceneSeparator.trim();
+    return rawText.replaceAll(RegExp(r'\n\s*(\*\s*\*\s*\*|---|___|\#\#\#)\s*\n'), '\n\n$sep\n\n');
   }
 
   /// Exports purely the story text without any metadata, statistics, cover, or extra dividers.
@@ -222,12 +238,36 @@ class ExportService {
         buffer.writeln('*POV: ${ch.povCharacter}*');
       }
       buffer.writeln();
-      buffer.writeln(ch.content.trim());
+      buffer.writeln(formatChapterText(ch.content, cfg).trim());
       buffer.writeln();
       if (i < compiledChapters.length - 1) {
-        buffer.writeln('***');
+        buffer.writeln(cfg?.sceneSeparator.trim().isNotEmpty == true ? cfg!.sceneSeparator.trim() : '***');
         buffer.writeln();
       }
+    }
+
+    if (includeEditorialElements && cfg != null && cfg.acknowledgments.trim().isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('## Agradecimientos');
+      buffer.writeln();
+      buffer.writeln(cfg.acknowledgments.trim());
+      buffer.writeln();
+      buffer.writeln('***');
+    }
+
+    if (includeEditorialElements && cfg != null && (cfg.authorBio.trim().isNotEmpty || cfg.authorSocials.trim().isNotEmpty)) {
+      buffer.writeln();
+      buffer.writeln('## Sobre el Autor');
+      buffer.writeln();
+      if (cfg.authorBio.trim().isNotEmpty) {
+        buffer.writeln(cfg.authorBio.trim());
+        buffer.writeln();
+      }
+      if (cfg.authorSocials.trim().isNotEmpty) {
+        buffer.writeln('*Contacto y Redes:* ${cfg.authorSocials.trim()}');
+        buffer.writeln();
+      }
+      buffer.writeln('***');
     }
 
     if (includeEditorialElements && cfg != null && cfg.copyrightNotice.trim().isNotEmpty) {
@@ -336,8 +376,32 @@ class ExportService {
         buffer.writeln('(POV: ${ch.povCharacter})');
       }
       buffer.writeln();
-      buffer.writeln(ch.content.trim());
+      buffer.writeln(formatChapterText(ch.content, cfg).trim());
       buffer.writeln();
+      buffer.writeln('----------------------------------------------------------------');
+      buffer.writeln();
+    }
+
+    if (cfg != null && cfg.acknowledgments.trim().isNotEmpty) {
+      buffer.writeln('AGRADECIMIENTOS');
+      buffer.writeln('----------------------------------------------------------------');
+      buffer.writeln(cfg.acknowledgments.trim());
+      buffer.writeln();
+      buffer.writeln('----------------------------------------------------------------');
+      buffer.writeln();
+    }
+
+    if (cfg != null && (cfg.authorBio.trim().isNotEmpty || cfg.authorSocials.trim().isNotEmpty)) {
+      buffer.writeln('SOBRE EL AUTOR');
+      buffer.writeln('----------------------------------------------------------------');
+      if (cfg.authorBio.trim().isNotEmpty) {
+        buffer.writeln(cfg.authorBio.trim());
+        buffer.writeln();
+      }
+      if (cfg.authorSocials.trim().isNotEmpty) {
+        buffer.writeln('Contacto y Redes: ${cfg.authorSocials.trim()}');
+        buffer.writeln();
+      }
       buffer.writeln('----------------------------------------------------------------');
       buffer.writeln();
     }
@@ -422,9 +486,11 @@ class ExportService {
 ''';
     }
 
+    final sceneSep = cfg?.sceneSeparator.trim().isNotEmpty == true ? cfg!.sceneSeparator.trim() : '* * *';
+
     final chaptersHtml = compiledChapters.map((item) {
       final ch = item.chapter;
-      final formattedContent = _convertMarkdownToEpubHtml(ch.content);
+      final formattedContent = _convertMarkdownToEpubHtml(formatChapterText(ch.content, cfg), sceneSeparator: sceneSep);
 
       return '''
     <section class="chapter">
@@ -437,6 +503,29 @@ class ExportService {
 ''';
     }).join('\n<hr class="chapter-divider"/>\n');
 
+    String acknowledgmentsHtml = '';
+    if (includeEditorialElements && cfg != null && cfg.acknowledgments.trim().isNotEmpty) {
+      acknowledgmentsHtml = '''
+    <section class="acknowledgments" style="margin: 40px 0;">
+      <h2>Agradecimientos</h2>
+      ${_convertMarkdownToEpubHtml(cfg.acknowledgments.trim(), sceneSeparator: sceneSep)}
+    </section>
+    <hr class="chapter-divider"/>
+''';
+    }
+
+    String authorBioHtml = '';
+    if (includeEditorialElements && cfg != null && (cfg.authorBio.trim().isNotEmpty || cfg.authorSocials.trim().isNotEmpty)) {
+      authorBioHtml = '''
+    <section class="author-bio" style="margin: 40px 0;">
+      <h2>Sobre el Autor</h2>
+      ${cfg.authorBio.trim().isNotEmpty ? _convertMarkdownToEpubHtml(cfg.authorBio.trim(), sceneSeparator: sceneSep) : ''}
+      ${cfg.authorSocials.trim().isNotEmpty ? '<p class="author-socials" style="margin-top: 16px; font-style: italic; color: #555;"><strong>Contacto y Redes:</strong> ${_xmlEscape(cfg.authorSocials.trim())}</p>' : ''}
+    </section>
+    <hr class="chapter-divider"/>
+''';
+    }
+
     String copyrightHtml = '';
     if (includeEditorialElements && cfg != null && cfg.copyrightNotice.trim().isNotEmpty) {
       copyrightHtml = '''
@@ -444,6 +533,24 @@ class ExportService {
       <p>${_xmlEscape(cfg.copyrightNotice.trim())}</p>
     </footer>
 ''';
+    }
+
+    final String fontFamilyCss;
+    final String paragraphStyleCss;
+    switch (cfg?.preset ?? EditorialPreset.classic) {
+      case EditorialPreset.modern:
+        fontFamilyCss = "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif";
+        paragraphStyleCss = 'margin-bottom: 1.2em; text-align: left; text-indent: 0;';
+        break;
+      case EditorialPreset.manuscriptSubmission:
+        fontFamilyCss = "'Courier New', Courier, monospace";
+        paragraphStyleCss = 'margin-bottom: 0; line-height: 2.0; text-indent: 2em;';
+        break;
+      case EditorialPreset.classic:
+      default:
+        fontFamilyCss = "'Lora', Georgia, serif";
+        paragraphStyleCss = 'margin-bottom: 1.4em; text-align: justify; text-indent: 1.5em;';
+        break;
     }
 
     return '''<!DOCTYPE html>
@@ -457,7 +564,7 @@ class ExportService {
       max-width: 760px;
       margin: 40px auto;
       padding: 0 24px;
-      font-family: 'Lora', Georgia, serif;
+      font-family: $fontFamilyCss;
       color: #1a1a1a;
       background: #faf8f5;
       line-height: 1.8;
@@ -512,9 +619,14 @@ class ExportService {
       margin-bottom: 24px;
     }
     p {
-      margin-bottom: 1.4em;
-      text-align: justify;
-      text-indent: 1.5em;
+      $paragraphStyleCss
+    }
+    .scene-break {
+      text-align: center;
+      margin: 32px 0;
+      font-weight: bold;
+      letter-spacing: 3px;
+      color: #777;
     }
     .chapter-divider {
       border: 0;
@@ -545,6 +657,8 @@ class ExportService {
   $charactersHtml
   $codexHtml
   $chaptersHtml
+  $acknowledgmentsHtml
+  $authorBioHtml
   $copyrightHtml
 </body>
 </html>''';
@@ -1061,7 +1175,91 @@ class ExportService {
               pw.SizedBox(height: 14),
               pw.Divider(color: PdfColors.grey300),
               pw.SizedBox(height: 14),
-              ..._convertMarkdownToPdfWidgets(chapter.content),
+              ..._convertMarkdownToPdfWidgets(
+                chapter.content,
+                sceneSeparator: cfg?.sceneSeparator ?? '* * *',
+                preset: cfg?.preset ?? EditorialPreset.classic,
+              ),
+            ];
+          },
+        ),
+      );
+    }
+
+    if (includeEditorialElements && cfg != null && cfg.acknowledgments.trim().isNotEmpty) {
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 48),
+          header: (pw.Context context) {
+            return pw.Container(
+              alignment: pw.Alignment.centerRight,
+              margin: const pw.EdgeInsets.only(bottom: 16),
+              child: pw.Text(
+                '${_sanitizeForPdf(title)} - Agradecimientos',
+                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+              ),
+            );
+          },
+          build: (pw.Context context) {
+            return [
+              pw.SizedBox(height: 20),
+              pw.Text(
+                'Agradecimientos',
+                style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 12),
+              pw.Divider(color: PdfColors.grey300),
+              pw.SizedBox(height: 14),
+              ..._convertMarkdownToPdfWidgets(
+                cfg.acknowledgments.trim(),
+                sceneSeparator: cfg.sceneSeparator,
+                preset: cfg.preset,
+              ),
+            ];
+          },
+        ),
+      );
+    }
+
+    if (includeEditorialElements && cfg != null && (cfg.authorBio.trim().isNotEmpty || cfg.authorSocials.trim().isNotEmpty)) {
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 48),
+          header: (pw.Context context) {
+            return pw.Container(
+              alignment: pw.Alignment.centerRight,
+              margin: const pw.EdgeInsets.only(bottom: 16),
+              child: pw.Text(
+                '${_sanitizeForPdf(title)} - Sobre el Autor',
+                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+              ),
+            );
+          },
+          build: (pw.Context context) {
+            return [
+              pw.SizedBox(height: 20),
+              pw.Text(
+                'Sobre el Autor',
+                style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 12),
+              pw.Divider(color: PdfColors.grey300),
+              pw.SizedBox(height: 14),
+              if (cfg.authorBio.trim().isNotEmpty)
+                ..._convertMarkdownToPdfWidgets(
+                  cfg.authorBio.trim(),
+                  sceneSeparator: cfg.sceneSeparator,
+                  preset: cfg.preset,
+                ),
+              if (cfg.authorSocials.trim().isNotEmpty) ...[
+                pw.SizedBox(height: 18),
+                pw.Text(
+                  _sanitizeForPdf('Contacto y Redes: ${cfg.authorSocials.trim()}'),
+                  style: pw.TextStyle(fontSize: 10, fontStyle: pw.FontStyle.italic, color: PdfColors.grey700),
+                ),
+              ],
             ];
           },
         ),
@@ -1095,12 +1293,39 @@ class ExportService {
   }
 
   /// Converts Markdown text into native PDF widgets (headings, blockquotes, lists, dialogue, paragraphs)
-  static List<pw.Widget> _convertMarkdownToPdfWidgets(String content) {
+  static List<pw.Widget> _convertMarkdownToPdfWidgets(
+    String content, {
+    String sceneSeparator = '* * *',
+    EditorialPreset preset = EditorialPreset.classic,
+  }) {
     if (content.trim().isEmpty) return [];
 
     final lines = content.split(RegExp(r'\r?\n'));
     final List<pw.Widget> widgets = [];
     final List<String> currentParagraphLines = [];
+
+    final double baseFontSize;
+    final double baseLineSpacing;
+    final pw.TextAlign paragraphAlign;
+
+    switch (preset) {
+      case EditorialPreset.manuscriptSubmission:
+        baseFontSize = 11.5;
+        baseLineSpacing = 5.5;
+        paragraphAlign = pw.TextAlign.left;
+        break;
+      case EditorialPreset.modern:
+        baseFontSize = 10.5;
+        baseLineSpacing = 2.5;
+        paragraphAlign = pw.TextAlign.left;
+        break;
+      case EditorialPreset.classic:
+      default:
+        baseFontSize = 11.0;
+        baseLineSpacing = 3.2;
+        paragraphAlign = pw.TextAlign.justify;
+        break;
+    }
 
     void flushParagraph() {
       if (currentParagraphLines.isEmpty) return;
@@ -1112,13 +1337,13 @@ class ExportService {
         pw.Padding(
           padding: const pw.EdgeInsets.only(bottom: 10),
           child: pw.RichText(
-            textAlign: pw.TextAlign.justify,
+            textAlign: paragraphAlign,
             text: pw.TextSpan(
               children: _parseInlineToPdfSpans(
                 fullText,
-                baseStyle: const pw.TextStyle(
-                  fontSize: 11,
-                  lineSpacing: 3,
+                baseStyle: pw.TextStyle(
+                  fontSize: baseFontSize,
+                  lineSpacing: baseLineSpacing,
                 ),
               ),
             ),
@@ -1175,15 +1400,15 @@ class ExportService {
         continue;
       }
 
-      // 2. Scene separators (***, ---, ___)
-      if (trimmed == '***' || trimmed == '---' || trimmed == '___') {
+      // 2. Scene separators (***, ---, ___, or custom)
+      if (trimmed == '***' || trimmed == '---' || trimmed == '___' || trimmed == sceneSeparator.trim()) {
         flushParagraph();
         widgets.add(
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(vertical: 12),
             child: pw.Center(
               child: pw.Text(
-                '*  *  *',
+                _sanitizeForPdf(sceneSeparator.isNotEmpty ? sceneSeparator : '*  *  *'),
                 style: pw.TextStyle(
                   fontSize: 12,
                   fontWeight: pw.FontWeight.bold,
@@ -1670,10 +1895,47 @@ class ExportService {
       }
 
       // Paragraphs
-      final paragraphs = ch.content.split('\n\n').map((p) => p.trim()).where((p) => p.isNotEmpty);
+      final paragraphs = formatChapterText(ch.content, cfg).split('\n\n').map((p) => p.trim()).where((p) => p.isNotEmpty);
       for (final p in paragraphs) {
+        if (p == '***' || p == '---' || p == '___' || p == '* * *' || p == cfg?.sceneSeparator.trim()) {
+          docBuffer.writeln('<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="240" w:after="240"/></w:pPr>');
+          docBuffer.writeln('<w:r><w:rPr><w:b/><w:sz w:val="24"/><w:szCs w:val="24"/><w:color w:val="777777"/></w:rPr>');
+          docBuffer.writeln('<w:t xml:space="preserve">${_xmlEscape(cfg?.sceneSeparator.trim().isNotEmpty == true ? cfg!.sceneSeparator.trim() : "*  *  *")}</w:t></w:r></w:p>');
+        } else {
+          docBuffer.writeln('<w:p><w:pPr><w:ind w:firstLine="400"/></w:pPr>');
+          docBuffer.writeln('<w:r><w:t xml:space="preserve">${_xmlEscape(p)}</w:t></w:r></w:p>');
+        }
+      }
+    }
+
+    if (includeEditorialElements && cfg != null && cfg.acknowledgments.trim().isNotEmpty) {
+      docBuffer.writeln('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+      docBuffer.writeln('<w:p><w:pPr><w:spacing w:before="400" w:after="200"/></w:pPr>');
+      docBuffer.writeln('<w:r><w:rPr><w:b/><w:sz w:val="36"/><w:szCs w:val="36"/></w:rPr>');
+      docBuffer.writeln('<w:t>${_xmlEscape("Agradecimientos")}</w:t></w:r></w:p>');
+      final ackParagraphs = cfg.acknowledgments.trim().split('\n\n').map((p) => p.trim()).where((p) => p.isNotEmpty);
+      for (final p in ackParagraphs) {
         docBuffer.writeln('<w:p><w:pPr><w:ind w:firstLine="400"/></w:pPr>');
         docBuffer.writeln('<w:r><w:t xml:space="preserve">${_xmlEscape(p)}</w:t></w:r></w:p>');
+      }
+    }
+
+    if (includeEditorialElements && cfg != null && (cfg.authorBio.trim().isNotEmpty || cfg.authorSocials.trim().isNotEmpty)) {
+      docBuffer.writeln('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+      docBuffer.writeln('<w:p><w:pPr><w:spacing w:before="400" w:after="200"/></w:pPr>');
+      docBuffer.writeln('<w:r><w:rPr><w:b/><w:sz w:val="36"/><w:szCs w:val="36"/></w:rPr>');
+      docBuffer.writeln('<w:t>${_xmlEscape("Sobre el Autor")}</w:t></w:r></w:p>');
+      if (cfg.authorBio.trim().isNotEmpty) {
+        final bioParagraphs = cfg.authorBio.trim().split('\n\n').map((p) => p.trim()).where((p) => p.isNotEmpty);
+        for (final p in bioParagraphs) {
+          docBuffer.writeln('<w:p><w:pPr><w:ind w:firstLine="400"/></w:pPr>');
+          docBuffer.writeln('<w:r><w:t xml:space="preserve">${_xmlEscape(p)}</w:t></w:r></w:p>');
+        }
+      }
+      if (cfg.authorSocials.trim().isNotEmpty) {
+        docBuffer.writeln('<w:p><w:pPr><w:spacing w:before="240" w:after="160"/></w:pPr>');
+        docBuffer.writeln('<w:r><w:rPr><w:i/><w:color w:val="555555"/></w:rPr>');
+        docBuffer.writeln('<w:t xml:space="preserve">${_xmlEscape("Contacto y Redes: ${cfg.authorSocials.trim()}")}</w:t></w:r></w:p>');
       }
     }
 
@@ -1703,12 +1965,41 @@ class ExportService {
     final author = cfg?.cover.author.isNotEmpty == true ? cfg!.cover.author : 'InkWright Author';
 
     final bool hasCover = includeEditorialElements;
+    Uint8List? coverImgBytes;
+    String? coverImgExt;
+    String? coverImgMime;
+    if (hasCover && cfg?.cover.imagePath != null && cfg!.cover.imagePath!.isNotEmpty) {
+      try {
+        final f = File(cfg.cover.imagePath!);
+        if (f.existsSync()) {
+          coverImgBytes = f.readAsBytesSync();
+          final pathLower = f.path.toLowerCase();
+          if (pathLower.endsWith('.png')) {
+            coverImgExt = 'png';
+            coverImgMime = 'image/png';
+          } else if (pathLower.endsWith('.webp')) {
+            coverImgExt = 'webp';
+            coverImgMime = 'image/webp';
+          } else {
+            coverImgExt = 'jpg';
+            coverImgMime = 'image/jpeg';
+          }
+        }
+      } catch (_) {}
+    }
+    final bool hasCoverImage = coverImgBytes != null && coverImgBytes.isNotEmpty;
     final bool hasDedication = includeEditorialElements && cfg != null && cfg.dedication.trim().isNotEmpty;
     final bool hasCopyright = includeEditorialElements && cfg != null && cfg.copyrightNotice.trim().isNotEmpty;
     final bool hasChars = includeEditorialElements && characters != null && characters.isNotEmpty;
     final bool hasCodex = includeEditorialElements && codexEntries != null && codexEntries.isNotEmpty;
+    final bool hasAcknowledgments = includeEditorialElements && cfg != null && cfg.acknowledgments.trim().isNotEmpty;
+    final bool hasAuthorBio = includeEditorialElements && cfg != null && (cfg.authorBio.trim().isNotEmpty || cfg.authorSocials.trim().isNotEmpty);
 
     final archive = Archive();
+
+    if (hasCoverImage) {
+      archive.addFile(ArchiveFile('OEBPS/images/cover.$coverImgExt', coverImgBytes!.length, coverImgBytes));
+    }
 
     // 1. mimetype (MUST be first and uncompressed)
     const mimetypeContent = 'application/epub+zip';
@@ -1726,10 +2017,28 @@ class ExportService {
     archive.addFile(ArchiveFile('META-INF/container.xml', containerXml.length, utf8.encode(containerXml)));
 
     // 3. OEBPS/style.css
-    const cssContent = '''
+    final String epubFontFamily;
+    final String epubPStyle;
+    switch (cfg?.preset ?? EditorialPreset.classic) {
+      case EditorialPreset.modern:
+        epubFontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+        epubPStyle = 'text-indent: 0;\n  margin-top: 0;\n  margin-bottom: 1em;\n  text-align: left;';
+        break;
+      case EditorialPreset.manuscriptSubmission:
+        epubFontFamily = '"Courier New", Courier, monospace';
+        epubPStyle = 'text-indent: 2em;\n  line-height: 2.0;\n  margin-top: 0;\n  margin-bottom: 0;\n  text-align: justify;';
+        break;
+      case EditorialPreset.classic:
+      default:
+        epubFontFamily = 'Georgia, "Times New Roman", serif';
+        epubPStyle = 'text-indent: 1.5em;\n  margin-top: 0;\n  margin-bottom: 0.5em;\n  text-align: justify;';
+        break;
+    }
+
+    final cssContent = '''
 @namespace "http://www.w3.org/1999/xhtml";
 body {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: $epubFontFamily;
   line-height: 1.6;
   margin: 5%;
   color: #1a1a1a;
@@ -1751,10 +2060,7 @@ h2 {
   margin-bottom: 0.4em;
 }
 p {
-  text-indent: 1.5em;
-  margin-top: 0;
-  margin-bottom: 0.5em;
-  text-align: justify;
+  $epubPStyle
 }
 .noindent {
   text-indent: 0;
@@ -1826,7 +2132,12 @@ mark {
       titlePageBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="es">');
       titlePageBuffer.writeln('<head><title>${_xmlEscape(title)}</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
       titlePageBuffer.writeln('<body>');
-      titlePageBuffer.writeln('<div style="text-align:center; padding-top: 20%;">');
+      titlePageBuffer.writeln('<div style="text-align:center; padding-top: 10%;">');
+      if (hasCoverImage) {
+        titlePageBuffer.writeln('<div style="margin-bottom: 2em;">');
+        titlePageBuffer.writeln('<img src="images/cover.$coverImgExt" alt="${_xmlEscape(title)}" style="max-width: 85%; max-height: 60vh; height: auto; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.25);" />');
+        titlePageBuffer.writeln('</div>');
+      }
       titlePageBuffer.writeln('<h1>${_xmlEscape(title)}</h1>');
       if (subtitle.isNotEmpty) {
         titlePageBuffer.writeln('<p class="subtitle">${_xmlEscape(subtitle)}</p>');
@@ -1937,6 +2248,8 @@ mark {
       archive.addFile(ArchiveFile('OEBPS/codex.xhtml', codexXml.length, utf8.encode(codexXml)));
     }
 
+    final sceneSep = cfg?.sceneSeparator.trim().isNotEmpty == true ? cfg!.sceneSeparator.trim() : '* * *';
+
     // Chapters (OEBPS/chapter_1.xhtml, ...)
     for (int i = 0; i < compiledChapters.length; i++) {
       final item = compiledChapters[i];
@@ -1951,10 +2264,45 @@ mark {
       if (includeEditorialElements && ch.povCharacter.isNotEmpty) {
         chBuffer.writeln('<p class="pov">POV: ${_xmlEscape(ch.povCharacter)}</p>');
       }
-      chBuffer.write(_convertMarkdownToEpubHtml(ch.content));
+      chBuffer.write(_convertMarkdownToEpubHtml(formatChapterText(ch.content, cfg), sceneSeparator: sceneSep));
       chBuffer.writeln('</body></html>');
       final chXml = chBuffer.toString();
       archive.addFile(ArchiveFile('OEBPS/chapter_${i + 1}.xhtml', chXml.length, utf8.encode(chXml)));
+    }
+
+    // Optional Acknowledgments (OEBPS/acknowledgments.xhtml)
+    if (hasAcknowledgments) {
+      final ackBuffer = StringBuffer();
+      ackBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
+      ackBuffer.writeln('<!DOCTYPE html>');
+      ackBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" lang="es">');
+      ackBuffer.writeln('<head><title>Agradecimientos</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
+      ackBuffer.writeln('<body>');
+      ackBuffer.writeln('<h2>Agradecimientos</h2>');
+      ackBuffer.write(_convertMarkdownToEpubHtml(cfg.acknowledgments.trim(), sceneSeparator: sceneSep));
+      ackBuffer.writeln('</body></html>');
+      final ackXml = ackBuffer.toString();
+      archive.addFile(ArchiveFile('OEBPS/acknowledgments.xhtml', ackXml.length, utf8.encode(ackXml)));
+    }
+
+    // Optional Author Bio & Socials (OEBPS/author.xhtml)
+    if (hasAuthorBio) {
+      final bioBuffer = StringBuffer();
+      bioBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
+      bioBuffer.writeln('<!DOCTYPE html>');
+      bioBuffer.writeln('<html xmlns="http://www.w3.org/1999/xhtml" lang="es">');
+      bioBuffer.writeln('<head><title>Sobre el Autor</title><link rel="stylesheet" type="text/css" href="style.css"/></head>');
+      bioBuffer.writeln('<body>');
+      bioBuffer.writeln('<h2>Sobre el Autor</h2>');
+      if (cfg.authorBio.trim().isNotEmpty) {
+        bioBuffer.write(_convertMarkdownToEpubHtml(cfg.authorBio.trim(), sceneSeparator: sceneSep));
+      }
+      if (cfg.authorSocials.trim().isNotEmpty) {
+        bioBuffer.writeln('<p class="meta" style="margin-top: 2em; font-style: italic;"><strong>Contacto y Redes:</strong> ${_xmlEscape(cfg.authorSocials.trim())}</p>');
+      }
+      bioBuffer.writeln('</body></html>');
+      final bioXml = bioBuffer.toString();
+      archive.addFile(ArchiveFile('OEBPS/author.xhtml', bioXml.length, utf8.encode(bioXml)));
     }
 
     // 5. OEBPS/nav.xhtml (EPUB 3 Table of Contents)
@@ -1985,6 +2333,12 @@ mark {
     for (int i = 0; i < compiledChapters.length; i++) {
       final item = compiledChapters[i];
       navBuffer.writeln('<li><a href="chapter_${i + 1}.xhtml">${_xmlEscape(item.displayHeader)}</a></li>');
+    }
+    if (hasAcknowledgments) {
+      navBuffer.writeln('<li><a href="acknowledgments.xhtml">Agradecimientos</a></li>');
+    }
+    if (hasAuthorBio) {
+      navBuffer.writeln('<li><a href="author.xhtml">Sobre el Autor</a></li>');
     }
     navBuffer.writeln('</ol>');
     navBuffer.writeln('</nav>');
@@ -2025,6 +2379,14 @@ mark {
       final item = compiledChapters[i];
       ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>${_xmlEscape(item.displayHeader)}</text></navLabel><content src="chapter_${i + 1}.xhtml"/></navPoint>');
     }
+    if (hasAcknowledgments) {
+      playOrder++;
+      ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Agradecimientos</text></navLabel><content src="acknowledgments.xhtml"/></navPoint>');
+    }
+    if (hasAuthorBio) {
+      playOrder++;
+      ncxBuffer.writeln('<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Sobre el Autor</text></navLabel><content src="author.xhtml"/></navPoint>');
+    }
     ncxBuffer.writeln('</navMap>');
     ncxBuffer.writeln('</ncx>');
     final ncxXml = ncxBuffer.toString();
@@ -2043,10 +2405,16 @@ mark {
     if (book.synopsis.isNotEmpty) {
       opfBuffer.writeln('<dc:description>${_xmlEscape(book.synopsis)}</dc:description>');
     }
+    if (hasCoverImage) {
+      opfBuffer.writeln('<meta name="cover" content="cover-image"/>');
+    }
     opfBuffer.writeln('<meta property="dcterms:modified">${DateTime.now().toUtc().toIso8601String().substring(0, 19)}Z</meta>');
     opfBuffer.writeln('</metadata>');
 
     opfBuffer.writeln('<manifest>');
+    if (hasCoverImage) {
+      opfBuffer.writeln('<item id="cover-image" href="images/cover.$coverImgExt" media-type="$coverImgMime" properties="cover-image"/>');
+    }
     opfBuffer.writeln('<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>');
     opfBuffer.writeln('<item id="css" href="style.css" media-type="text/css"/>');
     opfBuffer.writeln('<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>');
@@ -2067,6 +2435,12 @@ mark {
     }
     for (int i = 0; i < compiledChapters.length; i++) {
       opfBuffer.writeln('<item id="chap_${i + 1}" href="chapter_${i + 1}.xhtml" media-type="application/xhtml+xml"/>');
+    }
+    if (hasAcknowledgments) {
+      opfBuffer.writeln('<item id="acknowledgments" href="acknowledgments.xhtml" media-type="application/xhtml+xml"/>');
+    }
+    if (hasAuthorBio) {
+      opfBuffer.writeln('<item id="author" href="author.xhtml" media-type="application/xhtml+xml"/>');
     }
     opfBuffer.writeln('</manifest>');
 
@@ -2089,6 +2463,12 @@ mark {
     for (int i = 0; i < compiledChapters.length; i++) {
       opfBuffer.writeln('<itemref idref="chap_${i + 1}"/>');
     }
+    if (hasAcknowledgments) {
+      opfBuffer.writeln('<itemref idref="acknowledgments"/>');
+    }
+    if (hasAuthorBio) {
+      opfBuffer.writeln('<itemref idref="author"/>');
+    }
     opfBuffer.writeln('</spine>');
     opfBuffer.writeln('</package>');
     final opfXml = opfBuffer.toString();
@@ -2098,7 +2478,7 @@ mark {
   }
 
   /// Converts Markdown text into native semantic XHTML (paragraphs, headings, blockquotes, lists, dialogue) for EPUB and HTML
-  static String _convertMarkdownToEpubHtml(String content) {
+  static String _convertMarkdownToEpubHtml(String content, {String sceneSeparator = '* * *'}) {
     if (content.trim().isEmpty) return '';
 
     final lines = content.split(RegExp(r'\r?\n'));
@@ -2155,10 +2535,10 @@ mark {
       }
 
       // 2. Scene separators (***, ---, ___)
-      if (trimmed == '***' || trimmed == '---' || trimmed == '___') {
+      if (trimmed == '***' || trimmed == '---' || trimmed == '___' || trimmed == sceneSeparator.trim()) {
         flushParagraph();
         closeList();
-        buffer.writeln('<div class="scene-break">*  *  *</div>');
+        buffer.writeln('<div class="scene-break">${_xmlEscape(sceneSeparator.isNotEmpty ? sceneSeparator : "*  *  *")}</div>');
         continue;
       }
 
@@ -2181,7 +2561,7 @@ mark {
         }
         final isChecked = trimmed.startsWith('- [x] ') || trimmed.startsWith('- [X] ');
         final itemText = trimmed.substring(6).trim();
-        final box = isChecked ? '☑ ' : '☐ ';
+        final box = isChecked ? '[x] ' : '[ ] ';
         buffer.writeln('<li>$box${_parseInlineToHtml(itemText)}</li>');
         continue;
       }

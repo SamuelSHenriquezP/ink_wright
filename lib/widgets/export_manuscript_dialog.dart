@@ -318,7 +318,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                       ),
                       child: Row(
                         children: [
-                          Text(activeBook.coverEmoji, style: const TextStyle(fontSize: 28)),
+                          Icon(Icons.auto_stories_rounded, size: 28, color: textPrimary),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(

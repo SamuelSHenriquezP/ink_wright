@@ -24,6 +24,7 @@ import '../widgets/editor/zen_speed_dial_fab.dart';
 import '../widgets/editor/prose_inspector_sheet.dart';
 import '../widgets/editor/synonyms_sheet.dart';
 import '../widgets/editor/chapter_bookmarks_sheet.dart';
+import '../widgets/editor/lore_continuity_sheet.dart';
 import '../widgets/chapters/chapter_trash_sheet.dart';
 import '../widgets/dashboard/dashboard_tutorial_sheet.dart';
 import '../services/cloud_backup_service.dart';
@@ -32,6 +33,7 @@ import 'dashboard_screen.dart';
 import 'plot_mind_map_screen.dart';
 import 'manuscript_reader_screen.dart';
 import 'corkboard_screen.dart';
+import 'simple_text_editor_screen.dart';
 
 class ZenEditorScreen extends StatefulWidget {
   const ZenEditorScreen({super.key});
@@ -598,6 +600,25 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
     ChapterTrashSheet.show(context, controller, isDark);
   }
 
+  void _openLoreContinuitySheet(BuildContext context, EditorController controller, bool isDark) {
+    LoreContinuitySheet.show(
+      context: context,
+      isDark: isDark,
+      chapterTitle: controller.activeChapter.title,
+      chapterContent: controller.textEditingController.text,
+      allCharacters: controller.characters,
+      allCodexEntries: controller.codexEntries,
+      allRelationships: controller.relationships,
+      isContinuityAuditorEnabled: controller.isContinuityAuditorEnabled,
+      onToggleEnabled: (val) {
+        controller.setContinuityAuditorEnabled(val);
+      },
+      onInsertText: (text) {
+        controller.insertTextToEditor(text);
+      },
+    );
+  }
+
   void _openEditorOptionsMenu(
     BuildContext context,
     EditorController controller,
@@ -630,6 +651,14 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
       onSynonyms: () => _openSynonymsSheet(context, controller, isDark),
       onBookmarks: () => _openBookmarksSheet(context, controller, isDark),
       onTrash: () => _openTrashSheet(context, controller, isDark),
+      onLoreContinuity: () => _openLoreContinuitySheet(context, controller, isDark),
+      onSimpleEditor: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const SimpleTextEditorScreen(),
+          ),
+        );
+      },
       onToggleReadOnly: () {
         setState(() {
           _isReadOnly = !_isReadOnly;
@@ -1007,6 +1036,45 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                      onPressed: () => _openEditorOptionsMenu(context, controller, themeController, isDark),
                                      tooltip: 'Opciones del Editor',
                                    ),
+                                   if (controller.isContinuityAuditorEnabled) ...[
+                                     const SizedBox(width: 4),
+                                     GestureDetector(
+                                       onTap: () => _openLoreContinuitySheet(context, controller, isDark),
+                                       child: Tooltip(
+                                         message: 'Auditor de Continuidad activo (pulsa para abrir)',
+                                         child: Container(
+                                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                                           decoration: BoxDecoration(
+                                             color: AppTheme.accentTeal.withValues(alpha: 0.15),
+                                             borderRadius: BorderRadius.circular(8),
+                                             border: Border.all(
+                                               color: AppTheme.accentTeal.withValues(alpha: 0.5),
+                                             ),
+                                           ),
+                                           child: const Row(
+                                             mainAxisSize: MainAxisSize.min,
+                                             children: [
+                                               Icon(
+                                                 Icons.fact_check_rounded,
+                                                 size: 12,
+                                                 color: AppTheme.accentTeal,
+                                               ),
+                                               SizedBox(width: 3),
+                                               Text(
+                                                 'LORE',
+                                                 style: TextStyle(
+                                                   fontSize: 10,
+                                                   fontWeight: FontWeight.w800,
+                                                   letterSpacing: 0.5,
+                                                   color: AppTheme.accentTeal,
+                                                 ),
+                                               ),
+                                             ],
+                                           ),
+                                         ),
+                                       ),
+                                     ),
+                                   ],
                                    const SizedBox(width: 4),
                                  ],
                                ),

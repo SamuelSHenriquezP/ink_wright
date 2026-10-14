@@ -41,14 +41,9 @@ void showPlotNodeFormModal(
   }
 
   PlotNodeType selectedType = existingNode?.type ?? PlotNodeType.mainPlot;
-  String selectedEmoji = existingNode?.iconEmoji ?? '📌';
+  String selectedEmoji = existingNode?.iconEmoji ?? '';
   int selectedColor = existingNode?.colorHex ?? 0xFF18181B;
   String? selectedChapterId = existingNode?.linkedChapterId;
-
-  const availableEmojis = [
-    '📌', '🎬', '⚡', '🔍', '⚔️', '💔', '👑', '💡', '🗝️', '💥',
-    '🩸', '🕊️', '🏰', '🎭', '🌙', '👁️', '📜', '🧭', '🛡️', '✨'
-  ];
 
   const availableColors = [
     0xFF18181B, // Onyx

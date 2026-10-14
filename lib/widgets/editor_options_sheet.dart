@@ -33,6 +33,8 @@ class EditorOptionsMenuSheet extends StatelessWidget {
   final VoidCallback? onSynonyms;
   final VoidCallback? onBookmarks;
   final VoidCallback? onTrash;
+  final VoidCallback? onLoreContinuity;
+  final VoidCallback? onSimpleEditor;
   final bool hasNextChapter;
   final bool hasPreviousChapter;
 
@@ -68,6 +70,8 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     this.onSynonyms,
     this.onBookmarks,
     this.onTrash,
+    this.onLoreContinuity,
+    this.onSimpleEditor,
     this.hasNextChapter = false,
     this.hasPreviousChapter = false,
   });
@@ -104,6 +108,8 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     VoidCallback? onSynonyms,
     VoidCallback? onBookmarks,
     VoidCallback? onTrash,
+    VoidCallback? onLoreContinuity,
+    VoidCallback? onSimpleEditor,
     bool hasNextChapter = false,
     bool hasPreviousChapter = false,
   }) {
@@ -142,6 +148,8 @@ class EditorOptionsMenuSheet extends StatelessWidget {
         onSynonyms: onSynonyms,
         onBookmarks: onBookmarks,
         onTrash: onTrash,
+        onLoreContinuity: onLoreContinuity,
+        onSimpleEditor: onSimpleEditor,
         hasNextChapter: hasNextChapter,
         hasPreviousChapter: hasPreviousChapter,
       ),
@@ -312,6 +320,16 @@ class EditorOptionsMenuSheet extends StatelessWidget {
           onToggleReadOnly();
         },
       ),
+      if (onSimpleEditor != null)
+        _MenuItem(
+          icon: Icons.notes_rounded,
+          title: 'Editor de Texto Simple',
+          subtitle: 'Modo libre sin distracciones ni herramientas complejas',
+          onTap: () {
+            Navigator.of(context).pop();
+            onSimpleEditor!();
+          },
+        ),
       if (onContinuousReader != null)
         _MenuItem(
           icon: Icons.auto_stories_rounded,
@@ -330,6 +348,16 @@ class EditorOptionsMenuSheet extends StatelessWidget {
           onTap: () {
             Navigator.of(context).pop();
             onProseInspector!();
+          },
+        ),
+      if (onLoreContinuity != null)
+        _MenuItem(
+          icon: Icons.fact_check_rounded,
+          title: 'Auditor de Continuidad',
+          subtitle: 'Coherencia de personajes y lore en escena',
+          onTap: () {
+            Navigator.of(context).pop();
+            onLoreContinuity!();
           },
         ),
       if (onCorkboard != null)

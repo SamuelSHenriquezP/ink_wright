@@ -451,7 +451,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
             ),
             child: Row(
               children: [
-                Text(entry.defaultEmoji, style: const TextStyle(fontSize: 22)),
+                Icon(entry.iconData, size: 22, color: accentMint),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -582,7 +582,7 @@ class _ContextDrawerSheetState extends State<ContextDrawerSheet> with SingleTick
           ),
           child: Row(
             children: [
-              Text(idea.categoryIcon, style: const TextStyle(fontSize: 20)),
+              Icon(idea.iconData, size: 20, color: Color(idea.colorHex)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

@@ -11,7 +11,7 @@ class CharacterModel {
   final String characterArc; // Cómo cambia a lo largo de la historia
   final String writtenBiography; // Texto narrativo completo / biografía escrita
   final String quote; // Frase o diálogo icónico
-  final String avatarEmoji; // 🧙‍♂️, ⚔️, 🕵️‍♀️, 👑, 🦉, etc.
+  final String avatarEmoji;
   final DateTime createdAt;
 
   CharacterModel({
@@ -27,7 +27,7 @@ class CharacterModel {
     this.characterArc = '',
     this.writtenBiography = '',
     this.quote = '',
-    this.avatarEmoji = '👤',
+    this.avatarEmoji = '',
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -98,7 +98,7 @@ class CharacterModel {
       characterArc: json['characterArc'] as String? ?? '',
       writtenBiography: json['writtenBiography'] as String? ?? '',
       quote: json['quote'] as String? ?? '',
-      avatarEmoji: json['avatarEmoji'] as String? ?? '👤',
+      avatarEmoji: json['avatarEmoji'] as String? ?? '',
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
           : DateTime.now(),

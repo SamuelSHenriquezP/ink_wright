@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../controllers/editor_controller.dart';
 import '../../models/character_model.dart';
+import '../../models/character_relationship_model.dart';
 import '../../theme/app_theme.dart';
 import 'character_form_modal.dart';
+import 'relationship_form_modal.dart';
 
 class CharacterDetailModal {
   static Future<void> show(
@@ -58,7 +60,14 @@ class CharacterDetailModal {
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: borderSubtle),
                     ),
-                    child: Text(character.avatarEmoji, style: const TextStyle(fontSize: 28)),
+                    child: Text(
+                      character.name.isNotEmpty ? character.name[0].toUpperCase() : '?',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -247,6 +256,185 @@ class CharacterDetailModal {
                         ),
                         const SizedBox(height: 16),
                       ],
+
+                      // Dramatic Relationships & Conflicts
+                      Builder(
+                        builder: (ctx) {
+                          final characterRelationships = controller.relationships.where((r) =>
+                              r.fromCharacterId == character.id || r.toCharacterId == character.id
+                          ).toList();
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Vínculos y Conflictos (${characterRelationships.length})',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: textPrimary,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                  TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    ),
+                                    icon: const Icon(Icons.add_link_rounded, size: 16),
+                                    label: const Text('Vincular', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    onPressed: () {
+                                      RelationshipFormModal.show(
+                                        context,
+                                        controller,
+                                        initialFromCharacterId: character.id,
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              if (characterRelationships.isEmpty)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: borderSubtle),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.hub_outlined, size: 18, color: textSecondary.withValues(alpha: 0.5)),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          'Sin vínculos definidos con otros personajes aún.',
+                                          style: TextStyle(fontSize: 12, color: textSecondary),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else
+                                ...characterRelationships.map((rel) {
+                                  final otherId = rel.fromCharacterId == character.id ? rel.toCharacterId : rel.fromCharacterId;
+                                  final otherChar = controller.characters.firstWhere(
+                                    (c) => c.id == otherId,
+                                    orElse: () => CharacterModel(
+                                      id: '',
+                                      bookId: '',
+                                      name: 'Desconocido',
+                                      role: 'Secundario',
+                                    ),
+                                  );
+                                  final type = rel.type;
+
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF27272A) : const Color(0xFFF9F9FB),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: borderSubtle),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 13,
+                                          backgroundColor: AppTheme.accentTeal.withValues(alpha: 0.15),
+                                          child: const Icon(
+                                            Icons.person_rounded,
+                                            size: 16,
+                                            color: AppTheme.accentTeal,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Flexible(
+                                                    child: Text(
+                                                      otherChar.name,
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: textPrimary,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Color(type.colorHex).withValues(alpha: 0.15),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(
+                                                          type.iconData,
+                                                          size: 12,
+                                                          color: Color(type.colorHex),
+                                                        ),
+                                                        const SizedBox(width: 4),
+                                                        Text(
+                                                          type.label,
+                                                          style: TextStyle(
+                                                            fontSize: 10.5,
+                                                            fontWeight: FontWeight.w700,
+                                                            color: Color(type.colorHex),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              if (rel.description.isNotEmpty) ...[
+                                                const SizedBox(height: 3),
+                                                Text(
+                                                  rel.description,
+                                                  style: TextStyle(
+                                                    fontSize: 11.5,
+                                                    color: textSecondary,
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: Icon(Icons.edit_rounded, size: 16, color: textSecondary),
+                                          visualDensity: VisualDensity.compact,
+                                          tooltip: 'Editar Vínculo',
+                                          onPressed: () {
+                                            RelationshipFormModal.show(
+                                              context,
+                                              controller,
+                                              initialRelationship: rel,
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              const SizedBox(height: 18),
+                            ],
+                          );
+                        },
+                      ),
 
                       // Written Biography
                       Text(

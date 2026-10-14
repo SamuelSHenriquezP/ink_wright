@@ -56,10 +56,7 @@ class DashboardManuscriptTab extends StatelessWidget {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         alignment: Alignment.center,
-                        child: Text(
-                          controller.activeBook.coverEmoji,
-                          style: const TextStyle(fontSize: 28),
-                        ),
+                        child: Icon(Icons.auto_stories_rounded, size: 26, color: textPrimary),
                       ),
                       const SizedBox(width: 14),
                       Expanded(

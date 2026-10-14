@@ -105,7 +105,7 @@ class ChapterModel {
     return ChapterModel(
       id: map['id'] as String? ?? '',
       bookId: map['bookId'] as String? ?? '',
-      chapterNumber: map['chapterNumber'] as int? ?? 1,
+      chapterNumber: (map['chapterNumber'] as num?)?.toInt() ?? 1,
       title: map['title'] as String? ?? '',
       content: map['content'] as String? ?? '',
       lastEdited: map['lastEdited'] != null
@@ -119,15 +119,15 @@ class ChapterModel {
         orElse: () => ChapterType.chapter,
       ),
       snapshots: (map['snapshots'] as List<dynamic>?)
-              ?.map((item) => ChapterSnapshotModel.fromMap(item as Map<String, dynamic>))
+              ?.map((item) => ChapterSnapshotModel.fromMap(Map<String, dynamic>.from(item as Map)))
               .toList() ??
           const [],
       comments: (map['comments'] as List<dynamic>?)
-              ?.map((item) => RevisionCommentModel.fromMap(item as Map<String, dynamic>))
+              ?.map((item) => RevisionCommentModel.fromMap(Map<String, dynamic>.from(item as Map)))
               .toList() ??
           const [],
       bookmarks: (map['bookmarks'] as List<dynamic>?)
-              ?.map((item) => ChapterBookmarkModel.fromMap(item as Map<String, dynamic>))
+              ?.map((item) => ChapterBookmarkModel.fromMap(Map<String, dynamic>.from(item as Map)))
               .toList() ??
           const [],
     );

@@ -236,9 +236,7 @@ class ZenSelectionNoteSheet {
                     description: initialContent,
                     traits: [selectedCategory],
                     secrets: '',
-                    avatarEmoji: codexType == CodexType.location
-                        ? '🏰'
-                        : (codexType == CodexType.artifact ? '🗝️' : '📜'),
+                    avatarEmoji: '',
                     createdAt: DateTime.now(),
                   ));
                   Navigator.of(ctx).pop();

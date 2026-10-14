@@ -67,7 +67,7 @@ class IdeaChipCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(idea.categoryIcon, style: const TextStyle(fontSize: 12)),
+                          Icon(idea.iconData, size: 13, color: textPrimary),
                           const SizedBox(width: 4),
                           Text(
                             idea.categoryLabel,
