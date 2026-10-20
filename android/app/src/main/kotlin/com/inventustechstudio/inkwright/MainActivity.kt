@@ -1,5 +1,6 @@
-package com.example.ink_wright
+package com.inventustechstudio.inkwright
 
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity()
+
