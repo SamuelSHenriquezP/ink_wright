@@ -25,6 +25,9 @@ class CompiledChapterItem {
 }
 
 class ExportService {
+  static final RegExp _docInlineRegex = RegExp(
+    r'(\*\*\*.*?\*\*\*|___.*?___|\*\*.*?\*\*|__.*?__|\*.*?\*|_.*?_|~~.*?~~|`.*?`|==.*?==)',
+  );
   /// Sorts, filters, and formats chapters according to the compilation configuration.
   /// Prologues first, followed by regular chapters, followed by epilogues.
   static List<CompiledChapterItem> getCompiledChapters(
@@ -2191,7 +2194,6 @@ mark {
     }
 
     // Optional Dramatis Personae (OEBPS/characters.xhtml)
-    final bool hasChars = characters != null && characters.isNotEmpty;
     if (hasChars) {
       final charsBuffer = StringBuffer();
       charsBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
@@ -2223,7 +2225,6 @@ mark {
     }
 
     // Optional Codex (OEBPS/codex.xhtml)
-    final bool hasCodex = codexEntries != null && codexEntries.isNotEmpty;
     if (hasCodex) {
       final codexBuffer = StringBuffer();
       codexBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');

@@ -22,6 +22,8 @@ class ExportManuscriptDialog extends StatefulWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      elevation: 0,
+      showDragHandle: false,
       backgroundColor: Colors.transparent,
       builder: (_) => ExportManuscriptDialog(isDark: isDark),
     );
@@ -256,18 +258,6 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 12),
-            // Drag Handle for easy swiping down ("bajar")
-            Center(
-              child: Container(
-                width: 40,
-                height: 4.5,
-                decoration: BoxDecoration(
-                  color: textSecondary.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
 
             // Header Row
             Padding(
@@ -384,7 +374,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Compilador Editorial Profesional',
+                                    'Compilador Profesional',
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
@@ -393,7 +383,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Diseña portada RGB, dedicatoria, índice y tipos de capítulos',
+                                    'Composición, maquetación y portada',
                                     style: TextStyle(fontSize: 11, color: textSecondary),
                                   ),
                                 ],
@@ -581,16 +571,6 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                       ],
                     ),
 
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 4),
-                      child: Text(
-                        !_includeEditorialElements
-                            ? 'Exportará únicamente los capítulos y la prosa en formato $_selectedFormat sin portada, dedicatorias, créditos ni metadatos.'
-                            : 'Exportará el manuscrito en formato $_selectedFormat con maquetación editorial completa (portada, dedicatoria, índice y metadatos).',
-                        style: TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: textSecondary),
-                      ),
-                    ),
-
                     if (_includeEditorialElements) ...[
                       const SizedBox(height: 14),
 
@@ -664,7 +644,7 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                         _selectedFormat.contains('PDF')
                             ? (!_includeEditorialElements ? 'Exportar Solo Texto en PDF' : 'Previsualizar / Guardar en PDF')
                             : _selectedFormat.contains('Word')
-                                ? (!_includeEditorialElements ? 'Exportar Solo Texto en Word (.docx)' : 'Exportar a Microsoft Word (.docx)')
+                                ? 'Exportar a Microsoft Word (.docx)'
                                 : _selectedFormat.contains('EPUB')
                                     ? (!_includeEditorialElements ? 'Exportar Solo Texto en EPUB' : 'Exportar a Libro EPUB (.epub)')
                                     : (!_includeEditorialElements ? 'Copiar Solo Texto ($_selectedFormat)' : 'Copiar Manuscrito ($_selectedFormat)'),
@@ -726,21 +706,21 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: widget.isDark ? 0.12 : 0.10),
+                        color: widget.isDark ? const Color(0xFF222226) : const Color(0xFFF4F4F6),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
+                        border: Border.all(color: borderSubtle),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.amber),
+                          Icon(Icons.info_outline_rounded, size: 16, color: textSecondary),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Esta acción reemplazará todos tus datos actuales. Se recomienda exportar un respaldo antes de importar.',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: widget.isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+                                color: textSecondary,
                                 height: 1.4,
                               ),
                             ),

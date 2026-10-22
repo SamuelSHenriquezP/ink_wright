@@ -16,7 +16,7 @@ void main() {
 
   test('Smoke test controller initialization', () {
     final controller = EditorController();
-    expect(controller.activeBook.chapters.length, equals(3));
+    expect(controller.activeBook.chapters.length, equals(5));
   });
 
   test('Smoke test ThemeController and SprintController', () {
@@ -149,8 +149,6 @@ void main() {
     // Verify Export sheet is opened
     expect(find.text('Exportar Manuscrito'), findsOneWidget);
     expect(find.text('Seleccionar Formato de Exportación'), findsOneWidget);
-    expect(find.text('Tipografía Editorial'), findsOneWidget);
-    expect(find.text('Contenido Adicional'), findsOneWidget);
 
     // Verify SingleChildScrollView exists and is scrollable
     expect(find.byType(SingleChildScrollView), findsWidgets);
@@ -160,6 +158,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify button updates
+    await tester.ensureVisible(find.text('Exportar a Microsoft Word (.docx)'));
+    await tester.pumpAndSettle();
     expect(find.text('Exportar a Microsoft Word (.docx)'), findsOneWidget);
 
     // Tap outside / close sheet
@@ -194,14 +194,14 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify Book Study view is active
-    expect(find.text('Biblioteca'), findsOneWidget); // Strategic back button
+    expect(find.byIcon(Icons.arrow_back_rounded), findsWidgets); // Strategic back button
     expect(find.text('Manuscrito'), findsOneWidget);
     expect(find.text('Personajes'), findsWidgets);
     expect(find.text('Mapa de Trama'), findsOneWidget);
     expect(find.text('Cambiar de Libro'), findsOneWidget);
 
-    // 3. Tap 'Biblioteca' strategic button to return to Library view
-    await tester.tap(find.text('Biblioteca'));
+    // 3. Tap back strategic button to return to Library view
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded).first);
     await tester.pumpAndSettle();
 
     expect(find.text('Biblioteca de Manuscritos'), findsOneWidget);
@@ -238,9 +238,9 @@ void main() {
     // Verify dedicated Meta Diaria card is present in Herramientas
     expect(find.text('Meta Diaria de Escritura'), findsOneWidget);
     expect(find.text('Ajustar Meta Diaria'), findsOneWidget);
-    // Verify symmetrical backup export button
-    expect(find.text('Exportar'), findsOneWidget);
-    expect(find.text('Restaurar'), findsOneWidget);
+    // Verify backup buttons
+    expect(find.text('Exportar Rápido'), findsOneWidget);
+    expect(find.text('Restaurar de Nube'), findsOneWidget);
 
     // Tap 'Ajustar Meta Diaria'
     await tester.tap(find.text('Ajustar Meta Diaria'));

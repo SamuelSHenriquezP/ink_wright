@@ -20,6 +20,7 @@ class AppTheme {
   static const Color darkAccentMint = Color(0xFFFFFFFF); // Main Accent is crisp white
   static const Color darkAccentMintLight = Color(0xFF27272A);
   static const Color darkBorderSubtle = Color(0xFF27272A);
+  static const Color accentTeal = Color(0xFF0D9488);
 
   // Radii
   static const double cardRadius = 16.0;

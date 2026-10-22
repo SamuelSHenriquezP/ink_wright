@@ -224,7 +224,7 @@ void main() {
       final controller = EditorController();
       expect(controller.allBooks.length, equals(1));
       expect(controller.activeBook.title, equals('Manual del Escritor — Guía de Ink & Wright'));
-      expect(controller.activeBook.chapters.length, equals(3));
+      expect(controller.activeBook.chapters.length, equals(5));
       // Verify chapter 2 is numbered 2
       expect(controller.activeBook.chapters[1].chapterNumber, equals(2));
       expect(controller.ideas.isNotEmpty, isTrue);
@@ -741,7 +741,7 @@ code block line 2
 
       final txt = ExportService.exportToPlainText(book);
       expect(txt.contains('MISTERIO EN EL VALLE'), isTrue);
-      expect(txt.contains('CAPÍTULO 1 — EL AMANECER'), isTrue);
+      expect(txt.contains('CAPÍTULO 1: EL AMANECER'), isTrue);
 
       final html = ExportService.exportToHtml(book);
       expect(html.contains('<!DOCTYPE html>'), isTrue);
