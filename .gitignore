@@ -25,12 +25,15 @@ app.*.map.json
 **/android/build/
 **/android/.gradle/
 **/android/local.properties
-**/android/key.properties
-**/android/app/key.properties
+**/key.properties*
+!**/key.properties.example
 *.apk
 *.aab
 *.keystore
 *.jks
+
+# Release binaries
+release/
 
 # iOS / macOS Specific
 **/ios/Flutter/.last_build_id
