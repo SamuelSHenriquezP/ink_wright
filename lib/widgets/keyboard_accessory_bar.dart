@@ -9,6 +9,7 @@ class KeyboardAccessoryBar extends StatelessWidget {
   final VoidCallback? onUndo;
   final VoidCallback? onRedo;
   final bool canUndo;
+  final bool canRedo;
   final VoidCallback? onAnnotateSelection;
   final VoidCallback? onFindReplace;
   final VoidCallback? onOpenSynonyms;

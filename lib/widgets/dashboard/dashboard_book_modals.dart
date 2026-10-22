@@ -131,10 +131,17 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _subCtrl;
   late final TextEditingController _targetCtrl;
+  late final TextEditingController _emojiCtrl;
 
-  String _selectedEmoji = '';
+  String _selectedEmoji = '📖';
   String _selectedGenre = 'Ficción';
   bool _titleHasError = false;
+
+  static const List<String> _presetEmojis = [
+    '📖', '⚔️', '🐉', '🌌', '🔮', '🕯️', '🖋️', '📜',
+    '🏰', '👑', '🧭', '🌙', '✨', '🌹', '🎭', '💀',
+    '🗝️', '⏳', '🐺', '🪐', '🩸', '🏹', '🌊', '🌲',
+  ];
 
   static const List<String> _genres = [
     'Ficción',
@@ -155,6 +162,7 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
     _titleCtrl = TextEditingController();
     _subCtrl = TextEditingController();
     _targetCtrl = TextEditingController(text: '80000');
+    _emojiCtrl = TextEditingController(text: '📖');
   }
 
   @override
@@ -162,6 +170,7 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
     _titleCtrl.dispose();
     _subCtrl.dispose();
     _targetCtrl.dispose();
+    _emojiCtrl.dispose();
     super.dispose();
   }
 
@@ -225,7 +234,10 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
                       border: Border.all(color: borderSubtle),
                     ),
                     alignment: Alignment.center,
-                    child: Icon(Icons.auto_stories_rounded, size: 22, color: isDark ? Colors.white : Colors.black),
+                    child: Text(
+                      _selectedEmoji.isNotEmpty ? _selectedEmoji : '📖',
+                      style: const TextStyle(fontSize: 22),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -264,6 +276,97 @@ class _CreateBookDialogState extends State<_CreateBookDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+
+                    // Selector de Emoji de Portada
+                    Text(
+                      'EMOJI DE PORTADA',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        color: textSecondary,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 42,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              children: _presetEmojis.map((emoji) {
+                                final isSelected = emoji == _selectedEmoji;
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedEmoji = emoji;
+                                      _emojiCtrl.text = emoji;
+                                    });
+                                  },
+                                  child: Container(
+                                    width: 40,
+                                    height: 40,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? (isDark ? Colors.white24 : Colors.black12)
+                                          : accentBg,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? (isDark ? Colors.white : Colors.black)
+                                            : borderSubtle,
+                                        width: isSelected ? 2 : 1,
+                                      ),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(emoji, style: const TextStyle(fontSize: 20)),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 46,
+                          height: 40,
+                          child: TextField(
+                            controller: _emojiCtrl,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 18),
+                            decoration: InputDecoration(
+                              hintText: '⌨️',
+                              contentPadding: EdgeInsets.zero,
+                              filled: true,
+                              fillColor: accentBg,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(color: borderSubtle),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(color: borderSubtle),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(color: textPrimary, width: 1.2),
+                              ),
+                            ),
+                            onChanged: (val) {
+                              if (val.trim().isNotEmpty) {
+                                setState(() {
+                                  _selectedEmoji = val.trim();
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
 
                     // Título del Libro
                     Text(

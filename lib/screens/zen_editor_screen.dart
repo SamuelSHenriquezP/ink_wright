@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../controllers/editor_controller.dart';
 import '../controllers/theme_controller.dart';
 import '../widgets/keyboard_accessory_bar.dart';
+import '../widgets/dashboard/dashboard_book_modals.dart';
 import '../widgets/context_drawer_sheet.dart';
 import '../widgets/chapter_history_sheet.dart';
 import '../widgets/chapter_drawer.dart';
@@ -237,88 +238,19 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
   }
 
   void _showNewBookDialog(BuildContext context, EditorController controller, bool isDark) {
-    final titleCtrl = TextEditingController();
-    final subtitleCtrl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Nuevo Libro',
-          style: TextStyle(
-            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleCtrl,
-              autofocus: true,
-              style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
-              decoration: InputDecoration(
-                labelText: 'Título del libro / proyecto',
-                labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: subtitleCtrl,
-              style: TextStyle(color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary),
-              decoration: InputDecoration(
-                labelText: 'Subtítulo o premisa (opcional)',
-                labelStyle: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Cancelar',
-              style: TextStyle(color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDark ? Colors.white : Colors.black,
-              foregroundColor: isDark ? Colors.black : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              final title = titleCtrl.text.trim();
-              if (title.isNotEmpty) {
-                controller.createNewBook(
-                  title,
-                  subtitleCtrl.text.trim(),
-                  50000,
-                );
-                _syncTitleController(controller);
-                Navigator.of(ctx).pop();
-                if (_pageController.hasClients) {
-                  _pageController.animateToPage(
-                    1,
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeInOut,
-                  );
-                }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Libro "$title" creado con éxito.'),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            },
-            child: const Text('Crear Libro', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    DashboardBookModals.showCreateBookDialog(
+      context,
+      controller,
+      onBookCreated: () {
+        _syncTitleController(controller);
+        if (_pageController.hasClients) {
+          _pageController.animateToPage(
+            1,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+          );
+        }
+      },
     );
   }
 
@@ -733,10 +665,10 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
       onGoToDashboard: () {
         controller.saveCurrentSession();
         if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(false);
         } else {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const DashboardScreen()),
+            MaterialPageRoute(builder: (_) => const DashboardScreen(initialInsideBookView: false)),
           );
         }
         CloudBackupService.promptCloudBackupReminder(context, controller);
@@ -899,34 +831,56 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                   ),
                                   const SizedBox(width: 4),
 
-                                  // Chapter & Book Title (Tap opens chapter drawer too)
+                                  // Chapter & Book Title
                                   Expanded(
-                                    child: GestureDetector(
-                                      onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Flexible(
-                                                child: Text(
-                                                  activeBook.title,
-                                                  style: TextStyle(
-                                                    fontSize: 13.5,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: textPrimary,
-                                                    letterSpacing: -0.2,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Tap on the book title returns to the book study view (DashboardScreen)
+                                        InkWell(
+                                          onTap: () {
+                                            if (Navigator.of(context).canPop()) {
+                                              Navigator.of(context).pop(true);
+                                            } else {
+                                              Navigator.of(context).pushReplacement(
+                                                MaterialPageRoute(
+                                                  builder: (_) => const DashboardScreen(initialInsideBookView: true),
                                                 ),
-                                              ),
-                                              const SizedBox(width: 3),
-                                              Icon(Icons.keyboard_arrow_down_rounded, size: 15, color: textSecondary),
-                                            ],
+                                              );
+                                            }
+                                          },
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 1.5, horizontal: 2),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.auto_stories_rounded, size: 14, color: textSecondary),
+                                                const SizedBox(width: 4),
+                                                Flexible(
+                                                  child: Text(
+                                                    activeBook.title,
+                                                    style: TextStyle(
+                                                      fontSize: 13.5,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: textPrimary,
+                                                      letterSpacing: -0.2,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 3),
+                                                Icon(Icons.arrow_back_ios_new_rounded, size: 10, color: textSecondary),
+                                              ],
+                                            ),
                                           ),
-                                          Text(
+                                        ),
+                                        // Tap on chapter line opens chapter drawer
+                                        GestureDetector(
+                                          onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                                          child: Text(
                                             'Cap. ${controller.activeChapterIndex + 1} de ${controller.totalChapters} • ${controller.activeChapter.title}',
                                             style: TextStyle(
                                               fontSize: 11,
@@ -936,8 +890,8 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
                                   ),
 

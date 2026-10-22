@@ -45,6 +45,11 @@ void showPlotNodeFormModal(
   int selectedColor = existingNode?.colorHex ?? 0xFF18181B;
   String? selectedChapterId = existingNode?.linkedChapterId;
 
+  const availableEmojis = [
+    '📌', '🎬', '⚡', '🔍', '⚔️', '💔', '👑', '💡', '🗝️', '💥',
+    '🩸', '🕊️', '🏰', '🎭', '🌙', '👁️', '📜', '🧭', '🛡️', '✨'
+  ];
+
   const availableColors = [
     0xFF18181B, // Onyx
     0xFF3F3F46, // Graphite

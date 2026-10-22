@@ -329,7 +329,9 @@ class DashboardLibraryShelf extends StatelessWidget {
                               shape: BoxShape.circle,
                             ),
                             alignment: Alignment.center,
-                            child: Icon(Icons.auto_stories_rounded, size: 24, color: textPrimary),
+                            child: book.coverEmoji.isNotEmpty
+                                ? Text(book.coverEmoji, style: const TextStyle(fontSize: 24))
+                                : const Text('📖', style: TextStyle(fontSize: 24)),
                           ),
                           const SizedBox(height: 8),
 

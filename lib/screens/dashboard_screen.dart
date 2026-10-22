@@ -1,8 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/editor_controller.dart';
@@ -26,7 +23,12 @@ import 'plot_mind_map_screen.dart';
 import 'zen_editor_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final bool initialInsideBookView;
+
+  const DashboardScreen({
+    super.key,
+    this.initialInsideBookView = false,
+  });
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -35,7 +37,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedFilterIndex = 0;
   bool _hasAutoOpenedLastText = false;
-  bool _isInsideBookView = false;
+  late bool _isInsideBookView;
 
   final List<String> _bookFilters = [
     'Manuscrito',
@@ -50,12 +52,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _isInsideBookView = widget.initialInsideBookView;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_hasAutoOpenedLastText && mounted) {
         _hasAutoOpenedLastText = true;
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const ZenEditorScreen()),
-        );
+        ).then((result) {
+          if (mounted) {
+            setState(() {
+              _isInsideBookView = result != false;
+            });
+          }
+        });
       }
     });
   }
