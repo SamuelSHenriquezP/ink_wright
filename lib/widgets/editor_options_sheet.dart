@@ -118,7 +118,6 @@ class EditorOptionsMenuSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: bgCard,
-      surfaceTintColor: Colors.transparent,
       elevation: 0,
       showDragHandle: false,
       shape: const RoundedRectangleBorder(

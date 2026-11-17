@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../theme/app_theme.dart';
@@ -24,10 +25,15 @@ class BookCompilerModal extends StatefulWidget {
   });
 
   /// Abre el compilador como una pantalla completa dedicada
-  static Future<void> show(BuildContext context, EditorController controller, bool isDark) {
+  static Future<void> show(
+    BuildContext context,
+    EditorController controller,
+    bool isDark,
+  ) {
     return Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => BookCompilerModal(controller: controller, isDark: isDark),
+        builder: (_) =>
+            BookCompilerModal(controller: controller, isDark: isDark),
       ),
     );
   }
@@ -57,8 +63,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
   late int _textColorHex;
   late String _fontFamily;
   late CoverTextPosition _textPosition;
+  late CoverTextPosition _authorPosition;
+  late String _coverStyle;
   String? _imagePath;
-  int _coverSectionIndex = 0; // 0: Textos & Títulos, 1: Fondo & Imagen, 2: Tipografía & Posición
+  int _coverSectionIndex =
+      0; // 0: Textos & Títulos, 1: Fondo & Imagen, 2: Tipografía & Posición
 
   // Editorial settings
   late EditorialPreset _preset;
@@ -108,19 +117,31 @@ class _BookCompilerModalState extends State<BookCompilerModal>
     _tabController = TabController(length: 4, vsync: this);
 
     final book = widget.controller.activeBook;
-    final config = book.compilationConfig ??
+    final config =
+        book.compilationConfig ??
         BookCompilationConfig(
           cover: BookCoverConfig(
             title: book.title,
             author: 'Autor de la Obra',
             subtitle: book.subtitle,
           ),
-          copyrightNotice: '© ${DateTime.now().year} ${book.title}. Todos los derechos reservados.',
+          copyrightNotice:
+              '© ${DateTime.now().year} ${book.title}. Todos los derechos reservados.',
         );
 
-    _titleCtrl = TextEditingController(text: config.cover.title.isNotEmpty ? config.cover.title : book.title);
-    _subtitleCtrl = TextEditingController(text: config.cover.subtitle.isNotEmpty ? config.cover.subtitle : book.subtitle);
-    _authorCtrl = TextEditingController(text: config.cover.author.isNotEmpty ? config.cover.author : 'Autor de la Obra');
+    _titleCtrl = TextEditingController(
+      text: config.cover.title.isNotEmpty ? config.cover.title : book.title,
+    );
+    _subtitleCtrl = TextEditingController(
+      text: config.cover.subtitle.isNotEmpty
+          ? config.cover.subtitle
+          : book.subtitle,
+    );
+    _authorCtrl = TextEditingController(
+      text: config.cover.author.isNotEmpty
+          ? config.cover.author
+          : 'Autor de la Obra',
+    );
     _dedicationCtrl = TextEditingController(text: config.dedication);
     _copyrightCtrl = TextEditingController(
       text: config.copyrightNotice.isNotEmpty
@@ -136,10 +157,14 @@ class _BookCompilerModalState extends State<BookCompilerModal>
     _textColorHex = config.cover.textColorHex;
     _fontFamily = config.cover.fontFamily;
     _textPosition = config.cover.textPosition;
+    _authorPosition = config.cover.authorPosition;
+    _coverStyle = config.cover.coverStyle;
     _imagePath = config.cover.imagePath;
 
     _preset = config.preset;
-    _sceneSeparator = config.sceneSeparator.isNotEmpty ? config.sceneSeparator : '* * *';
+    _sceneSeparator = config.sceneSeparator.isNotEmpty
+        ? config.sceneSeparator
+        : '* * *';
 
     _includeToc = config.includeTableOfContents;
     _customChapterTitles = Map<String, String>.from(config.customChapterTitles);
@@ -148,7 +173,9 @@ class _BookCompilerModalState extends State<BookCompilerModal>
     // Initialize ordered chapter IDs
     final existingOrder = config.orderedChapterIds;
     final bookChapterIds = book.chapters.map((c) => c.id).toList();
-    final initialOrdered = existingOrder.where((id) => bookChapterIds.contains(id)).toList();
+    final initialOrdered = existingOrder
+        .where((id) => bookChapterIds.contains(id))
+        .toList();
     for (final id in bookChapterIds) {
       if (!initialOrdered.contains(id)) {
         initialOrdered.add(id);
@@ -192,6 +219,8 @@ class _BookCompilerModalState extends State<BookCompilerModal>
         textColorHex: _textColorHex,
         fontFamily: _fontFamily,
         textPosition: _textPosition,
+        authorPosition: _authorPosition,
+        coverStyle: _coverStyle,
       ),
       dedication: _dedicationCtrl.text.trim(),
       copyrightNotice: _copyrightCtrl.text.trim(),
@@ -200,7 +229,9 @@ class _BookCompilerModalState extends State<BookCompilerModal>
       excludedChapterIds: _excludedChapterIds.toList(),
       orderedChapterIds: _orderedChapterIds,
       preset: _preset,
-      sceneSeparator: _sceneSeparator.trim().isNotEmpty ? _sceneSeparator.trim() : '* * *',
+      sceneSeparator: _sceneSeparator.trim().isNotEmpty
+          ? _sceneSeparator.trim()
+          : '* * *',
       authorBio: _authorBioCtrl.text.trim(),
       acknowledgments: _acknowledgmentsCtrl.text.trim(),
       authorSocials: _authorSocialsCtrl.text.trim(),
@@ -212,7 +243,9 @@ class _BookCompilerModalState extends State<BookCompilerModal>
     _saveConfig();
     setState(() => _isExportingCover = true);
     try {
-      final boundary = _coverKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary =
+          _coverKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) {
         throw Exception('El contenedor de vista previa no está listo');
       }
@@ -222,7 +255,9 @@ class _BookCompilerModalState extends State<BookCompilerModal>
         throw Exception('No se pudo procesar la imagen PNG');
       }
       final pngBytes = byteData.buffer.asUint8List();
-      final baseFilename = widget.controller.activeBook.title.replaceAll(' ', '_').toLowerCase();
+      final baseFilename = widget.controller.activeBook.title
+          .replaceAll(' ', '_')
+          .toLowerCase();
       final filename = '${baseFilename}_portada_hd.png';
 
       final xFile = XFile.fromData(
@@ -281,7 +316,10 @@ class _BookCompilerModalState extends State<BookCompilerModal>
           compilationConfig: config,
         );
         if (mounted) {
-          await Printing.layoutPdf(name: baseFilename, onLayout: (_) async => pdfBytes);
+          await Printing.layoutPdf(
+            name: baseFilename,
+            onLayout: (_) async => pdfBytes,
+          );
         }
       } else if (format == 'docx') {
         final docxBytes = ExportService.generateDocx(
@@ -292,7 +330,8 @@ class _BookCompilerModalState extends State<BookCompilerModal>
         );
         final xFile = XFile.fromData(
           Uint8List.fromList(docxBytes),
-          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          mimeType:
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           name: '$baseFilename.docx',
         );
         await SharePlus.instance.share(
@@ -345,7 +384,9 @@ class _BookCompilerModalState extends State<BookCompilerModal>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Compilación ${format.toUpperCase()} generada con éxito.'),
+            content: Text(
+              'Compilación ${format.toUpperCase()} generada con éxito.',
+            ),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -372,11 +413,19 @@ class _BookCompilerModalState extends State<BookCompilerModal>
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
-    final bgScaffold = isDark ? const Color(0xFF101012) : const Color(0xFFF8F9FA);
+    final bgScaffold = isDark
+        ? const Color(0xFF101012)
+        : const Color(0xFFF8F9FA);
     final bgCard = isDark ? const Color(0xFF18181B) : Colors.white;
-    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
-    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final textPrimary = isDark
+        ? AppTheme.darkTextPrimary
+        : AppTheme.lightTextPrimary;
+    final textSecondary = isDark
+        ? AppTheme.darkTextSecondary
+        : AppTheme.lightTextSecondary;
+    final borderSubtle = isDark
+        ? AppTheme.darkBorderSubtle
+        : AppTheme.lightBorderSubtle;
 
     return PopScope(
       onPopInvokedWithResult: (didPop, result) {
@@ -414,7 +463,10 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                 ),
                 icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
-                label: const Text('Guardar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                label: const Text(
+                  'Guardar',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
                 onPressed: () {
                   _saveConfig();
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -440,13 +492,31 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                 indicatorWeight: 2.5,
                 labelColor: textPrimary,
                 unselectedLabelColor: textSecondary,
-                labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                labelStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
                 tabs: const [
-                  Tab(icon: Icon(Icons.palette_outlined, size: 17), text: 'Portada'),
-                  Tab(icon: Icon(Icons.format_list_numbered_rounded, size: 17), text: 'Capítulos'),
-                  Tab(icon: Icon(Icons.bookmark_border_rounded, size: 17), text: 'Amenidades'),
-                  Tab(icon: Icon(Icons.tune_rounded, size: 17), text: 'Maquetación'),
+                  Tab(
+                    icon: Icon(Icons.palette_outlined, size: 17),
+                    text: 'Portada',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.format_list_numbered_rounded, size: 17),
+                    text: 'Capítulos',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.bookmark_border_rounded, size: 17),
+                    text: 'Amenidades',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.tune_rounded, size: 17),
+                    text: 'Maquetación',
+                  ),
                 ],
               ),
             ),
@@ -455,13 +525,43 @@ class _BookCompilerModalState extends State<BookCompilerModal>
         body: TabBarView(
           controller: _tabController,
           children: [
-            _buildCoverTab(isDark, textPrimary, textSecondary, borderSubtle, bgCard),
-            _buildChaptersTab(isDark, textPrimary, textSecondary, borderSubtle, bgCard),
-            _buildAmenitiesTab(isDark, textPrimary, textSecondary, borderSubtle, bgCard),
-            _buildLayoutTab(isDark, textPrimary, textSecondary, borderSubtle, bgCard),
+            _buildCoverTab(
+              isDark,
+              textPrimary,
+              textSecondary,
+              borderSubtle,
+              bgCard,
+            ),
+            _buildChaptersTab(
+              isDark,
+              textPrimary,
+              textSecondary,
+              borderSubtle,
+              bgCard,
+            ),
+            _buildAmenitiesTab(
+              isDark,
+              textPrimary,
+              textSecondary,
+              borderSubtle,
+              bgCard,
+            ),
+            _buildLayoutTab(
+              isDark,
+              textPrimary,
+              textSecondary,
+              borderSubtle,
+              bgCard,
+            ),
           ],
         ),
-        bottomNavigationBar: _buildExportBottomBar(isDark, textPrimary, textSecondary, borderSubtle, bgCard),
+        bottomNavigationBar: _buildExportBottomBar(
+          isDark,
+          textPrimary,
+          textSecondary,
+          borderSubtle,
+          bgCard,
+        ),
       ),
     );
   }
@@ -487,18 +587,15 @@ class _BookCompilerModalState extends State<BookCompilerModal>
             child: RepaintBoundary(
               key: _coverKey,
               child: Container(
-                width: 195,
-                height: 285,
+                width: 205,
+                height: 300,
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   color: Color(_bgColorHex),
                   image: _imagePath != null && File(_imagePath!).existsSync()
                       ? DecorationImage(
                           image: FileImage(File(_imagePath!)),
                           fit: BoxFit.cover,
-                          colorFilter: ColorFilter.mode(
-                            Colors.black.withValues(alpha: 0.4),
-                            BlendMode.darken,
-                          ),
                         )
                       : null,
                   borderRadius: BorderRadius.circular(10),
@@ -514,57 +611,62 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                     width: 1,
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-                child: Column(
-                  mainAxisAlignment: _getAlignmentFromPosition(_textPosition),
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Text(
-                      _titleCtrl.text.isEmpty ? 'TÍTULO DE LA OBRA' : _titleCtrl.text.toUpperCase(),
-                      style: TextStyle(
-                        color: Color(_textColorHex),
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                        fontFamily: _fontFamily,
-                        height: 1.25,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (_subtitleCtrl.text.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        _subtitleCtrl.text,
-                        style: TextStyle(
-                          color: Color(_textColorHex).withValues(alpha: 0.85),
-                          fontSize: 10,
-                          fontStyle: FontStyle.italic,
-                          fontFamily: _fontFamily,
+                    if (_imagePath != null && File(_imagePath!).existsSync())
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.48),
+                              Colors.black.withValues(alpha: 0.28),
+                              Colors.black.withValues(alpha: 0.56),
+                            ],
+                          ),
                         ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
                       ),
-                    ],
-                    const SizedBox(height: 14),
-                    Container(
-                      width: 36,
-                      height: 1.2,
-                      color: Color(_textColorHex).withValues(alpha: 0.55),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _authorCtrl.text.isEmpty ? 'NOMBRE DEL AUTOR' : _authorCtrl.text,
-                      style: TextStyle(
-                        color: Color(_textColorHex),
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.9,
-                        fontFamily: _fontFamily,
+                    if (_coverStyle == 'editorial')
+                      Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Color(_textColorHex).withValues(alpha: 0.28),
+                              width: 0.8,
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (_coverStyle == 'framed')
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Color(_textColorHex).withValues(alpha: 0.45),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Color(_textColorHex).withValues(alpha: 0.25),
+                                width: 0.6,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 24,
+                      ),
+                      child: _buildCoverTextLayout(),
                     ),
                   ],
                 ),
@@ -580,8 +682,13 @@ class _BookCompilerModalState extends State<BookCompilerModal>
               style: OutlinedButton.styleFrom(
                 foregroundColor: textPrimary,
                 side: BorderSide(color: borderSubtle),
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               icon: _isExportingCover
                   ? const SizedBox(
@@ -610,9 +717,27 @@ class _BookCompilerModalState extends State<BookCompilerModal>
             padding: const EdgeInsets.all(4),
             child: Row(
               children: [
-                _buildSegmentButton(0, Icons.edit_note_rounded, 'Textos', textPrimary, isDark),
-                _buildSegmentButton(1, Icons.palette_outlined, 'Fondo', textPrimary, isDark),
-                _buildSegmentButton(2, Icons.format_paint_outlined, 'Estilo', textPrimary, isDark),
+                _buildSegmentButton(
+                  0,
+                  Icons.edit_note_rounded,
+                  'Textos',
+                  textPrimary,
+                  isDark,
+                ),
+                _buildSegmentButton(
+                  1,
+                  Icons.palette_outlined,
+                  'Fondo',
+                  textPrimary,
+                  isDark,
+                ),
+                _buildSegmentButton(
+                  2,
+                  Icons.format_paint_outlined,
+                  'Estilo',
+                  textPrimary,
+                  isDark,
+                ),
               ],
             ),
           ),
@@ -629,11 +754,17 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                 children: [
                   TextField(
                     controller: _titleCtrl,
-                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: textPrimary),
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: textPrimary,
+                    ),
                     decoration: InputDecoration(
                       labelText: 'Título de la Obra',
                       prefixIcon: const Icon(Icons.book_outlined, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
@@ -643,8 +774,13 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                     style: TextStyle(fontSize: 13, color: textPrimary),
                     decoration: InputDecoration(
                       labelText: 'Subtítulo (opcional)',
-                      prefixIcon: const Icon(Icons.short_text_rounded, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      prefixIcon: const Icon(
+                        Icons.short_text_rounded,
+                        size: 20,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
@@ -654,8 +790,13 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                     style: TextStyle(fontSize: 13, color: textPrimary),
                     decoration: InputDecoration(
                       labelText: 'Nombre del Autor o Seudónimo',
-                      prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      prefixIcon: const Icon(
+                        Icons.person_outline_rounded,
+                        size: 20,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
@@ -677,15 +818,24 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                             foregroundColor: textPrimary,
                             side: BorderSide(color: borderSubtle),
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           icon: const Icon(Icons.image_outlined, size: 18),
                           label: Text(
-                            _imagePath != null ? 'Cambiar Imagen de Fondo' : 'Cargar Imagen de Fondo',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            _imagePath != null
+                                ? 'Cambiar Imagen de Fondo'
+                                : 'Cargar Imagen de Fondo',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           onPressed: () async {
-                            final res = await FilePicker.platform.pickFiles(type: FileType.image);
+                            final res = await FilePicker.platform.pickFiles(
+                              type: FileType.image,
+                            );
                             if (res != null && res.files.single.path != null) {
                               setState(() {
                                 _imagePath = res.files.single.path;
@@ -700,9 +850,15 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                           tooltip: 'Quitar imagen de portada',
                           style: IconButton.styleFrom(
                             side: BorderSide(color: borderSubtle),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
-                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 19),
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: Colors.redAccent,
+                            size: 19,
+                          ),
                           onPressed: () => setState(() => _imagePath = null),
                         ),
                       ],
@@ -712,7 +868,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                     const SizedBox(height: 6),
                     Text(
                       _imagePath!.split(Platform.pathSeparator).last,
-                      style: TextStyle(fontSize: 11, color: textSecondary, fontStyle: FontStyle.italic),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: textSecondary,
+                        fontStyle: FontStyle.italic,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -720,7 +880,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   const SizedBox(height: 16),
                   Text(
                     'Color de Fondo',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textPrimary),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
@@ -736,12 +900,17 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                           });
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 7,
+                          ),
                           decoration: BoxDecoration(
                             color: Color(p['bg']),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: isSel ? (isDark ? Colors.white : Colors.black) : Colors.white24,
+                              color: isSel
+                                  ? (isDark ? Colors.white : Colors.black)
+                                  : Colors.white24,
                               width: isSel ? 2 : 1,
                             ),
                           ),
@@ -762,7 +931,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                     children: [
                       Text(
                         'Tono del Texto:',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textPrimary),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: textPrimary,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       _buildTextColorCircle(0xFFF4F4F5, 'Blanco Marfil'),
@@ -783,18 +956,34 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: _fontFamily,
+                    initialValue: _fontFamily,
                     decoration: InputDecoration(
                       labelText: 'Tipografía',
-                      prefixIcon: const Icon(Icons.text_fields_rounded, size: 20),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      prefixIcon: const Icon(
+                        Icons.text_fields_rounded,
+                        size: 20,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     items: _fonts
-                        .map((f) => DropdownMenuItem(
-                              value: f,
-                              child: Text(f, style: TextStyle(fontSize: 12.5, color: textPrimary)),
-                            ))
+                        .map(
+                          (f) => DropdownMenuItem(
+                            value: f,
+                            child: Text(
+                              f,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: textPrimary,
+                              ),
+                            ),
+                          ),
+                        )
                         .toList(),
                     onChanged: (val) {
                       if (val != null) setState(() => _fontFamily = val);
@@ -802,17 +991,113 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Posición del Texto',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textPrimary),
+                    'Diseño de Portada',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      _buildPositionChip(CoverTextPosition.top, 'Superior', Icons.vertical_align_top_rounded, textPrimary, borderSubtle, isDark),
+                      _buildStyleChip('editorial', 'Editorial', textPrimary, borderSubtle, isDark),
                       const SizedBox(width: 8),
-                      _buildPositionChip(CoverTextPosition.center, 'Centro', Icons.vertical_align_center_rounded, textPrimary, borderSubtle, isDark),
+                      _buildStyleChip('framed', 'Enmarcado', textPrimary, borderSubtle, isDark),
                       const SizedBox(width: 8),
-                      _buildPositionChip(CoverTextPosition.bottom, 'Inferior', Icons.vertical_align_bottom_rounded, textPrimary, borderSubtle, isDark),
+                      _buildStyleChip('minimal', 'Minimal', textPrimary, borderSubtle, isDark),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Posición del Título',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _buildPositionChip(
+                        CoverTextPosition.top,
+                        'Superior',
+                        Icons.vertical_align_top_rounded,
+                        _textPosition,
+                        (pos) => setState(() => _textPosition = pos),
+                        textPrimary,
+                        borderSubtle,
+                        isDark,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildPositionChip(
+                        CoverTextPosition.center,
+                        'Centro',
+                        Icons.vertical_align_center_rounded,
+                        _textPosition,
+                        (pos) => setState(() => _textPosition = pos),
+                        textPrimary,
+                        borderSubtle,
+                        isDark,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildPositionChip(
+                        CoverTextPosition.bottom,
+                        'Inferior',
+                        Icons.vertical_align_bottom_rounded,
+                        _textPosition,
+                        (pos) => setState(() => _textPosition = pos),
+                        textPrimary,
+                        borderSubtle,
+                        isDark,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Posición del Autor',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _buildPositionChip(
+                        CoverTextPosition.top,
+                        'Superior',
+                        Icons.vertical_align_top_rounded,
+                        _authorPosition,
+                        (pos) => setState(() => _authorPosition = pos),
+                        textPrimary,
+                        borderSubtle,
+                        isDark,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildPositionChip(
+                        CoverTextPosition.center,
+                        'Centro',
+                        Icons.vertical_align_center_rounded,
+                        _authorPosition,
+                        (pos) => setState(() => _authorPosition = pos),
+                        textPrimary,
+                        borderSubtle,
+                        isDark,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildPositionChip(
+                        CoverTextPosition.bottom,
+                        'Inferior',
+                        Icons.vertical_align_bottom_rounded,
+                        _authorPosition,
+                        (pos) => setState(() => _authorPosition = pos),
+                        textPrimary,
+                        borderSubtle,
+                        isDark,
+                      ),
                     ],
                   ),
                 ],
@@ -863,11 +1148,19 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   children: [
                     Text(
                       'Capítulos',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textPrimary),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
                     ),
                     Text(
                       '${orderedChapters.length} capítulos',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textSecondary),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -880,9 +1173,14 @@ class _BookCompilerModalState extends State<BookCompilerModal>
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.03)
+                          : Colors.black.withValues(alpha: 0.02),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: borderSubtle),
                     ),
@@ -909,8 +1207,8 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                                 ch.chapterType == ChapterType.prologue
                                     ? 'Prólogo'
                                     : (ch.chapterType == ChapterType.epilogue
-                                        ? 'Epílogo'
-                                        : 'Capítulo ${ch.chapterNumber}'),
+                                          ? 'Epílogo'
+                                          : 'Capítulo ${ch.chapterNumber}'),
                                 style: TextStyle(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.bold,
@@ -922,23 +1220,41 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: isExcluded ? textSecondary.withValues(alpha: 0.4) : textPrimary,
-                                  decoration: isExcluded ? TextDecoration.lineThrough : null,
+                                  color: isExcluded
+                                      ? textSecondary.withValues(alpha: 0.4)
+                                      : textPrimary,
+                                  decoration: isExcluded
+                                      ? TextDecoration.lineThrough
+                                      : null,
                                 ),
                               ),
                             ],
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.edit_note_rounded, size: 20, color: textSecondary),
+                          icon: Icon(
+                            Icons.edit_note_rounded,
+                            size: 20,
+                            color: textSecondary,
+                          ),
                           tooltip: 'Editar título para publicación',
                           onPressed: () {
-                            final editCtrl = TextEditingController(text: customTitle);
+                            final editCtrl = TextEditingController(
+                              text: customTitle,
+                            );
                             showDialog(
                               context: context,
                               builder: (ctx) => AlertDialog(
-                                backgroundColor: isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard,
-                                title: Text('Editar Título Compilado', style: TextStyle(fontSize: 15, color: textPrimary)),
+                                backgroundColor: isDark
+                                    ? AppTheme.darkSurfaceCard
+                                    : AppTheme.lightSurfaceCard,
+                                title: Text(
+                                  'Editar Título Compilado',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: textPrimary,
+                                  ),
+                                ),
                                 content: TextField(
                                   controller: editCtrl,
                                   autofocus: true,
@@ -950,12 +1266,17 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.of(ctx).pop(),
-                                    child: Text('Cancelar', style: TextStyle(color: textSecondary)),
+                                    child: Text(
+                                      'Cancelar',
+                                      style: TextStyle(color: textSecondary),
+                                    ),
                                   ),
                                   ElevatedButton(
                                     onPressed: () {
                                       setState(() {
-                                        _customChapterTitles[ch.id] = editCtrl.text.trim();
+                                        _customChapterTitles[ch.id] = editCtrl
+                                            .text
+                                            .trim();
                                       });
                                       Navigator.of(ctx).pop();
                                     },
@@ -1004,11 +1325,19 @@ class _BookCompilerModalState extends State<BookCompilerModal>
               children: [
                 Row(
                   children: [
-                    Icon(Icons.favorite_border_rounded, size: 18, color: textSecondary),
+                    Icon(
+                      Icons.favorite_border_rounded,
+                      size: 18,
+                      color: textSecondary,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Dedicatoria de la Obra',
-                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: textPrimary),
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
                     ),
                   ],
                 ),
@@ -1016,10 +1345,17 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                 TextField(
                   controller: _dedicationCtrl,
                   maxLines: 3,
-                  style: TextStyle(fontSize: 13, color: textPrimary, fontStyle: FontStyle.italic),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: textPrimary,
+                    fontStyle: FontStyle.italic,
+                  ),
                   decoration: InputDecoration(
-                    hintText: 'ej. Para aquellos que buscan la luz en la oscuridad...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    hintText:
+                        'ej. Para aquellos que buscan la luz en la oscuridad...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],
@@ -1037,11 +1373,19 @@ class _BookCompilerModalState extends State<BookCompilerModal>
               children: [
                 Row(
                   children: [
-                    Icon(Icons.copyright_rounded, size: 18, color: textSecondary),
+                    Icon(
+                      Icons.copyright_rounded,
+                      size: 18,
+                      color: textSecondary,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Página de Derechos y Créditos (Copyright)',
-                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: textPrimary),
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
                     ),
                   ],
                 ),
@@ -1051,7 +1395,9 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   maxLines: 2,
                   style: TextStyle(fontSize: 12, color: textPrimary),
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],
@@ -1069,11 +1415,19 @@ class _BookCompilerModalState extends State<BookCompilerModal>
               children: [
                 Row(
                   children: [
-                    Icon(Icons.history_edu_rounded, size: 18, color: textSecondary),
+                    Icon(
+                      Icons.history_edu_rounded,
+                      size: 18,
+                      color: textSecondary,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Biografía del Autor',
-                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: textPrimary),
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
                     ),
                   ],
                 ),
@@ -1083,8 +1437,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   maxLines: 4,
                   style: TextStyle(fontSize: 12.5, color: textPrimary),
                   decoration: InputDecoration(
-                    hintText: 'ej. Nació en una noche de tormenta y desde entonces escribe historias sobre mundos olvidados...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    hintText:
+                        'ej. Nació en una noche de tormenta y desde entonces escribe historias sobre mundos olvidados...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],
@@ -1106,7 +1463,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                     const SizedBox(width: 8),
                     Text(
                       'Redes y Enlaces de Contacto',
-                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: textPrimary),
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
                     ),
                   ],
                 ),
@@ -1115,8 +1476,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   controller: _authorSocialsCtrl,
                   style: TextStyle(fontSize: 12.5, color: textPrimary),
                   decoration: InputDecoration(
-                    hintText: 'ej. @autor_fantasia • www.autor.com • wattpad.com/user/autor',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    hintText:
+                        'ej. @autor_fantasia • www.autor.com • wattpad.com/user/autor',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],
@@ -1134,11 +1498,19 @@ class _BookCompilerModalState extends State<BookCompilerModal>
               children: [
                 Row(
                   children: [
-                    Icon(Icons.handshake_outlined, size: 18, color: textSecondary),
+                    Icon(
+                      Icons.handshake_outlined,
+                      size: 18,
+                      color: textSecondary,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Página de Agradecimientos',
-                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: textPrimary),
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
                     ),
                   ],
                 ),
@@ -1148,8 +1520,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   maxLines: 4,
                   style: TextStyle(fontSize: 12.5, color: textPrimary),
                   decoration: InputDecoration(
-                    hintText: 'ej. Gracias a mis primeros lectores por no dejarme rendir en el camino...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    hintText:
+                        'ej. Gracias a mis primeros lectores por no dejarme rendir en el camino...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],
@@ -1176,9 +1551,13 @@ class _BookCompilerModalState extends State<BookCompilerModal>
     final readMinutes = (totalWords / 220).ceil();
     final readHours = readMinutes ~/ 60;
     final readMinsRemainder = readMinutes % 60;
-    final readTimeString = readHours > 0 ? '${readHours}h ${readMinsRemainder}m' : '${readMinutes}m';
+    final readTimeString = readHours > 0
+        ? '${readHours}h ${readMinsRemainder}m'
+        : '${readMinutes}m';
 
-    final chaptersMap = {for (final ch in widget.controller.activeBook.chapters) ch.id: ch};
+    final chaptersMap = {
+      for (final ch in widget.controller.activeBook.chapters) ch.id: ch,
+    };
     final orderedChapters = _orderedChapterIds
         .map((id) => chaptersMap[id])
         .whereType<ChapterModel>()
@@ -1199,7 +1578,9 @@ class _BookCompilerModalState extends State<BookCompilerModal>
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.04)
+                  : Colors.black.withValues(alpha: 0.03),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: borderSubtle),
             ),
@@ -1222,10 +1603,7 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                       const SizedBox(height: 2),
                       Text(
                         '⏱️ ~$readTimeString de lectura estimada  •  $totalWords palabras totales',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: textSecondary,
-                        ),
+                        style: TextStyle(fontSize: 11.5, color: textSecondary),
                       ),
                     ],
                   ),
@@ -1239,14 +1617,19 @@ class _BookCompilerModalState extends State<BookCompilerModal>
           // Presets de Maquetación
           Text(
             'Presets de Maquetación Editorial',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textPrimary),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: textPrimary,
+            ),
           ),
           const SizedBox(height: 12),
 
           _buildPresetCard(
             preset: EditorialPreset.classic,
             title: 'Clásica / Novela Tradicional',
-            subtitle: 'Tipografía serif clásica (Lora/Georgia), sangría francesa (1.5em) y saltos florales centrados. Estilo estándar en editoriales de narrativa y ficción.',
+            subtitle:
+                'Tipografía serif clásica (Lora/Georgia), sangría francesa (1.5em) y saltos florales centrados. Estilo estándar en editoriales de narrativa y ficción.',
             icon: Icons.history_edu_rounded,
             isDark: isDark,
             textPrimary: textPrimary,
@@ -1258,7 +1641,8 @@ class _BookCompilerModalState extends State<BookCompilerModal>
           _buildPresetCard(
             preset: EditorialPreset.modern,
             title: 'Moderna / Minimalista',
-            subtitle: 'Tipografía limpia sin serifa (Sans-Serif), espaciado de bloque entre párrafos sin sangría. Ideal para no-ficción, ensayo, sci-fi y publicación web.',
+            subtitle:
+                'Tipografía limpia sin serifa (Sans-Serif), espaciado de bloque entre párrafos sin sangría. Ideal para no-ficción, ensayo, sci-fi y publicación web.',
             icon: Icons.auto_awesome_rounded,
             isDark: isDark,
             textPrimary: textPrimary,
@@ -1270,7 +1654,8 @@ class _BookCompilerModalState extends State<BookCompilerModal>
           _buildPresetCard(
             preset: EditorialPreset.manuscriptSubmission,
             title: 'Envío Editorial / Concurso',
-            subtitle: 'Formato estándar de manuscrito (Courier/monoespaciada, interlineado doble amplio, márgenes uniformes) para certámenes literarios y agencias.',
+            subtitle:
+                'Formato estándar de manuscrito (Courier/monoespaciada, interlineado doble amplio, márgenes uniformes) para certámenes literarios y agencias.',
             icon: Icons.article_rounded,
             isDark: isDark,
             textPrimary: textPrimary,
@@ -1289,7 +1674,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
               children: [
                 Text(
                   'Separador de Escenas en Capítulos',
-                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: textPrimary),
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                    color: textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Wrap(
@@ -1303,12 +1692,16 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
-                          color: isSel ? (isDark ? Colors.black : Colors.white) : textPrimary,
+                          color: isSel
+                              ? (isDark ? Colors.black : Colors.white)
+                              : textPrimary,
                         ),
                       ),
                       selected: isSel,
                       selectedColor: isDark ? Colors.white : Colors.black,
-                      backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
+                      backgroundColor: isDark
+                          ? Colors.white10
+                          : Colors.black.withValues(alpha: 0.04),
                       onSelected: (selected) {
                         if (selected) {
                           setState(() {
@@ -1327,7 +1720,9 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   decoration: InputDecoration(
                     labelText: 'Separador Personalizado',
                     hintText: 'ej. ~ * ~ o * * *',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.check_rounded, size: 18),
                       onPressed: () {
@@ -1360,7 +1755,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   children: [
                     Text(
                       'Tabla de Contenidos (Índice)',
-                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: textPrimary),
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
                     ),
                     Switch(
                       value: _includeToc,
@@ -1372,7 +1771,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   const SizedBox(height: 12),
                   Text(
                     'Orden de lectura:',
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: textSecondary),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   ...orderedChapters.asMap().entries.map((entry) {
@@ -1382,47 +1785,68 @@ class _BookCompilerModalState extends State<BookCompilerModal>
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.02),
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.02)
+                            : Colors.black.withValues(alpha: 0.02),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
                           Text(
                             '${index + 1}.',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textSecondary),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: textSecondary,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               customTitle,
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: textPrimary,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           InkWell(
                             borderRadius: BorderRadius.circular(4),
-                            onTap: index > 0 ? () => _moveChapter(index, -1) : null,
+                            onTap: index > 0
+                                ? () => _moveChapter(index, -1)
+                                : null,
                             child: Padding(
                               padding: const EdgeInsets.all(4),
                               child: Icon(
                                 Icons.keyboard_arrow_up_rounded,
                                 size: 18,
-                                color: index > 0 ? textPrimary : textSecondary.withValues(alpha: 0.25),
+                                color: index > 0
+                                    ? textPrimary
+                                    : textSecondary.withValues(alpha: 0.25),
                               ),
                             ),
                           ),
                           InkWell(
                             borderRadius: BorderRadius.circular(4),
-                            onTap: index < orderedChapters.length - 1 ? () => _moveChapter(index, 1) : null,
+                            onTap: index < orderedChapters.length - 1
+                                ? () => _moveChapter(index, 1)
+                                : null,
                             child: Padding(
                               padding: const EdgeInsets.all(4),
                               child: Icon(
                                 Icons.keyboard_arrow_down_rounded,
                                 size: 18,
-                                color: index < orderedChapters.length - 1 ? textPrimary : textSecondary.withValues(alpha: 0.25),
+                                color: index < orderedChapters.length - 1
+                                    ? textPrimary
+                                    : textSecondary.withValues(alpha: 0.25),
                               ),
                             ),
                           ),
@@ -1475,7 +1899,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.ios_share_rounded, size: 15, color: textSecondary),
+                      Icon(
+                        Icons.ios_share_rounded,
+                        size: 15,
+                        color: textSecondary,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Formatos de Publicación',
@@ -1499,7 +1927,11 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                         const SizedBox(width: 6),
                         Text(
                           'Compilando ${_currentlyExportingFormat?.toUpperCase()}...',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textPrimary),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: textPrimary,
+                          ),
                         ),
                       ],
                     ),
@@ -1620,11 +2052,7 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   ),
                 )
               else
-                Icon(
-                  icon,
-                  size: 17,
-                  color: accentColor,
-                ),
+                Icon(icon, size: 17, color: accentColor),
               const SizedBox(width: 5),
               Flexible(
                 child: Text(
@@ -1664,7 +2092,13 @@ class _BookCompilerModalState extends State<BookCompilerModal>
     );
   }
 
-  Widget _buildSegmentButton(int index, IconData icon, String label, Color textPrimary, bool isDark) {
+  Widget _buildSegmentButton(
+    int index,
+    IconData icon,
+    String label,
+    Color textPrimary,
+    bool isDark,
+  ) {
     final isSelected = _coverSectionIndex == index;
     return Expanded(
       child: GestureDetector(
@@ -1673,7 +2107,9 @@ class _BookCompilerModalState extends State<BookCompilerModal>
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? (isDark ? Colors.white12 : Colors.white) : Colors.transparent,
+            color: isSelected
+                ? (isDark ? Colors.white12 : Colors.white)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             boxShadow: isSelected
                 ? [
@@ -1691,7 +2127,9 @@ class _BookCompilerModalState extends State<BookCompilerModal>
               Icon(
                 icon,
                 size: 16,
-                color: isSelected ? textPrimary : textPrimary.withValues(alpha: 0.5),
+                color: isSelected
+                    ? textPrimary
+                    : textPrimary.withValues(alpha: 0.5),
               ),
               const SizedBox(width: 6),
               Text(
@@ -1699,10 +2137,205 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? textPrimary : textPrimary.withValues(alpha: 0.6),
+                  color: isSelected
+                      ? textPrimary
+                      : textPrimary.withValues(alpha: 0.6),
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  TextStyle _coverTextStyle({
+    required double fontSize,
+    FontWeight fontWeight = FontWeight.normal,
+    FontStyle fontStyle = FontStyle.normal,
+    double letterSpacing = 0,
+    double height = 1.25,
+    Color? color,
+  }) {
+    try {
+      return GoogleFonts.getFont(
+        _fontFamily,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        fontStyle: fontStyle,
+        letterSpacing: letterSpacing,
+        height: height,
+        color: color ?? Color(_textColorHex),
+      );
+    } catch (_) {
+      return TextStyle(
+        fontFamily: _fontFamily,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        fontStyle: fontStyle,
+        letterSpacing: letterSpacing,
+        height: height,
+        color: color ?? Color(_textColorHex),
+      );
+    }
+  }
+
+  Widget _buildCoverOrnament() {
+    final c = Color(_textColorHex);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 18, height: 0.9, color: c.withValues(alpha: 0.55)),
+        if (_coverStyle != 'minimal') ...[
+          const SizedBox(width: 6),
+          Transform.rotate(
+            angle: 0.785398,
+            child: Container(
+              width: 4,
+              height: 4,
+              color: c.withValues(alpha: 0.75),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(width: 18, height: 0.9, color: c.withValues(alpha: 0.55)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCoverTitleBlock() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          _titleCtrl.text.isEmpty
+              ? 'TÍTULO DE LA OBRA'
+              : _titleCtrl.text.toUpperCase(),
+          style: _coverTextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.4,
+            height: 1.22,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (_subtitleCtrl.text.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            _subtitleCtrl.text,
+            style: _coverTextStyle(
+              color: Color(_textColorHex).withValues(alpha: 0.85),
+              fontSize: 9.5,
+              fontStyle: FontStyle.italic,
+              letterSpacing: 0.3,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCoverAuthorBlock() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_textPosition != _authorPosition) ...[
+          _buildCoverOrnament(),
+          const SizedBox(height: 8),
+        ],
+        Text(
+          _authorCtrl.text.isEmpty
+              ? 'NOMBRE DEL AUTOR'
+              : _authorCtrl.text.toUpperCase(),
+          style: _coverTextStyle(
+            fontSize: 9.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.8,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCoverTextLayout() {
+    if (_textPosition == _authorPosition) {
+      return Column(
+        mainAxisAlignment: _getAlignmentFromPosition(_textPosition),
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _buildCoverTitleBlock(),
+          const SizedBox(height: 12),
+          _buildCoverOrnament(),
+          const SizedBox(height: 10),
+          _buildCoverAuthorBlock(),
+        ],
+      );
+    }
+
+    Widget? zoneWidget(CoverTextPosition zone) {
+      if (_textPosition == zone) return _buildCoverTitleBlock();
+      if (_authorPosition == zone) return _buildCoverAuthorBlock();
+      return null;
+    }
+
+    final topW = zoneWidget(CoverTextPosition.top);
+    final centerW = zoneWidget(CoverTextPosition.center);
+    final bottomW = zoneWidget(CoverTextPosition.bottom);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        if (topW != null) topW else const SizedBox(height: 12),
+        const Spacer(),
+        if (centerW != null) centerW,
+        const Spacer(),
+        if (bottomW != null) bottomW else const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildStyleChip(
+    String styleKey,
+    String label,
+    Color textPrimary,
+    Color borderSubtle,
+    bool isDark,
+  ) {
+    final isSel = _coverStyle == styleKey;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _coverStyle = styleKey),
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSel
+                ? (isDark
+                      ? Colors.white.withValues(alpha: 0.15)
+                      : Colors.black.withValues(alpha: 0.08))
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSel ? textPrimary : borderSubtle,
+              width: isSel ? 1.5 : 1,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+              color: isSel ? textPrimary : textPrimary.withValues(alpha: 0.7),
+            ),
           ),
         ),
       ),
@@ -1713,20 +2346,24 @@ class _BookCompilerModalState extends State<BookCompilerModal>
     CoverTextPosition pos,
     String label,
     IconData icon,
+    CoverTextPosition currentValue,
+    ValueChanged<CoverTextPosition> onSelect,
     Color textPrimary,
     Color borderSubtle,
     bool isDark,
   ) {
-    final isSel = _textPosition == pos;
+    final isSel = currentValue == pos;
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _textPosition = pos),
+        onTap: () => onSelect(pos),
         borderRadius: BorderRadius.circular(10),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: isSel
-                ? (isDark ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.08))
+                ? (isDark
+                      ? Colors.white.withValues(alpha: 0.15)
+                      : Colors.black.withValues(alpha: 0.08))
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
@@ -1737,14 +2374,20 @@ class _BookCompilerModalState extends State<BookCompilerModal>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: isSel ? textPrimary : textPrimary.withValues(alpha: 0.6)),
+              Icon(
+                icon,
+                size: 18,
+                color: isSel ? textPrimary : textPrimary.withValues(alpha: 0.6),
+              ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                  color: isSel ? textPrimary : textPrimary.withValues(alpha: 0.7),
+                  color: isSel
+                      ? textPrimary
+                      : textPrimary.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -1768,7 +2411,9 @@ class _BookCompilerModalState extends State<BookCompilerModal>
             color: Color(hex),
             shape: BoxShape.circle,
             border: Border.all(
-              color: isSel ? (isDark ? Colors.white : Colors.black) : Colors.grey.shade600,
+              color: isSel
+                  ? (isDark ? Colors.white : Colors.black)
+                  : Colors.grey.shade600,
               width: isSel ? 2.5 : 1,
             ),
           ),
@@ -1809,8 +2454,12 @@ class _BookCompilerModalState extends State<BookCompilerModal>
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: isSelected
-              ? (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05))
-              : (isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02)),
+              ? (isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.05))
+              : (isDark
+                    ? Colors.white.withValues(alpha: 0.03)
+                    : Colors.black.withValues(alpha: 0.02)),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? activeColor : borderSubtle,
@@ -1825,10 +2474,16 @@ class _BookCompilerModalState extends State<BookCompilerModal>
               decoration: BoxDecoration(
                 color: isSelected
                     ? (isDark ? Colors.white12 : Colors.black12)
-                    : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                    : (isDark
+                          ? Colors.white10
+                          : Colors.black.withValues(alpha: 0.05)),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, size: 20, color: isSelected ? activeColor : textSecondary),
+              child: Icon(
+                icon,
+                size: 20,
+                color: isSelected ? activeColor : textSecondary,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1848,13 +2503,21 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                         ),
                       ),
                       if (isSelected)
-                        Icon(Icons.check_circle_rounded, size: 18, color: activeColor),
+                        Icon(
+                          Icons.check_circle_rounded,
+                          size: 18,
+                          color: activeColor,
+                        ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 11.5, color: textSecondary, height: 1.35),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: textSecondary,
+                      height: 1.35,
+                    ),
                   ),
                 ],
               ),

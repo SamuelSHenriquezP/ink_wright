@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../controllers/editor_controller.dart';
 import '../../models/chapter_model.dart';
-import '../../models/chapter_bookmark_model.dart';
 import '../../formatters/writer_text_formatter.dart';
 
 class ChapterBookmarksSheet extends StatelessWidget {
@@ -53,10 +52,18 @@ class ChapterBookmarksSheet extends StatelessWidget {
     int end = (safeOffset + 25).clamp(0, text.length);
     final snippet = text.isEmpty ? '' : text.substring(start, end).trim();
 
-    final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
-    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
-    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final bgCard = isDark
+        ? AppTheme.darkSurfaceCard
+        : AppTheme.lightSurfaceCard;
+    final textPrimary = isDark
+        ? AppTheme.darkTextPrimary
+        : AppTheme.lightTextPrimary;
+    final textSecondary = isDark
+        ? AppTheme.darkTextSecondary
+        : AppTheme.lightTextSecondary;
+    final borderSubtle = isDark
+        ? AppTheme.darkBorderSubtle
+        : AppTheme.lightBorderSubtle;
 
     showDialog(
       context: context,
@@ -72,7 +79,11 @@ class ChapterBookmarksSheet extends StatelessWidget {
             const SizedBox(width: 10),
             Text(
               'Nuevo Marcapáginas',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: textPrimary),
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: textPrimary,
+              ),
             ),
           ],
         ),
@@ -83,19 +94,29 @@ class ChapterBookmarksSheet extends StatelessWidget {
             if (snippet.isNotEmpty) ...[
               Text(
                 'Posición actual:',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textSecondary),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: textSecondary,
+                ),
               ),
               const SizedBox(height: 4),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04),
+                  color: isDark
+                      ? Colors.white10
+                      : Colors.black.withValues(alpha: 0.04),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '«$snippet»',
-                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: textPrimary),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: textPrimary,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -131,7 +152,9 @@ class ChapterBookmarksSheet extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: isDark ? Colors.white : Colors.black,
               foregroundColor: isDark ? Colors.black : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () {
               final label = textController.text.trim();
@@ -158,10 +181,18 @@ class ChapterBookmarksSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
-    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
-    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final bgCard = isDark
+        ? AppTheme.darkSurfaceCard
+        : AppTheme.lightSurfaceCard;
+    final textPrimary = isDark
+        ? AppTheme.darkTextPrimary
+        : AppTheme.lightTextPrimary;
+    final textSecondary = isDark
+        ? AppTheme.darkTextSecondary
+        : AppTheme.lightTextSecondary;
+    final borderSubtle = isDark
+        ? AppTheme.darkBorderSubtle
+        : AppTheme.lightBorderSubtle;
 
     return ListenableBuilder(
       listenable: controller,
@@ -178,228 +209,291 @@ class ChapterBookmarksSheet extends StatelessWidget {
           height: MediaQuery.of(context).size.height * 0.70,
           decoration: BoxDecoration(
             color: bgCard,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.sheetRadius)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppTheme.sheetRadius),
+            ),
             border: Border.all(color: borderSubtle),
           ),
-      child: Column(
-        children: [
-          // Drag Handle
-          Container(
-            margin: const EdgeInsets.only(top: 12, bottom: 8),
-            width: 38,
-            height: 4,
-            decoration: BoxDecoration(
-              color: textSecondary.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 16, 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.bookmark_rounded, size: 20, color: textPrimary),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Marcadores del Capítulo',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              color: textPrimary,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Puntos de retorno rápido en «${liveChapter.title}» (${bookmarks.length} guardados)',
-                        style: TextStyle(fontSize: 12, color: textSecondary),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+          child: Column(
+            children: [
+              // Drag Handle
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: textSecondary.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded, size: 20),
-                  onPressed: () => Navigator.of(context).pop(),
-                  tooltip: 'Cerrar',
-                ),
-              ],
-            ),
-          ),
+              ),
 
-          // Add bookmark button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark ? Colors.white : Colors.black,
-                      foregroundColor: isDark ? Colors.black : Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 0,
-                    ),
-                    icon: const Icon(Icons.bookmark_add_rounded, size: 17),
-                    label: const Text(
-                      'Añadir Marcador en Cursor Actual',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                    ),
-                    onPressed: () => _showAddBookmarkDialog(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 8),
-          Divider(height: 1, color: borderSubtle),
-
-          // Bookmarks List
-          Expanded(
-            child: bookmarks.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 16, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.bookmark_border_rounded,
-                            size: 46,
-                            color: textSecondary.withValues(alpha: 0.4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.bookmark_rounded,
+                                size: 20,
+                                color: textPrimary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Marcadores del Capítulo',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: textPrimary,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 2),
                           Text(
-                            'No hay marcadores en este capítulo',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPrimary),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Coloca marcas en frases clave para volver a ellas al instante con un solo toque.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12, color: textSecondary, height: 1.4),
+                            'Puntos de retorno rápido en «${liveChapter.title}» (${bookmarks.length} guardados)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
-                    itemCount: bookmarks.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final bm = bookmarks[index];
-                      final dateStr = WriterTextFormatter.formatSpanishDate(bm.createdAt);
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      onPressed: () => Navigator.of(context).pop(),
+                      tooltip: 'Cerrar',
+                    ),
+                  ],
+                ),
+              ),
 
-                      return Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02),
-                          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                          border: Border.all(color: borderSubtle),
+              // Add bookmark button
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 4,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? Colors.white : Colors.black,
+                          foregroundColor: isDark ? Colors.black : Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.bookmark_rounded,
-                                  size: 16,
-                                  color: isDark ? Colors.amberAccent : Colors.amber.shade800,
+                        icon: const Icon(Icons.bookmark_add_rounded, size: 17),
+                        label: const Text(
+                          'Añadir Marcador en Cursor Actual',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        onPressed: () => _showAddBookmarkDialog(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 8),
+              Divider(height: 1, color: borderSubtle),
+
+              // Bookmarks List
+              Expanded(
+                child: bookmarks.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.bookmark_border_rounded,
+                                size: 46,
+                                color: textSecondary.withValues(alpha: 0.4),
+                              ),
+                              const SizedBox(height: 14),
+                              Text(
+                                'No hay marcadores en este capítulo',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: textPrimary,
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    bm.label,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: textPrimary,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Coloca marcas en frases clave para volver a ellas al instante con un solo toque.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: textSecondary,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
+                        itemCount: bookmarks.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final bm = bookmarks[index];
+                          final dateStr = WriterTextFormatter.formatSpanishDate(
+                            bm.createdAt,
+                          );
+
+                          return Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.04)
+                                  : Colors.black.withValues(alpha: 0.02),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.cardRadius,
+                              ),
+                              border: Border.all(color: borderSubtle),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.bookmark_rounded,
+                                      size: 16,
+                                      color: isDark
+                                          ? Colors.amberAccent
+                                          : Colors.amber.shade800,
                                     ),
-                                    maxLines: 1,
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        bm.label,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: textPrimary,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Text(
+                                      dateStr,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? Colors.white.withValues(alpha: 0.05)
+                                        : Colors.black.withValues(alpha: 0.03),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '«${bm.previewText}»',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                      color: textSecondary,
+                                    ),
+                                    maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                Text(
-                                  dateStr,
-                                  style: TextStyle(fontSize: 11, color: textSecondary),
+                                const SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: textPrimary,
+                                        side: BorderSide(color: borderSubtle),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                        visualDensity: VisualDensity.compact,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                      ),
+                                      icon: const Icon(
+                                        Icons.arrow_forward_rounded,
+                                        size: 13,
+                                      ),
+                                      label: const Text(
+                                        'Ir al punto',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                        onJumpToBookmark(bm.charOffset);
+                                      },
+                                    ),
+                                    const SizedBox(width: 6),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.delete_outline_rounded,
+                                        size: 16,
+                                        color: textSecondary,
+                                      ),
+                                      visualDensity: VisualDensity.compact,
+                                      tooltip: 'Eliminar marcador',
+                                      onPressed: () {
+                                        controller.removeBookmark(
+                                          chapter.id,
+                                          bm.id,
+                                        );
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '«${bm.previewText}»',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontStyle: FontStyle.italic,
-                                  color: textSecondary,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                OutlinedButton.icon(
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: textPrimary,
-                                    side: BorderSide(color: borderSubtle),
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    visualDensity: VisualDensity.compact,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  icon: const Icon(Icons.arrow_forward_rounded, size: 13),
-                                  label: const Text('Ir al punto', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                    onJumpToBookmark(bm.charOffset);
-                                  },
-                                ),
-                                const SizedBox(width: 6),
-                                IconButton(
-                                  icon: Icon(Icons.delete_outline_rounded, size: 16, color: textSecondary),
-                                  visualDensity: VisualDensity.compact,
-                                  tooltip: 'Eliminar marcador',
-                                  onPressed: () {
-                                    controller.removeBookmark(chapter.id, bm.id);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
-  },
-);
   }
 }
-

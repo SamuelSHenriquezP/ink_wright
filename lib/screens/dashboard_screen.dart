@@ -175,7 +175,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                             Text(
-                              'InkWright Studio',
+                              'InkWright',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,

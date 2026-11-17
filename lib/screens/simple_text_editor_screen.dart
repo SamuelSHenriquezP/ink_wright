@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
@@ -130,9 +129,15 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
     final isDark = themeController.isDarkMode;
 
     final bgPrimary = isDark ? AppTheme.darkBgPrimary : AppTheme.lightBgPrimary;
-    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
-    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final textPrimary = isDark
+        ? AppTheme.darkTextPrimary
+        : AppTheme.lightTextPrimary;
+    final textSecondary = isDark
+        ? AppTheme.darkTextSecondary
+        : AppTheme.lightTextSecondary;
+    final borderSubtle = isDark
+        ? AppTheme.darkBorderSubtle
+        : AppTheme.lightBorderSubtle;
     final accentColor = isDark ? Colors.white : Colors.black;
 
     _syncTitle(controller);
@@ -152,7 +157,9 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
               height: 54,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: borderSubtle, width: 0.8)),
+                border: Border(
+                  bottom: BorderSide(color: borderSubtle, width: 0.8),
+                ),
               ),
               child: Row(
                 children: [
@@ -177,7 +184,8 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
                         ? () {
                             controller.goToPreviousChapter();
                             _syncTitle(controller);
-                            if (_scrollController.hasClients) _scrollController.jumpTo(0);
+                            if (_scrollController.hasClients)
+                              _scrollController.jumpTo(0);
                           }
                         : null,
                   ),
@@ -189,7 +197,8 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
                         ? () {
                             controller.goToNextChapter();
                             _syncTitle(controller);
-                            if (_scrollController.hasClients) _scrollController.jumpTo(0);
+                            if (_scrollController.hasClients)
+                              _scrollController.jumpTo(0);
                           }
                         : null,
                   ),
@@ -235,7 +244,9 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
                       margin: const EdgeInsets.only(right: 8),
                       child: CircularProgressIndicator(
                         strokeWidth: 1.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(textSecondary),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          textSecondary,
+                        ),
                       ),
                     ),
                   ],
@@ -245,13 +256,17 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
                     icon: const Icon(Icons.undo_rounded, size: 19),
                     tooltip: 'Deshacer (Ctrl+Z)',
                     visualDensity: VisualDensity.compact,
-                    onPressed: controller.canUndo ? () => controller.undo() : null,
+                    onPressed: controller.canUndo
+                        ? () => controller.undo()
+                        : null,
                   ),
                   IconButton(
                     icon: const Icon(Icons.redo_rounded, size: 19),
                     tooltip: 'Rehacer (Ctrl+Y)',
                     visualDensity: VisualDensity.compact,
-                    onPressed: controller.canRedo ? () => controller.redo() : null,
+                    onPressed: controller.canRedo
+                        ? () => controller.redo()
+                        : null,
                   ),
 
                   // Selector de tipografía / fuente
@@ -259,13 +274,16 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
                     icon: const Icon(Icons.format_size_rounded, size: 20),
                     tooltip: 'Tipografía y tamaño de texto',
                     visualDensity: VisualDensity.compact,
-                    onPressed: () => _openTypographySheet(context, controller, isDark),
+                    onPressed: () =>
+                        _openTypographySheet(context, controller, isDark),
                   ),
 
                   // Alternar Tema Claro / Oscuro
                   IconButton(
                     icon: Icon(
-                      isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                      isDark
+                          ? Icons.light_mode_rounded
+                          : Icons.dark_mode_rounded,
                       size: 20,
                     ),
                     tooltip: isDark ? 'Modo claro' : 'Modo oscuro',
@@ -314,11 +332,15 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
                                 decoration: InputDecoration(
                                   hintText: 'Título del capítulo...',
                                   hintStyle: TextStyle(
-                                    color: textSecondary.withValues(alpha: 0.35),
+                                    color: textSecondary.withValues(
+                                      alpha: 0.35,
+                                    ),
                                     fontWeight: FontWeight.w700,
                                   ),
                                   border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
                                 ),
                                 onChanged: (val) {
                                   controller.updateActiveChapterTitle(val);
@@ -345,15 +367,18 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
                                 ),
                                 decoration: InputDecoration(
                                   hintText: 'Escribe libremente aquí...',
-                                  hintStyle: _getEditorFontTextStyle(
-                                    controller.selectedFontFamily,
-                                    controller.fontSize,
-                                    controller.lineHeight,
-                                    isDark,
-                                  ).copyWith(
-                                    color: textSecondary.withValues(alpha: 0.35),
-                                    fontStyle: FontStyle.italic,
-                                  ),
+                                  hintStyle:
+                                      _getEditorFontTextStyle(
+                                        controller.selectedFontFamily,
+                                        controller.fontSize,
+                                        controller.lineHeight,
+                                        isDark,
+                                      ).copyWith(
+                                        color: textSecondary.withValues(
+                                          alpha: 0.35,
+                                        ),
+                                        fontStyle: FontStyle.italic,
+                                      ),
                                   border: InputBorder.none,
                                   contentPadding: EdgeInsets.zero,
                                 ),
@@ -371,18 +396,26 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
                       bottom: 18,
                       right: 18,
                       child: GestureDetector(
-                        onTap: () => setState(() => _showMetricsBar = !_showMetricsBar),
+                        onTap: () =>
+                            setState(() => _showMetricsBar = !_showMetricsBar),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: isDark
-                                ? const Color(0xFF1E1E22).withValues(alpha: 0.92)
+                                ? const Color(
+                                    0xFF1E1E22,
+                                  ).withValues(alpha: 0.92)
                                 : Colors.white.withValues(alpha: 0.92),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: borderSubtle),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+                                color: Colors.black.withValues(
+                                  alpha: isDark ? 0.3 : 0.08,
+                                ),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -391,7 +424,11 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.edit_note_rounded, size: 14, color: textSecondary),
+                              Icon(
+                                Icons.edit_note_rounded,
+                                size: 14,
+                                color: textSecondary,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 '$wordCount palabras • $readingTime min',
@@ -415,4 +452,3 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
     );
   }
 }
-

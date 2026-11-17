@@ -13,6 +13,8 @@ class BookCoverConfig {
   final int textColorHex;
   final String fontFamily;
   final CoverTextPosition textPosition;
+  final CoverTextPosition authorPosition;
+  final String coverStyle; // 'editorial', 'framed', 'minimal'
 
   const BookCoverConfig({
     required this.title,
@@ -23,6 +25,8 @@ class BookCoverConfig {
     this.textColorHex = 0xFFF4F4F5, // Ivory / Platinum
     this.fontFamily = 'Playfair Display',
     this.textPosition = CoverTextPosition.center,
+    this.authorPosition = CoverTextPosition.bottom,
+    this.coverStyle = 'editorial',
   });
 
   BookCoverConfig copyWith({
@@ -35,6 +39,8 @@ class BookCoverConfig {
     int? textColorHex,
     String? fontFamily,
     CoverTextPosition? textPosition,
+    CoverTextPosition? authorPosition,
+    String? coverStyle,
   }) {
     return BookCoverConfig(
       title: title ?? this.title,
@@ -45,6 +51,8 @@ class BookCoverConfig {
       textColorHex: textColorHex ?? this.textColorHex,
       fontFamily: fontFamily ?? this.fontFamily,
       textPosition: textPosition ?? this.textPosition,
+      authorPosition: authorPosition ?? this.authorPosition,
+      coverStyle: coverStyle ?? this.coverStyle,
     );
   }
 
@@ -58,10 +66,20 @@ class BookCoverConfig {
       'textColorHex': textColorHex,
       'fontFamily': fontFamily,
       'textPosition': textPosition.name,
+      'authorPosition': authorPosition.name,
+      'coverStyle': coverStyle,
     };
   }
 
   factory BookCoverConfig.fromMap(Map<String, dynamic> map) {
+    final titlePos = CoverTextPosition.values.firstWhere(
+      (p) => p.name == (map['textPosition'] as String? ?? ''),
+      orElse: () => CoverTextPosition.center,
+    );
+    final authorPos = CoverTextPosition.values.firstWhere(
+      (p) => p.name == (map['authorPosition'] as String? ?? ''),
+      orElse: () => CoverTextPosition.bottom,
+    );
     return BookCoverConfig(
       title: map['title'] as String? ?? '',
       author: map['author'] as String? ?? '',
@@ -70,10 +88,9 @@ class BookCoverConfig {
       backgroundColorHex: (map['backgroundColorHex'] as num?)?.toInt() ?? 0xFF18181B,
       textColorHex: (map['textColorHex'] as num?)?.toInt() ?? 0xFFF4F4F5,
       fontFamily: map['fontFamily'] as String? ?? 'Playfair Display',
-      textPosition: CoverTextPosition.values.firstWhere(
-        (p) => p.name == (map['textPosition'] as String? ?? ''),
-        orElse: () => CoverTextPosition.center,
-      ),
+      textPosition: titlePos,
+      authorPosition: authorPos,
+      coverStyle: map['coverStyle'] as String? ?? 'editorial',
     );
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../controllers/editor_controller.dart';
 import '../../models/character_relationship_model.dart';
-import '../../theme/app_theme.dart';
 import 'relationship_form_modal.dart';
 import 'relationship_graph_view.dart';
 
@@ -47,7 +46,9 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
         final fromName = charMap[rel.fromCharacterId]?.name.toLowerCase() ?? '';
         final toName = charMap[rel.toCharacterId]?.name.toLowerCase() ?? '';
         final desc = rel.description.toLowerCase();
-        if (!fromName.contains(query) && !toName.contains(query) && !desc.contains(query)) {
+        if (!fromName.contains(query) &&
+            !toName.contains(query) &&
+            !desc.contains(query)) {
           return false;
         }
       }
@@ -66,7 +67,9 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                      color: isDark
+                          ? Colors.white10
+                          : Colors.black.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -76,7 +79,9 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
                           icon: Icon(
                             Icons.view_list_rounded,
                             size: 18,
-                            color: !_isGraphView ? (isDark ? Colors.white : Colors.black) : textSecondary,
+                            color: !_isGraphView
+                                ? (isDark ? Colors.white : Colors.black)
+                                : textSecondary,
                           ),
                           tooltip: 'Vista Lista',
                           visualDensity: VisualDensity.compact,
@@ -86,7 +91,9 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
                           icon: Icon(
                             Icons.bubble_chart_rounded,
                             size: 18,
-                            color: _isGraphView ? (isDark ? Colors.white : Colors.black) : textSecondary,
+                            color: _isGraphView
+                                ? (isDark ? Colors.white : Colors.black)
+                                : textSecondary,
                           ),
                           tooltip: 'Vista Red / Grafo',
                           visualDensity: VisualDensity.compact,
@@ -98,7 +105,11 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
                   const SizedBox(width: 8),
                   Text(
                     '${filteredRelationships.length} ${filteredRelationships.length == 1 ? "vínculo" : "vínculos"}',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textSecondary),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -107,8 +118,13 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
                   backgroundColor: isDark ? Colors.white : Colors.black,
                   foregroundColor: isDark ? Colors.black : Colors.white,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -117,7 +133,8 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
                   'Vincular',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                 ),
-                onPressed: () => RelationshipFormModal.show(context, controller),
+                onPressed: () =>
+                    RelationshipFormModal.show(context, controller),
               ),
             ],
           ),
@@ -136,7 +153,11 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
                 decoration: InputDecoration(
                   hintText: 'Buscar por personaje o conflicto...',
                   hintStyle: TextStyle(fontSize: 12, color: textSecondary),
-                  prefixIcon: Icon(Icons.search_rounded, size: 16, color: textSecondary),
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    size: 16,
+                    color: textSecondary,
+                  ),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear_rounded, size: 14),
@@ -147,7 +168,9 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
                         )
                       : null,
                   filled: true,
-                  fillColor: isDark ? const Color(0xFF242428) : const Color(0xFFF1F3F5),
+                  fillColor: isDark
+                      ? const Color(0xFF242428)
+                      : const Color(0xFFF1F3F5),
                   contentPadding: EdgeInsets.zero,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -209,15 +232,25 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
                           width: 56,
                           height: 56,
                           decoration: BoxDecoration(
-                            color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                            color: isDark
+                                ? Colors.white10
+                                : Colors.black.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.hub_outlined, size: 28, color: textSecondary),
+                          child: Icon(
+                            Icons.hub_outlined,
+                            size: 28,
+                            color: textSecondary,
+                          ),
                         ),
                         const SizedBox(height: 14),
                         Text(
                           'Sin vínculos aún',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: textPrimary),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: textPrimary,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -230,228 +263,288 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: textPrimary,
                             side: BorderSide(color: borderSubtle),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                           icon: const Icon(Icons.add_rounded, size: 16),
                           label: const Text('Crear Primer Vínculo'),
-                          onPressed: () => RelationshipFormModal.show(context, controller),
+                          onPressed: () =>
+                              RelationshipFormModal.show(context, controller),
                         ),
                       ],
                     ),
                   ),
                 )
               : _isGraphView
-                  ? RelationshipGraphView(controller: controller)
-                  : filteredRelationships.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No se encontraron vínculos con los filtros actuales',
-                            style: TextStyle(color: textSecondary, fontSize: 13),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                          itemCount: filteredRelationships.length,
-                          itemBuilder: (ctx, index) {
-                            final rel = filteredRelationships[index];
-                            final fromChar = charMap[rel.fromCharacterId];
-                            final toChar = charMap[rel.toCharacterId];
-                            final type = rel.type;
+              ? RelationshipGraphView(controller: controller)
+              : filteredRelationships.isEmpty
+              ? Center(
+                  child: Text(
+                    'No se encontraron vínculos con los filtros actuales',
+                    style: TextStyle(color: textSecondary, fontSize: 13),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  itemCount: filteredRelationships.length,
+                  itemBuilder: (ctx, index) {
+                    final rel = filteredRelationships[index];
+                    final fromChar = charMap[rel.fromCharacterId];
+                    final toChar = charMap[rel.toCharacterId];
+                    final type = rel.type;
 
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF27272A) : const Color(0xFFF9F9FB),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: borderSubtle),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        // From Character
-                                        Expanded(
-                                          child: Row(
-                                            children: [
-                                              CircleAvatar(
-                                                radius: 12,
-                                                backgroundColor: isDark
-                                                    ? Colors.white12
-                                                    : Colors.black.withValues(alpha: 0.06),
-                                                child: Icon(
-                                                  Icons.person_rounded,
-                                                  size: 15,
-                                                  color: isDark ? Colors.white70 : Colors.black87,
-                                                ),
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF27272A)
+                            : const Color(0xFFF9F9FB),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: borderSubtle),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                // From Character
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 12,
+                                        backgroundColor: isDark
+                                            ? Colors.white12
+                                            : Colors.black.withValues(
+                                                alpha: 0.06,
                                               ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  fromChar?.name ?? 'Desconocido',
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: textPrimary,
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                        child: Icon(
+                                          Icons.person_rounded,
+                                          size: 15,
+                                          color: isDark
+                                              ? Colors.white70
+                                              : Colors.black87,
                                         ),
-
-                                        // Relation Chip in middle
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Color(type.colorHex).withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(color: Color(type.colorHex).withValues(alpha: 0.4)),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                type.iconData,
-                                                size: 13,
-                                                color: Color(type.colorHex),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                type.label,
-                                                style: TextStyle(
-                                                  fontSize: 10.5,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: Color(type.colorHex),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Icon(
-                                                rel.isMutual ? Icons.swap_horiz_rounded : Icons.arrow_forward_rounded,
-                                                size: 13,
-                                                color: Color(type.colorHex),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-
-                                        // To Character
-                                        Expanded(
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.end,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  toChar?.name ?? 'Desconocido',
-                                                  textAlign: TextAlign.end,
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: textPrimary,
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              CircleAvatar(
-                                                radius: 12,
-                                                backgroundColor: isDark
-                                                    ? Colors.white12
-                                                    : Colors.black.withValues(alpha: 0.06),
-                                                child: Icon(
-                                                  Icons.person_rounded,
-                                                  size: 15,
-                                                  color: isDark ? Colors.white70 : Colors.black87,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-
-                                    // Description / Conflict Notes
-                                    if (rel.description.isNotEmpty) ...[
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
                                         child: Text(
-                                          rel.description,
+                                          fromChar?.name ?? 'Desconocido',
                                           style: TextStyle(
-                                            fontSize: 12,
-                                            color: textSecondary,
-                                            fontStyle: FontStyle.italic,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: textPrimary,
                                           ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
+                                  ),
+                                ),
 
-                                    const SizedBox(height: 8),
-                                    const Divider(height: 1),
-                                    const SizedBox(height: 6),
+                                // Relation Chip in middle
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Color(
+                                      type.colorHex,
+                                    ).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Color(
+                                        type.colorHex,
+                                      ).withValues(alpha: 0.4),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        type.iconData,
+                                        size: 13,
+                                        color: Color(type.colorHex),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        type.label,
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(type.colorHex),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        rel.isMutual
+                                            ? Icons.swap_horiz_rounded
+                                            : Icons.arrow_forward_rounded,
+                                        size: 13,
+                                        color: Color(type.colorHex),
+                                      ),
+                                    ],
+                                  ),
+                                ),
 
-                                    // Bottom row: Intensity indicator & Action Buttons
+                                // To Character
+                                Expanded(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          toChar?.name ?? 'Desconocido',
+                                          textAlign: TextAlign.end,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: textPrimary,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      CircleAvatar(
+                                        radius: 12,
+                                        backgroundColor: isDark
+                                            ? Colors.white12
+                                            : Colors.black.withValues(
+                                                alpha: 0.06,
+                                              ),
+                                        child: Icon(
+                                          Icons.person_rounded,
+                                          size: 15,
+                                          color: isDark
+                                              ? Colors.white70
+                                              : Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // Description / Conflict Notes
+                            if (rel.description.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.04)
+                                      : Colors.black.withValues(alpha: 0.03),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  rel.description,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: textSecondary,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                            ],
+
+                            const SizedBox(height: 8),
+                            const Divider(height: 1),
+                            const SizedBox(height: 6),
+
+                            // Bottom row: Intensity indicator & Action Buttons
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Intensidad: ',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: textSecondary,
+                                      ),
+                                    ),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Text(
-                                              'Intensidad: ',
-                                              style: TextStyle(fontSize: 11, color: textSecondary),
-                                            ),
-                                            Row(
-                                              children: List.generate(5, (i) {
-                                                final isFilled = i < rel.strength;
-                                                return Padding(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                                                  child: Icon(
-                                                    isFilled ? Icons.circle : Icons.circle_outlined,
-                                                    size: 10,
-                                                    color: isFilled ? Color(type.colorHex) : textSecondary.withValues(alpha: 0.3),
+                                      children: List.generate(5, (i) {
+                                        final isFilled = i < rel.strength;
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 1.5,
+                                          ),
+                                          child: Icon(
+                                            isFilled
+                                                ? Icons.circle
+                                                : Icons.circle_outlined,
+                                            size: 10,
+                                            color: isFilled
+                                                ? Color(type.colorHex)
+                                                : textSecondary.withValues(
+                                                    alpha: 0.3,
                                                   ),
-                                                );
-                                              }),
-                                            ),
-                                          ],
-                                        ),
-                                        Row(
-                                          children: [
-                                            InkWell(
-                                              onTap: () => RelationshipFormModal.show(context, controller, initialRelationship: rel),
-                                              borderRadius: BorderRadius.circular(6),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(4),
-                                                child: Icon(Icons.edit_outlined, size: 16, color: textSecondary),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            InkWell(
-                                              onTap: () => RelationshipFormModal.confirmDelete(context, controller, rel),
-                                              borderRadius: BorderRadius.circular(6),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(4),
-                                                child: Icon(Icons.delete_outline_rounded, size: 16, color: textSecondary),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
+                                          ),
+                                        );
+                                      }),
                                     ),
                                   ],
                                 ),
-                              ),
-                            );
-                          },
+                                Row(
+                                  children: [
+                                    InkWell(
+                                      onTap: () => RelationshipFormModal.show(
+                                        context,
+                                        controller,
+                                        initialRelationship: rel,
+                                      ),
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(4),
+                                        child: Icon(
+                                          Icons.edit_outlined,
+                                          size: 16,
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    InkWell(
+                                      onTap: () =>
+                                          RelationshipFormModal.confirmDelete(
+                                            context,
+                                            controller,
+                                            rel,
+                                          ),
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(4),
+                                        child: Icon(
+                                          Icons.delete_outline_rounded,
+                                          size: 16,
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );
@@ -466,7 +559,8 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
     required bool isDark,
     required Color textSecondary,
   }) {
-    final effectiveActiveColor = activeColor ?? (isDark ? Colors.white : Colors.black);
+    final effectiveActiveColor =
+        activeColor ?? (isDark ? Colors.white : Colors.black);
 
     return Padding(
       padding: const EdgeInsets.only(right: 6),
@@ -503,9 +597,7 @@ class _RelationshipsTabViewState extends State<RelationshipsTabView> {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected
-                      ? effectiveActiveColor
-                      : textSecondary,
+                  color: isSelected ? effectiveActiveColor : textSecondary,
                 ),
               ),
             ],

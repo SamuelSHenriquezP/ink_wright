@@ -856,8 +856,6 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Icon(Icons.auto_stories_rounded, size: 14, color: textSecondary),
-                                                const SizedBox(width: 4),
                                                 Flexible(
                                                   child: Text(
                                                     activeBook.title,

@@ -117,14 +117,18 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
   @override
   Widget build(BuildContext context) {
     final bgCard = widget.isDark ? const Color(0xFF1E1E22) : Colors.white;
-    final textPrimary =
-        widget.isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
-    final textSecondary =
-        widget.isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final borderSubtle =
-        widget.isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
-    final cardBg =
-        widget.isDark ? const Color(0xFF26262B) : const Color(0xFFF8F9FA);
+    final textPrimary = widget.isDark
+        ? AppTheme.darkTextPrimary
+        : AppTheme.lightTextPrimary;
+    final textSecondary = widget.isDark
+        ? AppTheme.darkTextSecondary
+        : AppTheme.lightTextSecondary;
+    final borderSubtle = widget.isDark
+        ? AppTheme.darkBorderSubtle
+        : AppTheme.lightBorderSubtle;
+    final cardBg = widget.isDark
+        ? const Color(0xFF26262B)
+        : const Color(0xFFF8F9FA);
 
     return Container(
       constraints: BoxConstraints(
@@ -194,10 +198,7 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
                           widget.chapterTitle.isNotEmpty
                               ? widget.chapterTitle
                               : 'Capítulo Activo',
-                          style: TextStyle(
-                            color: textSecondary,
-                            fontSize: 12,
-                          ),
+                          style: TextStyle(color: textSecondary, fontSize: 12),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -218,8 +219,10 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: cardBg,
                   borderRadius: BorderRadius.circular(14),
@@ -305,10 +308,7 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
                     fontWeight: FontWeight.normal,
                   ),
                   tabs: [
-                    Tab(
-                      text:
-                          'Personajes (${_auditResult.characters.length})',
-                    ),
+                    Tab(text: 'Personajes (${_auditResult.characters.length})'),
                     Tab(
                       text:
                           'Códice & Lore (${_auditResult.codexEntries.length})',
@@ -325,8 +325,18 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildCharactersTab(textPrimary, textSecondary, borderSubtle, cardBg),
-                  _buildCodexTab(textPrimary, textSecondary, borderSubtle, cardBg),
+                  _buildCharactersTab(
+                    textPrimary,
+                    textSecondary,
+                    borderSubtle,
+                    cardBg,
+                  ),
+                  _buildCodexTab(
+                    textPrimary,
+                    textSecondary,
+                    borderSubtle,
+                    cardBg,
+                  ),
                 ],
               ),
             ),
@@ -368,10 +378,7 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
               Text(
                 'Asegúrate de registrar tus personajes en la pestaña Códice/Personajes y nombrarlos en el texto.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: textSecondary,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: textSecondary, fontSize: 12),
               ),
             ],
           ),
@@ -403,7 +410,9 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
                 children: [
                   CircleAvatar(
                     radius: 18,
-                    backgroundColor: AppTheme.accentTeal.withValues(alpha: 0.15),
+                    backgroundColor: AppTheme.accentTeal.withValues(
+                      alpha: 0.15,
+                    ),
                     child: Text(
                       char.name.isNotEmpty ? char.name[0].toUpperCase() : '?',
                       style: const TextStyle(
@@ -428,16 +437,16 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
                         ),
                         Text(
                           '${char.role.isNotEmpty ? char.role : "Personaje"} • ${char.archetype.isNotEmpty ? char.archetype : "Sin arquetipo"}',
-                          style: TextStyle(
-                            color: textSecondary,
-                            fontSize: 11,
-                          ),
+                          style: TextStyle(color: textSecondary, fontSize: 11),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.accentTeal.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
@@ -538,10 +547,7 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  '${rel.type.label} con $otherName' +
-                                      (rel.description.isNotEmpty
-                                          ? ': "${rel.description}"'
-                                          : ''),
+                                  '${rel.type.label} con $otherName${rel.description.isNotEmpty ? ': "${rel.description}"' : ''}',
                                   style: TextStyle(
                                     color: textSecondary,
                                     fontSize: 11.5,
@@ -564,7 +570,10 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       visualDensity: VisualDensity.compact,
                     ),
                     icon: const Icon(Icons.add_comment_rounded, size: 14),
@@ -573,9 +582,10 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
                       style: TextStyle(fontSize: 11),
                     ),
                     onPressed: () {
-                      final summary = '> **[Continuidad: ${char.name}]** '
-                          '${char.physicalAppearance.isNotEmpty ? "Físico: " + char.physicalAppearance + ". " : ""}'
-                          '${char.motivation.isNotEmpty ? "Motivación: " + char.motivation : ""}\n\n';
+                      final summary =
+                          '> **[Continuidad: ${char.name}]** '
+                          '${char.physicalAppearance.isNotEmpty ? "Físico: ${char.physicalAppearance}. " : ""}'
+                          '${char.motivation.isNotEmpty ? "Motivación: ${char.motivation}" : ""}\n\n';
                       widget.onInsertText!(summary);
                       Navigator.of(context).pop();
                     },
@@ -621,10 +631,7 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
               Text(
                 'Crea entradas de lugares, objetos o lore en el Códice y menciónalas en el texto para auditar su lore.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: textSecondary,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: textSecondary, fontSize: 12),
               ),
             ],
           ),
@@ -683,16 +690,16 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
                         ),
                         Text(
                           entry.typeLabel,
-                          style: TextStyle(
-                            color: textSecondary,
-                            fontSize: 11,
-                          ),
+                          style: TextStyle(color: textSecondary, fontSize: 11),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.accentTeal.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
@@ -740,10 +747,7 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
                       ),
                       child: Text(
                         '#$trait',
-                        style: TextStyle(
-                          color: textSecondary,
-                          fontSize: 10,
-                        ),
+                        style: TextStyle(color: textSecondary, fontSize: 10),
                       ),
                     );
                   }).toList(),
@@ -782,10 +786,7 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
           Expanded(
             child: Text(
               value,
-              style: TextStyle(
-                color: textSecondary,
-                fontSize: 11.5,
-              ),
+              style: TextStyle(color: textSecondary, fontSize: 11.5),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -795,4 +796,3 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
     );
   }
 }
-
