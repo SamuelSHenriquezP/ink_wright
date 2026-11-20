@@ -742,10 +742,10 @@ class _ExportManuscriptDialogState extends State<ExportManuscriptDialog> {
                       ),
                       icon: const Icon(Icons.cloud_upload_outlined, size: 20),
                       label: const Text(
-                        'Subir Respaldo a Google Drive / Nube',
+                        'Preparar y compartir respaldo',
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      onPressed: () => CloudBackupService.uploadToCloudDrive(context, controller),
+                      onPressed: () => CloudBackupService.shareBackupFile(context, controller),
                     ),
 
                     const SizedBox(height: 10),

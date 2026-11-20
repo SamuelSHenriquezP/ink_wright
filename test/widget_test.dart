@@ -240,7 +240,8 @@ void main() {
     expect(find.text('Ajustar Meta Diaria'), findsOneWidget);
     // Verify backup buttons
     expect(find.text('Exportar Rápido'), findsOneWidget);
-    expect(find.text('Restaurar de Nube'), findsOneWidget);
+    expect(find.text('Restaurar archivo'), findsOneWidget);
+    expect(find.text('Subida a la nube: sin confirmar'), findsOneWidget);
 
     // Tap 'Ajustar Meta Diaria'
     await tester.tap(find.text('Ajustar Meta Diaria'));

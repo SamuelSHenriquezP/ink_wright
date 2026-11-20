@@ -364,7 +364,7 @@ class DashboardToolsTab extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  'Copia en la Nube',
+                                  'Compartir respaldo',
                                   style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700,
@@ -396,7 +396,7 @@ class DashboardToolsTab extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Google Drive, OneDrive o almacenamiento personal',
+                              'Archivo para Drive u otra app',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 color: textSecondary,
@@ -409,7 +409,7 @@ class DashboardToolsTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Sube un archivo de respaldo seguro (.inkwright) a tu Google Drive personal con un toque para proteger tus novelas, capítulos, personajes y mapas de trama sin costo.',
+                    'Prepara un archivo .inkwright de tu biblioteca y elige con qué aplicación compartirlo. Comprueba en esa aplicación que se haya guardado o subido.',
                     style: TextStyle(
                       fontSize: 12,
                       color: textSecondary,
@@ -419,53 +419,30 @@ class DashboardToolsTab extends StatelessWidget {
                   const SizedBox(height: 14),
 
                   // Estado del último respaldo
-                  FutureBuilder<DateTime?>(
-                    future: CloudBackupService.getLastCloudUploadTime(),
-                    builder: (context, snapshot) {
-                      final statusText =
-                          CloudBackupService.formatLastUploadText(
-                            snapshot.data,
-                          );
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.04)
-                              : Colors.black.withValues(alpha: 0.03),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: borderSubtle),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.access_time_rounded,
-                              size: 14,
-                              color: textSecondary,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Última copia en nube: ',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: textSecondary,
-                              ),
-                            ),
-                            Text(
-                              statusText,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                  ValueListenableBuilder<int>(
+                    valueListenable: CloudBackupService.statusRevision,
+                    builder: (context, revision, _) => FutureBuilder<CloudBackupStatus>(
+                      future: CloudBackupService.getBackupStatus(),
+                      builder: (context, snapshot) {
+                        final status = snapshot.data ?? const CloudBackupStatus();
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(border: Border.all(color: borderSubtle), borderRadius: BorderRadius.circular(8)),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('Archivo preparado: ${CloudBackupService.formatBackupTime(status.preparedAt)}', style: TextStyle(fontSize: 11, color: textSecondary)),
+                            const SizedBox(height: 4),
+                            Text('Compartido con otra app: ${CloudBackupService.formatBackupTime(status.sharedAt)}', style: TextStyle(fontSize: 11, color: textSecondary)),
+                            const SizedBox(height: 4),
+                            Text('Subida a la nube: sin confirmar', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textPrimary)),
+                            if (status.lastState == BackupShareState.cancelled || status.lastState == BackupShareState.unavailable || status.lastState == BackupShareState.failed) ...[
+                              const SizedBox(height: 6),
+                              Text(CloudBackupService.shareMessage(status.lastState!), style: TextStyle(fontSize: 11, color: textSecondary)),
+                            ],
+                          ]),
+                        );
+                      },
+                    ),
                   ),
 
                   const SizedBox(height: 16),
@@ -485,13 +462,13 @@ class DashboardToolsTab extends StatelessWidget {
                       ),
                       icon: const Icon(Icons.cloud_upload_outlined, size: 19),
                       label: const Text(
-                        'Subir a Google Drive / Nube',
+                        'Preparar y compartir respaldo',
                         style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      onPressed: () => CloudBackupService.uploadToCloudDrive(
+                      onPressed: () => CloudBackupService.shareBackupFile(
                         context,
                         controller,
                       ),
@@ -518,7 +495,7 @@ class DashboardToolsTab extends StatelessWidget {
                             size: 17,
                           ),
                           label: const Text(
-                            'Restaurar de Nube',
+                            'Restaurar archivo',
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,

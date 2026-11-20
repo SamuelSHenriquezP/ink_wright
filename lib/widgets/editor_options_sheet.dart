@@ -322,8 +322,8 @@ class EditorOptionsMenuSheet extends StatelessWidget {
       if (onCloudBackup != null)
         _MenuItem(
           icon: Icons.cloud_upload_outlined,
-          title: 'Copia en la Nube (Drive)',
-          subtitle: 'Subir a Google Drive / Nube',
+          title: 'Compartir respaldo',
+          subtitle: 'Preparar archivo para Drive u otra app',
           onTap: () {
             Navigator.of(context).pop();
             onCloudBackup!();

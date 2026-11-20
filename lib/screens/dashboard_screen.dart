@@ -94,7 +94,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _handleExportBackup(BuildContext context, EditorController controller, bool isDark) async {
-    await CloudBackupService.uploadToCloudDrive(context, controller);
+    await CloudBackupService.shareBackupFile(context, controller);
   }
 
   @override

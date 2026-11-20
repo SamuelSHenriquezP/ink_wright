@@ -627,7 +627,7 @@ class _ZenEditorScreenState extends State<ZenEditorScreen> with WidgetsBindingOb
         RevisionSidebar.show(context);
       },
       onCloudBackup: () {
-        CloudBackupService.uploadToCloudDrive(context, controller);
+        CloudBackupService.shareBackupFile(context, controller);
       },
       onTypography: () {
         _openTypographySheet(context, controller, isDark);
