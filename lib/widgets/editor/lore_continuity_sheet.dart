@@ -266,7 +266,7 @@ class _LoreContinuitySheetState extends State<LoreContinuitySheet>
                     ),
                     Switch.adaptive(
                       value: widget.isContinuityAuditorEnabled,
-                      activeColor: AppTheme.accentTeal,
+                      activeThumbColor: AppTheme.accentTeal,
                       onChanged: (val) {
                         widget.onToggleEnabled(val);
                         setState(() {});

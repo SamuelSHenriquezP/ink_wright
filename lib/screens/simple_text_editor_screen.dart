@@ -184,8 +184,9 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
                         ? () {
                             controller.goToPreviousChapter();
                             _syncTitle(controller);
-                            if (_scrollController.hasClients)
+                            if (_scrollController.hasClients) {
                               _scrollController.jumpTo(0);
+                            }
                           }
                         : null,
                   ),
@@ -197,8 +198,9 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen>
                         ? () {
                             controller.goToNextChapter();
                             _syncTitle(controller);
-                            if (_scrollController.hasClients)
+                            if (_scrollController.hasClients) {
                               _scrollController.jumpTo(0);
+                            }
                           }
                         : null,
                   ),

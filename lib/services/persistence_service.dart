@@ -33,7 +33,9 @@ class PersistenceService {
   static const String _keyRelationships = 'ink_wright_relationships';
   static const String _keyContinuityAuditor = 'ink_continuity_auditor_enabled';
   static const String _keyAutoBackup = 'ink_wright_auto_backup_json';
+  static const String _keyAutoBackupRedundant = 'ink_wright_auto_backup_redundant_json';
   static const String _keyAutoBackupTimestamp = 'ink_wright_auto_backup_timestamp';
+  static const String _keyAutoBackupEnabled = 'ink_wright_auto_backup_enabled';
 
   Timer? _saveDebounceTimer;
   Future<void> Function()? _pendingSaveAction;
@@ -489,20 +491,51 @@ class PersistenceService {
     }
   }
 
+  Future<bool> loadAutoBackupEnabled() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_keyAutoBackupEnabled) ?? true;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  Future<void> setAutoBackupEnabled(bool enabled) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyAutoBackupEnabled, enabled);
+    } catch (e) {
+      debugPrint('Error saving auto backup preference: $e');
+    }
+  }
+
+  /// Guarda una copia automática local redundante (primaria + secundaria de respaldo)
   Future<void> saveSilentAutoBackup(String backupJson) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_keyAutoBackup, backupJson);
-      await prefs.setString(_keyAutoBackupTimestamp, DateTime.now().toIso8601String());
+      await Future.wait([
+        prefs.setString(_keyAutoBackup, backupJson),
+        prefs.setString(_keyAutoBackupRedundant, backupJson),
+        prefs.setString(_keyAutoBackupTimestamp, DateTime.now().toIso8601String()),
+      ]);
     } catch (e) {
       debugPrint('Error saving auto backup: $e');
     }
   }
 
+  /// Carga la copia automática local verificando la primaria y cayendo en la redundante si es necesario
   Future<String?> loadSilentAutoBackup() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(_keyAutoBackup);
+      final primary = prefs.getString(_keyAutoBackup);
+      if (primary != null && primary.isNotEmpty && parseBackupJson(primary) != null) {
+        return primary;
+      }
+      final redundant = prefs.getString(_keyAutoBackupRedundant);
+      if (redundant != null && redundant.isNotEmpty && parseBackupJson(redundant) != null) {
+        return redundant;
+      }
+      return primary ?? redundant;
     } catch (e) {
       return null;
     }

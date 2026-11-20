@@ -113,11 +113,10 @@ class EditorOptionsMenuSheet extends StatelessWidget {
     bool hasNextChapter = false,
     bool hasPreviousChapter = false,
   }) {
-    final bgCard = isDark ? const Color(0xFF1E1E20) : Colors.white;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: bgCard,
+      backgroundColor: isDark ? const Color(0xFF1E1E20) : Colors.white,
       elevation: 0,
       showDragHandle: false,
       shape: const RoundedRectangleBorder(
@@ -177,10 +176,15 @@ class EditorOptionsMenuSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgCard = isDark ? const Color(0xFF1E1E20) : Colors.white;
-    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
-    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final textPrimary = isDark
+        ? AppTheme.darkTextPrimary
+        : AppTheme.lightTextPrimary;
+    final textSecondary = isDark
+        ? AppTheme.darkTextSecondary
+        : AppTheme.lightTextSecondary;
+    final borderSubtle = isDark
+        ? AppTheme.darkBorderSubtle
+        : AppTheme.lightBorderSubtle;
     final itemBg = isDark ? const Color(0xFF26262A) : const Color(0xFFF7F7F8);
 
     final List<_MenuItem> items = [
@@ -250,7 +254,11 @@ class EditorOptionsMenuSheet extends StatelessWidget {
         icon: Icons.content_copy_rounded,
         title: 'Copiar Todo',
         subtitle: 'Título y texto completo',
-        onTap: () => _copyToClipboard(context, '# $chapterTitle\n\n$chapterContent', 'Capítulo completo'),
+        onTap: () => _copyToClipboard(
+          context,
+          '# $chapterTitle\n\n$chapterContent',
+          'Capítulo completo',
+        ),
       ),
       _MenuItem(
         icon: Icons.search_rounded,
@@ -285,7 +293,11 @@ class EditorOptionsMenuSheet extends StatelessWidget {
         title: 'Copiar Solo Texto',
         subtitle: 'Copiar únicamente la prosa sin metadatos',
         onTap: () {
-          _copyToClipboard(context, chapterContent.trim(), 'Texto del capítulo');
+          _copyToClipboard(
+            context,
+            chapterContent.trim(),
+            'Texto del capítulo',
+          );
         },
       ),
       _MenuItem(
@@ -320,7 +332,9 @@ class EditorOptionsMenuSheet extends StatelessWidget {
       _MenuItem(
         icon: isReadOnly ? Icons.visibility_rounded : Icons.edit_note_rounded,
         title: 'Modo Solo Lectura',
-        subtitle: isReadOnly ? 'Activado (bloqueado)' : 'Desactivado (editable)',
+        subtitle: isReadOnly
+            ? 'Activado (bloqueado)'
+            : 'Desactivado (editable)',
         isActive: isReadOnly,
         onTap: () {
           Navigator.of(context).pop();
@@ -399,7 +413,9 @@ class EditorOptionsMenuSheet extends StatelessWidget {
       _MenuItem(
         icon: Icons.auto_stories_outlined,
         title: 'Símbolos Markdown',
-        subtitle: hideMarkdownSymbols ? 'Ocultos (Modo limpio)' : 'Visibles (#, **, *)',
+        subtitle: hideMarkdownSymbols
+            ? 'Ocultos (Modo limpio)'
+            : 'Visibles (#, **, *)',
         isActive: hideMarkdownSymbols,
         onTap: () {
           Navigator.of(context).pop();
@@ -512,7 +528,11 @@ class EditorOptionsMenuSheet extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close_rounded, size: 20, color: textSecondary),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        size: 20,
+                        color: textSecondary,
+                      ),
                       onPressed: () => Navigator.of(context).pop(),
                       visualDensity: VisualDensity.compact,
                     ),
@@ -536,14 +556,19 @@ class EditorOptionsMenuSheet extends StatelessWidget {
                     final isItemActive = item.isActive;
                     return Material(
                       color: isItemActive
-                          ? (isDark ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.08))
+                          ? (isDark
+                                ? Colors.white.withValues(alpha: 0.12)
+                                : Colors.black.withValues(alpha: 0.08))
                           : itemBg,
                       borderRadius: BorderRadius.circular(14),
                       child: InkWell(
                         onTap: item.onTap,
                         borderRadius: BorderRadius.circular(14),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(

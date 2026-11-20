@@ -7,7 +7,6 @@ import '../models/chapter_snapshot_model.dart';
 import '../models/idea_snippet_model.dart';
 import '../models/writer_stats_model.dart';
 import '../models/codex_entry_model.dart';
-import '../models/writing_sprint_model.dart';
 import '../models/mind_map_node_model.dart';
 import '../models/character_model.dart';
 import '../models/character_relationship_model.dart';
@@ -15,7 +14,6 @@ import '../models/sprint_history_model.dart';
 import '../models/revision_comment_model.dart';
 import '../models/chapter_bookmark_model.dart';
 import '../models/book_compilation_config_model.dart';
-import '../formatters/writer_text_formatter.dart';
 import 'markdown_editing_controller.dart';
 import '../services/persistence_service.dart';
 import '../services/import_service.dart';
@@ -42,7 +40,6 @@ class EditorController extends ChangeNotifier {
   List<MindMapNodeModel> _mindMapNodes = [];
   List<CharacterModel> _characters = [];
 
-  WritingSprintModel? _activeSprint;
   String _selectedFontFamily = 'Lora';
   double _fontSize = 16.5;
   double _lineHeight = 1.65;
@@ -55,7 +52,8 @@ class EditorController extends ChangeNotifier {
   List<CharacterRelationshipModel> _relationships = [];
   List<SprintHistoryModel> _sprintHistory = [];
 
-  final MarkdownEditingController textEditingController = MarkdownEditingController();
+  final MarkdownEditingController textEditingController =
+      MarkdownEditingController();
   final FocusNode focusNode = FocusNode();
 
   // Undo / Redo history
@@ -69,12 +67,14 @@ class EditorController extends ChangeNotifier {
   Timer? _autoBackupTimer;
   DateTime? _lastSavedTime;
   DateTime? _lastAutoBackupTime;
+  bool _autoBackupEnabled = true;
   bool _isSaving = false;
 
   // Getters
   bool get isDarkMode => _isDarkMode;
   bool get isZenMode => _isZenMode;
   bool get isAutoSaveEnabled => _isAutoSaveEnabled;
+  bool get autoBackupEnabled => _autoBackupEnabled;
   bool get isLiveMarkdownEnabled => textEditingController.isLiveMarkdownEnabled;
   bool get isSaving => _isSaving;
   DateTime? get lastSavedTime => _lastSavedTime;
@@ -111,13 +111,14 @@ class EditorController extends ChangeNotifier {
     final idx = activeChapterIndex;
     return idx != -1 && idx < _activeBook.chapters.length - 1;
   }
+
   bool get hasPreviousChapter {
     final idx = activeChapterIndex;
     return idx > 0;
   }
+
   List<CharacterModel> get allCharacters => List.unmodifiable(_characters);
 
-  WritingSprintModel? get activeSprint => _activeSprint;
   String get selectedFontFamily => _selectedFontFamily;
   double get fontSize => _fontSize;
   double get lineHeight => _lineHeight;
@@ -129,21 +130,26 @@ class EditorController extends ChangeNotifier {
   // Relationships filtered per active book
   List<CharacterRelationshipModel> get relationships =>
       _relationships.where((r) => r.bookId == _activeBook.id).toList();
-  List<CharacterRelationshipModel> get allRelationships => List.unmodifiable(_relationships);
+  List<CharacterRelationshipModel> get allRelationships =>
+      List.unmodifiable(_relationships);
 
   // Sprint history filtered per active book
   List<SprintHistoryModel> get sprintHistory =>
       _sprintHistory.where((s) => s.bookId == _activeBook.id).toList();
-  List<SprintHistoryModel> get allSprintHistory => List.unmodifiable(_sprintHistory);
+  List<SprintHistoryModel> get allSprintHistory =>
+      List.unmodifiable(_sprintHistory);
 
   // Revision comments for active chapter
-  List<RevisionCommentModel> get activeChapterComments => _activeChapter.comments;
+  List<RevisionCommentModel> get activeChapterComments =>
+      _activeChapter.comments;
 
   EditorController() {
     _initializeInitialState();
-    _loadPersistedData();
+    ready = _loadPersistedData();
     _startAutoBackupTimer();
   }
+
+  late final Future<void> ready;
 
   void _initializeInitialState() {
     final initial = InitialSampleDataService.create();
@@ -197,10 +203,15 @@ class EditorController extends ChangeNotifier {
         textEditingController.isDarkMode = _isDarkMode;
         textEditingController.text = _activeChapter.content;
         _lastRecordedText = _activeChapter.content;
-        if (lastCursor >= 0 && lastCursor <= textEditingController.text.length) {
-          textEditingController.selection = TextSelection.collapsed(offset: lastCursor);
+        if (lastCursor >= 0 &&
+            lastCursor <= textEditingController.text.length) {
+          textEditingController.selection = TextSelection.collapsed(
+            offset: lastCursor,
+          );
         } else {
-          textEditingController.selection = TextSelection.collapsed(offset: textEditingController.text.length);
+          textEditingController.selection = TextSelection.collapsed(
+            offset: textEditingController.text.length,
+          );
         }
         textEditingController.addListener(_onTextChanged);
       }
@@ -208,7 +219,9 @@ class EditorController extends ChangeNotifier {
       if (savedIdeas != null) {
         _ideas = savedIdeas.map((i) {
           if (i.bookId.isEmpty) {
-            return i.copyWith(bookId: _activeBook.id.isNotEmpty ? _activeBook.id : 'b_tutorial');
+            return i.copyWith(
+              bookId: _activeBook.id.isNotEmpty ? _activeBook.id : 'b_tutorial',
+            );
           }
           return i;
         }).toList();
@@ -216,7 +229,9 @@ class EditorController extends ChangeNotifier {
       if (savedCodex != null) {
         _codexEntries = savedCodex.map((c) {
           if (c.bookId.isEmpty) {
-            return c.copyWith(bookId: _activeBook.id.isNotEmpty ? _activeBook.id : 'b_tutorial');
+            return c.copyWith(
+              bookId: _activeBook.id.isNotEmpty ? _activeBook.id : 'b_tutorial',
+            );
           }
           return c;
         }).toList();
@@ -232,18 +247,30 @@ class EditorController extends ChangeNotifier {
 
       _isDarkMode = prefs['darkMode'] as bool? ?? _isDarkMode;
       textEditingController.isDarkMode = _isDarkMode;
-      _selectedFontFamily = prefs['fontFamily'] as String? ?? _selectedFontFamily;
+      _selectedFontFamily =
+          prefs['fontFamily'] as String? ?? _selectedFontFamily;
       _fontSize = (prefs['fontSize'] as num?)?.toDouble() ?? _fontSize;
       _lineHeight = (prefs['lineHeight'] as num?)?.toDouble() ?? _lineHeight;
-      _maxEditorWidth = (prefs['maxEditorWidth'] as num?)?.toDouble() ?? _maxEditorWidth;
+      _maxEditorWidth =
+          (prefs['maxEditorWidth'] as num?)?.toDouble() ?? _maxEditorWidth;
       _isTypewriterMode = prefs['typewriterMode'] as bool? ?? _isTypewriterMode;
-      _isContinuityAuditorEnabled = prefs['continuityAuditorEnabled'] as bool? ?? _isContinuityAuditorEnabled;
+      _isContinuityAuditorEnabled =
+          prefs['continuityAuditorEnabled'] as bool? ??
+          _isContinuityAuditorEnabled;
+      _autoBackupEnabled = await _persistenceService.loadAutoBackupEnabled();
+      _lastAutoBackupTime = await _persistenceService
+          .getSilentAutoBackupTimestamp();
+      if (!_autoBackupEnabled) {
+        _autoBackupTimer?.cancel();
+      }
 
       notifyListeners();
     } catch (_) {}
   }
 
   Future<void> saveCurrentSession() async {
+    _textChangeDebounceTimer?.cancel();
+    _syncActiveChapterFromEditor();
     _saveCurrentData(debounced: false);
   }
 
@@ -251,11 +278,24 @@ class EditorController extends ChangeNotifier {
     await _persistenceService.flushPendingSave();
   }
 
+  Future<void> flushAndBackup() async {
+    _textChangeDebounceTimer?.cancel();
+    _syncActiveChapterFromEditor();
+    _saveCurrentData(debounced: true);
+    await flushPendingSave();
+    await performSilentAutoBackup();
+  }
+
   void _saveCurrentData({bool debounced = true}) {
     // Save cursor position safely to shared preferences
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setInt(_prefKeyCursorPos, textEditingController.selection.baseOffset);
-    }).catchError((_) {});
+    SharedPreferences.getInstance()
+        .then((prefs) {
+          prefs.setInt(
+            _prefKeyCursorPos,
+            textEditingController.selection.baseOffset,
+          );
+        })
+        .catchError((_) {});
 
     if (debounced) {
       _isSaving = true;
@@ -326,37 +366,64 @@ class EditorController extends ChangeNotifier {
 
     _textChangeDebounceTimer?.cancel();
     _textChangeDebounceTimer = Timer(const Duration(milliseconds: 300), () {
-      final oldWordCount = _activeChapter.wordCount;
-
-      _activeChapter = _activeChapter.copyWith(
-        content: currentText,
-        lastEdited: DateTime.now(),
-      );
-
-      final updatedChapters = _activeBook.chapters.map((ch) {
-        return ch.id == _activeChapter.id ? _activeChapter : ch;
-      }).toList();
-
-      _activeBook = _activeBook.copyWith(
-        chapters: updatedChapters,
-        lastEdited: DateTime.now(),
-      );
-
-      _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
-
-      // Update writer stats words today
-      final newWordCount = _activeChapter.wordCount;
-      final delta = newWordCount - oldWordCount;
-      if (delta > 0) {
-        _writerStats = _writerStats.copyWith(
-          wordsToday: _writerStats.wordsToday + delta,
-          totalWordsWritten: _writerStats.totalWordsWritten + delta,
-        );
-      }
-
+      _syncActiveChapterFromEditor();
       _saveCurrentData(debounced: true);
       notifyListeners();
     });
+  }
+
+  void _syncActiveChapterFromEditor() {
+    final currentText = textEditingController.text;
+    if (currentText == _activeChapter.content) return;
+
+    final oldWordCount = _activeChapter.wordCount;
+
+    // Keep a recoverable version before replacing a chapter, at most once per 5 minutes.
+    final autos = _activeChapter.snapshots
+        .where((s) => s.label == 'Respaldo automático')
+        .toList();
+    if (_activeChapter.content.isNotEmpty &&
+        (autos.isEmpty ||
+            DateTime.now().difference(autos.first.createdAt).inMinutes >= 5)) {
+      final snapshot = ChapterSnapshotModel(
+        id: 'auto_${DateTime.now().microsecondsSinceEpoch}',
+        chapterId: _activeChapter.id,
+        label: 'Respaldo automático',
+        content: _activeChapter.content,
+        createdAt: DateTime.now(),
+      );
+      final manual = _activeChapter.snapshots.where(
+        (s) => s.label != 'Respaldo automático',
+      );
+      _activeChapter = _activeChapter.copyWith(
+        snapshots: [snapshot, ...autos.take(19), ...manual],
+      );
+    }
+
+    _activeChapter = _activeChapter.copyWith(
+      content: currentText,
+      lastEdited: DateTime.now(),
+    );
+
+    final updatedChapters = _activeBook.chapters.map((ch) {
+      return ch.id == _activeChapter.id ? _activeChapter : ch;
+    }).toList();
+
+    _activeBook = _activeBook.copyWith(
+      chapters: updatedChapters,
+      lastEdited: DateTime.now(),
+    );
+
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
+
+    // Registrar palabras escritas hoy y en el mapa histórico por fecha (YYYY-MM-DD)
+    final newWordCount = _activeChapter.wordCount;
+    final delta = newWordCount - oldWordCount;
+    if (delta > 0) {
+      _writerStats = _writerStats.recordWordsForDate(delta);
+    }
   }
 
   // --- UNDO / REDO ---
@@ -368,9 +435,14 @@ class EditorController extends ChangeNotifier {
     final previousText = _undoStack.removeLast();
     _lastRecordedText = previousText;
     textEditingController.text = previousText;
-    textEditingController.selection = TextSelection.collapsed(offset: previousText.length);
+    textEditingController.selection = TextSelection.collapsed(
+      offset: previousText.length,
+    );
 
-    _activeChapter = _activeChapter.copyWith(content: previousText, lastEdited: DateTime.now());
+    _activeChapter = _activeChapter.copyWith(
+      content: previousText,
+      lastEdited: DateTime.now(),
+    );
     _isPerformingUndoRedo = false;
     _saveCurrentData(debounced: true);
     notifyListeners();
@@ -383,9 +455,14 @@ class EditorController extends ChangeNotifier {
     final nextText = _redoStack.removeLast();
     _lastRecordedText = nextText;
     textEditingController.text = nextText;
-    textEditingController.selection = TextSelection.collapsed(offset: nextText.length);
+    textEditingController.selection = TextSelection.collapsed(
+      offset: nextText.length,
+    );
 
-    _activeChapter = _activeChapter.copyWith(content: nextText, lastEdited: DateTime.now());
+    _activeChapter = _activeChapter.copyWith(
+      content: nextText,
+      lastEdited: DateTime.now(),
+    );
     _isPerformingUndoRedo = false;
     _saveCurrentData(debounced: true);
     notifyListeners();
@@ -474,17 +551,24 @@ class EditorController extends ChangeNotifier {
 
     _ideas = ((data['ideas'] as List<IdeaSnippetModel>?) ?? _ideas).map((i) {
       if (i.bookId.isEmpty) {
-        return i.copyWith(bookId: _activeBook.id.isNotEmpty ? _activeBook.id : 'b_tutorial');
+        return i.copyWith(
+          bookId: _activeBook.id.isNotEmpty ? _activeBook.id : 'b_tutorial',
+        );
       }
       return i;
     }).toList();
-    _codexEntries = ((data['codex'] as List<CodexEntryModel>?) ?? _codexEntries).map((c) {
-      if (c.bookId.isEmpty) {
-        return c.copyWith(bookId: _activeBook.id.isNotEmpty ? _activeBook.id : 'b_tutorial');
-      }
-      return c;
-    }).toList();
-    _mindMapNodes = (data['mindMap'] as List<MindMapNodeModel>?) ?? _mindMapNodes;
+    _codexEntries = ((data['codex'] as List<CodexEntryModel>?) ?? _codexEntries)
+        .map((c) {
+          if (c.bookId.isEmpty) {
+            return c.copyWith(
+              bookId: _activeBook.id.isNotEmpty ? _activeBook.id : 'b_tutorial',
+            );
+          }
+          return c;
+        })
+        .toList();
+    _mindMapNodes =
+        (data['mindMap'] as List<MindMapNodeModel>?) ?? _mindMapNodes;
     _characters = (data['characters'] as List<CharacterModel>?) ?? _characters;
     if (data['writerStats'] != null) {
       _writerStats = data['writerStats'] as WriterStatsModel;
@@ -501,9 +585,12 @@ class EditorController extends ChangeNotifier {
     _selectedFontFamily = prefs['fontFamily'] as String? ?? _selectedFontFamily;
     _fontSize = (prefs['fontSize'] as num?)?.toDouble() ?? _fontSize;
     _lineHeight = (prefs['lineHeight'] as num?)?.toDouble() ?? _lineHeight;
-    _maxEditorWidth = (prefs['maxEditorWidth'] as num?)?.toDouble() ?? _maxEditorWidth;
+    _maxEditorWidth =
+        (prefs['maxEditorWidth'] as num?)?.toDouble() ?? _maxEditorWidth;
     _isTypewriterMode = prefs['typewriterMode'] as bool? ?? _isTypewriterMode;
-    _isContinuityAuditorEnabled = prefs['continuityAuditorEnabled'] as bool? ?? _isContinuityAuditorEnabled;
+    _isContinuityAuditorEnabled =
+        prefs['continuityAuditorEnabled'] as bool? ??
+        _isContinuityAuditorEnabled;
 
     textEditingController.removeListener(_onTextChanged);
     textEditingController.text = _activeChapter.content;
@@ -525,7 +612,8 @@ class EditorController extends ChangeNotifier {
   }
 
   void toggleLiveMarkdown() {
-    textEditingController.isLiveMarkdownEnabled = !textEditingController.isLiveMarkdownEnabled;
+    textEditingController.isLiveMarkdownEnabled =
+        !textEditingController.isLiveMarkdownEnabled;
     notifyListeners();
   }
 
@@ -535,11 +623,17 @@ class EditorController extends ChangeNotifier {
   }
 
   void switchBook(String bookId) {
-    final book = _allBooks.firstWhere((b) => b.id == bookId, orElse: () => _activeBook);
+    final book = _allBooks.firstWhere(
+      (b) => b.id == bookId,
+      orElse: () => _activeBook,
+    );
     selectBook(book);
   }
 
   void selectBook(BookModel book) {
+    _textChangeDebounceTimer?.cancel();
+    _syncActiveChapterFromEditor();
+    book = _allBooks.firstWhere((b) => b.id == book.id, orElse: () => book);
     _activeBook = book;
     if (book.chapters.isNotEmpty) {
       _activeChapter = book.chapters.first;
@@ -557,6 +651,9 @@ class EditorController extends ChangeNotifier {
   }
 
   void selectChapter(ChapterModel chapter) {
+    _textChangeDebounceTimer?.cancel();
+    _syncActiveChapterFromEditor();
+    chapter = _activeBook.chapters.firstWhere((c) => c.id == chapter.id);
     _activeChapter = chapter;
     textEditingController.removeListener(_onTextChanged);
     textEditingController.text = chapter.content;
@@ -568,8 +665,14 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addNewChapter(String title, {String povCharacter = '', String notes = ''}) {
+  void addNewChapter(
+    String title, {
+    String povCharacter = '',
+    String notes = '',
+  }) {
     final newChapterNum = _activeBook.chapters.length + 1;
+    _textChangeDebounceTimer?.cancel();
+    _syncActiveChapterFromEditor();
     final newChapter = ChapterModel(
       id: 'ch_${DateTime.now().millisecondsSinceEpoch}',
       bookId: _activeBook.id,
@@ -581,7 +684,8 @@ class EditorController extends ChangeNotifier {
       povCharacter: povCharacter.trim(),
     );
 
-    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters)..add(newChapter);
+    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters)
+      ..add(newChapter);
     _activeBook = _activeBook.copyWith(chapters: updatedChapters);
     _activeChapter = newChapter;
 
@@ -592,7 +696,9 @@ class EditorController extends ChangeNotifier {
     _redoStack.clear();
     textEditingController.addListener(_onTextChanged);
 
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -612,12 +718,21 @@ class EditorController extends ChangeNotifier {
   }
 
   void updateActiveChapterTitle(String newTitle) {
-    if (newTitle.trim().isEmpty || newTitle.trim() == _activeChapter.title) return;
-    final updated = _activeChapter.copyWith(title: newTitle.trim(), lastEdited: DateTime.now());
+    if (newTitle.trim().isEmpty || newTitle.trim() == _activeChapter.title) {
+      return;
+    }
+    final updated = _activeChapter.copyWith(
+      title: newTitle.trim(),
+      lastEdited: DateTime.now(),
+    );
     _activeChapter = updated;
-    final updatedChapters = _activeBook.chapters.map((c) => c.id == updated.id ? updated : c).toList();
+    final updatedChapters = _activeBook.chapters
+        .map((c) => c.id == updated.id ? updated : c)
+        .toList();
     _activeBook = _activeBook.copyWith(chapters: updatedChapters);
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
     _saveCurrentData(debounced: true);
     notifyListeners();
   }
@@ -646,7 +761,9 @@ class EditorController extends ChangeNotifier {
     if (_activeChapter.id == chapterId) {
       _activeChapter = updatedChapters.firstWhere((c) => c.id == chapterId);
     }
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -659,15 +776,31 @@ class EditorController extends ChangeNotifier {
   }
 
   void moveChapter(int oldIndex, int newIndex) {
-    if (oldIndex == newIndex || oldIndex < 0 || oldIndex >= _activeBook.chapters.length) return;
-    final updatedList = ChapterOperationsService.moveChapter(_activeBook.chapters, oldIndex, newIndex);
+    if (oldIndex == newIndex ||
+        oldIndex < 0 ||
+        oldIndex >= _activeBook.chapters.length) {
+      return;
+    }
+    final updatedList = ChapterOperationsService.moveChapter(
+      _activeBook.chapters,
+      oldIndex,
+      newIndex,
+    );
     _activeBook = _activeBook.copyWith(chapters: updatedList);
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
-  void createNewBook(String title, String subtitle, int targetWordCount, {String genre = 'Ficción', String coverEmoji = ''}) {
+  void createNewBook(
+    String title,
+    String subtitle,
+    int targetWordCount, {
+    String genre = 'Ficción',
+    String coverEmoji = '',
+  }) {
     final newBook = BookModel(
       id: 'b_${DateTime.now().millisecondsSinceEpoch}',
       title: title,
@@ -690,7 +823,8 @@ class EditorController extends ChangeNotifier {
       id: 'node_${DateTime.now().millisecondsSinceEpoch}',
       bookId: newBook.id,
       title: 'Premisa: $title',
-      description: 'Define aquí el conflicto principal, la meta del protagonista y el tono de la historia.',
+      description:
+          'Define aquí el conflicto principal, la meta del protagonista y el tono de la historia.',
       act: PlotAct.act1Exposition,
       type: PlotNodeType.turningPoint,
       dx: 80,
@@ -711,24 +845,30 @@ class EditorController extends ChangeNotifier {
 
     for (int i = 0; i < data.chapters.length; i++) {
       final chData = data.chapters[i];
-      chapters.add(ChapterModel(
-        id: 'ch_${DateTime.now().millisecondsSinceEpoch}_$i',
-        bookId: bookId,
-        chapterNumber: i + 1,
-        title: chData.title,
-        content: chData.content,
-        lastEdited: DateTime.now(),
-        notes: '',
-        povCharacter: '',
-      ));
+      chapters.add(
+        ChapterModel(
+          id: 'ch_${DateTime.now().millisecondsSinceEpoch}_$i',
+          bookId: bookId,
+          chapterNumber: i + 1,
+          title: chData.title,
+          content: chData.content,
+          lastEdited: DateTime.now(),
+          notes: '',
+          povCharacter: '',
+        ),
+      );
     }
 
-    final targetWords = data.totalWords > 0 ? (data.totalWords * 1.2).round() : 80000;
+    final targetWords = data.totalWords > 0
+        ? (data.totalWords * 1.2).round()
+        : 80000;
 
     final newBook = BookModel(
       id: bookId,
       title: data.title,
-      subtitle: data.subtitle.isNotEmpty ? data.subtitle : (data.author.isNotEmpty ? 'Por ${data.author}' : ''),
+      subtitle: data.subtitle.isNotEmpty
+          ? data.subtitle
+          : (data.author.isNotEmpty ? 'Por ${data.author}' : ''),
       genre: data.genre.isNotEmpty ? data.genre : 'Ficción',
       targetWordCount: targetWords,
       status: BookStatus.drafting,
@@ -766,7 +906,9 @@ class EditorController extends ChangeNotifier {
   }
 
   /// Importa capítulos dentro del libro activo actual
-  void importChaptersIntoActiveBook(List<ImportedChapterData> importedChapters) {
+  void importChaptersIntoActiveBook(
+    List<ImportedChapterData> importedChapters,
+  ) {
     if (importedChapters.isEmpty) return;
 
     final currentCount = _activeBook.chapters.length;
@@ -774,25 +916,30 @@ class EditorController extends ChangeNotifier {
 
     for (int i = 0; i < importedChapters.length; i++) {
       final chData = importedChapters[i];
-      newChapters.add(ChapterModel(
-        id: 'ch_${DateTime.now().millisecondsSinceEpoch}_$i',
-        bookId: _activeBook.id,
-        chapterNumber: currentCount + i + 1,
-        title: chData.title,
-        content: chData.content,
-        lastEdited: DateTime.now(),
-        notes: '',
-        povCharacter: '',
-      ));
+      newChapters.add(
+        ChapterModel(
+          id: 'ch_${DateTime.now().millisecondsSinceEpoch}_$i',
+          bookId: _activeBook.id,
+          chapterNumber: currentCount + i + 1,
+          title: chData.title,
+          content: chData.content,
+          lastEdited: DateTime.now(),
+          notes: '',
+          povCharacter: '',
+        ),
+      );
     }
 
-    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters)..addAll(newChapters);
+    final updatedChapters = List<ChapterModel>.from(_activeBook.chapters)
+      ..addAll(newChapters);
     _activeBook = _activeBook.copyWith(
       chapters: updatedChapters,
       lastEdited: DateTime.now(),
     );
 
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     selectChapter(newChapters.first);
     _saveCurrentData(debounced: false);
@@ -809,9 +956,13 @@ class EditorController extends ChangeNotifier {
 
     _activeBook = _activeBook.copyWith(chapters: updatedChapters);
     if (_activeChapter.id == chapterId) {
-      _activeChapter = _activeChapter.copyWith(isCompleted: !_activeChapter.isCompleted);
+      _activeChapter = _activeChapter.copyWith(
+        isCompleted: !_activeChapter.isCompleted,
+      );
     }
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -822,7 +973,9 @@ class EditorController extends ChangeNotifier {
       return false;
     }
 
-    final targetIndex = _activeBook.chapters.indexWhere((c) => c.id == chapterId);
+    final targetIndex = _activeBook.chapters.indexWhere(
+      (c) => c.id == chapterId,
+    );
     if (targetIndex == -1) return false;
 
     ChapterModel chapterToTrash = _activeBook.chapters[targetIndex];
@@ -833,14 +986,19 @@ class EditorController extends ChangeNotifier {
       );
     }
 
-    final reindexed = ChapterOperationsService.removeAndReindex(_activeBook.chapters, chapterId);
+    final reindexed = ChapterOperationsService.removeAndReindex(
+      _activeBook.chapters,
+      chapterId,
+    );
     final updatedTrashed = [chapterToTrash, ..._activeBook.trashedChapters];
 
     _activeBook = _activeBook.copyWith(
       chapters: reindexed,
       trashedChapters: updatedTrashed,
     );
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     if (_activeChapter.id == chapterId) {
       selectChapter(reindexed.first);
@@ -856,11 +1014,15 @@ class EditorController extends ChangeNotifier {
 
   /// Restores a chapter from the trash
   bool restoreChapter(String chapterId) {
-    final targetIndex = _activeBook.trashedChapters.indexWhere((c) => c.id == chapterId);
+    final targetIndex = _activeBook.trashedChapters.indexWhere(
+      (c) => c.id == chapterId,
+    );
     if (targetIndex == -1) return false;
 
     final targetChapter = _activeBook.trashedChapters[targetIndex];
-    final remainingTrashed = _activeBook.trashedChapters.where((c) => c.id != chapterId).toList();
+    final remainingTrashed = _activeBook.trashedChapters
+        .where((c) => c.id != chapterId)
+        .toList();
 
     final restoredChapter = targetChapter.copyWith(
       chapterNumber: _activeBook.chapters.length + 1,
@@ -873,7 +1035,9 @@ class EditorController extends ChangeNotifier {
       chapters: updatedChapters,
       trashedChapters: remainingTrashed,
     );
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     _saveCurrentData(debounced: false);
     notifyListeners();
@@ -882,9 +1046,13 @@ class EditorController extends ChangeNotifier {
 
   /// Permanently deletes a chapter from trash
   bool permanentlyDeleteChapter(String chapterId) {
-    final remainingTrashed = _activeBook.trashedChapters.where((c) => c.id != chapterId).toList();
+    final remainingTrashed = _activeBook.trashedChapters
+        .where((c) => c.id != chapterId)
+        .toList();
     _activeBook = _activeBook.copyWith(trashedChapters: remainingTrashed);
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     _saveCurrentData(debounced: false);
     notifyListeners();
@@ -895,7 +1063,9 @@ class EditorController extends ChangeNotifier {
   void emptyTrash() {
     if (_activeBook.trashedChapters.isEmpty) return;
     _activeBook = _activeBook.copyWith(trashedChapters: const []);
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     _saveCurrentData(debounced: false);
     notifyListeners();
@@ -917,7 +1087,9 @@ class EditorController extends ChangeNotifier {
       id: 'bm_${DateTime.now().millisecondsSinceEpoch}',
       label: label ?? 'Marcador ${target.bookmarks.length + 1}',
       charOffset: charOffset,
-      previewText: previewText.length > 50 ? '${previewText.substring(0, 50)}...' : previewText,
+      previewText: previewText.length > 50
+          ? '${previewText.substring(0, 50)}...'
+          : previewText,
       createdAt: DateTime.now(),
       colorHex: colorHex,
     );
@@ -932,7 +1104,9 @@ class EditorController extends ChangeNotifier {
     if (_activeChapter.id == chapterId) {
       _activeChapter = updatedChapter;
     }
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     _saveCurrentData(debounced: false);
     notifyListeners();
@@ -944,7 +1118,9 @@ class EditorController extends ChangeNotifier {
     if (index == -1) return;
 
     final target = _activeBook.chapters[index];
-    final updatedBookmarks = target.bookmarks.where((b) => b.id != bookmarkId).toList();
+    final updatedBookmarks = target.bookmarks
+        .where((b) => b.id != bookmarkId)
+        .toList();
     final updatedChapter = target.copyWith(bookmarks: updatedBookmarks);
 
     final updatedChapters = List<ChapterModel>.from(_activeBook.chapters);
@@ -954,7 +1130,9 @@ class EditorController extends ChangeNotifier {
     if (_activeChapter.id == chapterId) {
       _activeChapter = updatedChapter;
     }
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     _saveCurrentData(debounced: false);
     notifyListeners();
@@ -963,7 +1141,9 @@ class EditorController extends ChangeNotifier {
   /// Updates the publication compilation configuration for the active book
   void updateCompilationConfig(BookCompilationConfig config) {
     _activeBook = _activeBook.copyWith(compilationConfig: config);
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -983,17 +1163,28 @@ class EditorController extends ChangeNotifier {
     if (_activeChapter.id == chapterId) {
       _activeChapter = updatedChapter;
     }
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   /// Splits the specified chapter at [splitPosition] into two chapters.
-  ChapterModel? splitChapter(String chapterId, int splitPosition, {String? newChapterTitle}) {
+  ChapterModel? splitChapter(
+    String chapterId,
+    int splitPosition, {
+    String? newChapterTitle,
+  }) {
     final currentText = chapterId == _activeChapter.id
         ? textEditingController.text
-        : _activeBook.chapters.firstWhere((ch) => ch.id == chapterId, orElse: () => _activeChapter).content;
+        : _activeBook.chapters
+              .firstWhere(
+                (ch) => ch.id == chapterId,
+                orElse: () => _activeChapter,
+              )
+              .content;
 
     final result = ChapterOperationsService.splitChapter(
       chapters: _activeBook.chapters,
@@ -1006,7 +1197,9 @@ class EditorController extends ChangeNotifier {
     if (result == null) return null;
 
     _activeBook = _activeBook.copyWith(chapters: result.updatedChapters);
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     if (_activeChapter.id == chapterId) {
       _activeChapter = result.updatedOriginal;
@@ -1025,7 +1218,9 @@ class EditorController extends ChangeNotifier {
 
   /// Merges the chapter with [chapterId] and the subsequent chapter in the book.
   bool mergeChapterWithNext(String chapterId) {
-    final chapterIndex = _activeBook.chapters.indexWhere((ch) => ch.id == chapterId);
+    final chapterIndex = _activeBook.chapters.indexWhere(
+      (ch) => ch.id == chapterId,
+    );
     if (chapterIndex == -1 || chapterIndex >= _activeBook.chapters.length - 1) {
       return false;
     }
@@ -1049,7 +1244,9 @@ class EditorController extends ChangeNotifier {
     if (result == null) return false;
 
     _activeBook = _activeBook.copyWith(chapters: result.updatedChapters);
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     _mindMapNodes = _mindMapNodes.map((node) {
       if (node.linkedChapterId == result.deletedChapterId) {
@@ -1083,7 +1280,8 @@ class EditorController extends ChangeNotifier {
     if (index == -1) return null;
 
     final targetChapter = _activeBook.chapters[index];
-    final snapshotContent = customContent ??
+    final snapshotContent =
+        customContent ??
         (targetChapter.id == _activeChapter.id
             ? textEditingController.text
             : targetChapter.content);
@@ -1094,8 +1292,9 @@ class EditorController extends ChangeNotifier {
       label: label,
     );
 
-    final updatedSnapshots = List<ChapterSnapshotModel>.from(targetChapter.snapshots)
-      ..insert(0, snapshot);
+    final updatedSnapshots = List<ChapterSnapshotModel>.from(
+      targetChapter.snapshots,
+    )..insert(0, snapshot);
 
     final updatedChapter = targetChapter.copyWith(
       snapshots: updatedSnapshots,
@@ -1109,7 +1308,9 @@ class EditorController extends ChangeNotifier {
     if (_activeChapter.id == chapterId) {
       _activeChapter = updatedChapter;
     }
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     _saveCurrentData(debounced: false);
     notifyListeners();
@@ -1120,7 +1321,12 @@ class EditorController extends ChangeNotifier {
   bool restoreChapterSnapshot(String chapterId, String snapshotId) {
     final currentText = _activeChapter.id == chapterId
         ? textEditingController.text
-        : _activeBook.chapters.firstWhere((c) => c.id == chapterId, orElse: () => _activeChapter).content;
+        : _activeBook.chapters
+              .firstWhere(
+                (c) => c.id == chapterId,
+                orElse: () => _activeChapter,
+              )
+              .content;
 
     final result = ChapterOperationsService.restoreSnapshot(
       chapters: _activeBook.chapters,
@@ -1139,7 +1345,9 @@ class EditorController extends ChangeNotifier {
       _lastRecordedText = result.restoredChapter.content;
       textEditingController.addListener(_onTextChanged);
     }
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     _saveCurrentData(debounced: false);
     notifyListeners();
@@ -1165,7 +1373,9 @@ class EditorController extends ChangeNotifier {
     if (_activeChapter.id == chapterId) {
       _activeChapter = updatedChapter;
     }
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
 
     _saveCurrentData(debounced: false);
     notifyListeners();
@@ -1174,7 +1384,11 @@ class EditorController extends ChangeNotifier {
 
   /// Replaces all occurrences of [query] with [replacement] across ALL chapters of the active book.
   /// Returns the total number of occurrences replaced.
-  int replaceAllInBook(String query, String replacement, {bool caseSensitive = false}) {
+  int replaceAllInBook(
+    String query,
+    String replacement, {
+    bool caseSensitive = false,
+  }) {
     if (query.isEmpty) return 0;
     flushPendingSave();
 
@@ -1195,7 +1409,9 @@ class EditorController extends ChangeNotifier {
 
     if (totalReplaced > 0) {
       _activeBook = _activeBook.copyWith(chapters: updatedChapters);
-      final activeIdx = updatedChapters.indexWhere((c) => c.id == _activeChapter.id);
+      final activeIdx = updatedChapters.indexWhere(
+        (c) => c.id == _activeChapter.id,
+      );
       if (activeIdx != -1) {
         _activeChapter = updatedChapters[activeIdx];
         textEditingController.removeListener(_onTextChanged);
@@ -1204,7 +1420,9 @@ class EditorController extends ChangeNotifier {
         _lastRecordedText = _activeChapter.content;
         textEditingController.addListener(_onTextChanged);
       }
-      _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+      _allBooks = _allBooks
+          .map((b) => b.id == _activeBook.id ? _activeBook : b)
+          .toList();
       _saveCurrentData(debounced: false);
       notifyListeners();
     }
@@ -1235,7 +1453,11 @@ class EditorController extends ChangeNotifier {
   // --- CHARACTERS ACTIONS ---
 
   void addCharacter(CharacterModel character) {
-    _characters = WorldbuildingService.addCharacter(_characters, character, _activeBook.id);
+    _characters = WorldbuildingService.addCharacter(
+      _characters,
+      character,
+      _activeBook.id,
+    );
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -1247,7 +1469,11 @@ class EditorController extends ChangeNotifier {
   }
 
   void deleteCharacter(String characterId) {
-    final result = WorldbuildingService.deleteCharacter(_characters, _relationships, characterId);
+    final result = WorldbuildingService.deleteCharacter(
+      _characters,
+      _relationships,
+      characterId,
+    );
     _characters = result.$1;
     _relationships = result.$2;
     _saveCurrentData(debounced: false);
@@ -1293,10 +1519,16 @@ class EditorController extends ChangeNotifier {
     final selection = textEditingController.selection;
 
     if (selection.isValid && selection.start >= 0) {
-      final newText = text.replaceRange(selection.start, selection.end, snippetText);
+      final newText = text.replaceRange(
+        selection.start,
+        selection.end,
+        snippetText,
+      );
       textEditingController.value = TextEditingValue(
         text: newText,
-        selection: TextSelection.collapsed(offset: selection.start + snippetText.length),
+        selection: TextSelection.collapsed(
+          offset: selection.start + snippetText.length,
+        ),
       );
     } else {
       final newText = text + snippetText;
@@ -1310,13 +1542,21 @@ class EditorController extends ChangeNotifier {
   // --- CODEX ACTIONS ---
 
   void addCodexEntry(CodexEntryModel entry) {
-    _codexEntries = WorldbuildingService.addCodexEntry(_codexEntries, entry, _activeBook.id);
+    _codexEntries = WorldbuildingService.addCodexEntry(
+      _codexEntries,
+      entry,
+      _activeBook.id,
+    );
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void updateCodexEntry(CodexEntryModel updated) {
-    _codexEntries = WorldbuildingService.updateCodexEntry(_codexEntries, updated, _activeBook.id);
+    _codexEntries = WorldbuildingService.updateCodexEntry(
+      _codexEntries,
+      updated,
+      _activeBook.id,
+    );
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -1333,26 +1573,6 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- WRITING SPRINT ACTIONS ---
-
-  void startSprint({required int durationMinutes, required int targetWords}) {
-    _activeSprint = WritingSprintModel(
-      startTime: DateTime.now(),
-      durationMinutes: durationMinutes,
-      targetWords: targetWords,
-      startingWordCount: WriterTextFormatter.countWords(textEditingController.text),
-      isActive: true,
-    );
-    notifyListeners();
-  }
-
-  void stopSprint() {
-    if (_activeSprint != null) {
-      _activeSprint = _activeSprint!.copyWith(isActive: false);
-      notifyListeners();
-    }
-  }
-
   // --- WRITER STATS ACTIONS ---
 
   void updateDailyGoal(int newGoalWords) {
@@ -1365,7 +1585,9 @@ class EditorController extends ChangeNotifier {
   // --- MIND MAP PLOT ACTIONS ---
 
   void addMindMapNode(MindMapNodeModel node) {
-    final scopedNode = node.bookId.isEmpty ? node.copyWith(bookId: _activeBook.id) : node;
+    final scopedNode = node.bookId.isEmpty
+        ? node.copyWith(bookId: _activeBook.id)
+        : node;
     _mindMapNodes.add(scopedNode);
     _saveCurrentData(debounced: false);
     notifyListeners();
@@ -1394,13 +1616,21 @@ class EditorController extends ChangeNotifier {
   }
 
   void connectMindMapNodes(String fromId, String toId) {
-    _mindMapNodes = MindMapLayoutService.connectNodes(_mindMapNodes, fromId, toId);
+    _mindMapNodes = MindMapLayoutService.connectNodes(
+      _mindMapNodes,
+      fromId,
+      toId,
+    );
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void disconnectMindMapNodes(String fromId, String toId) {
-    _mindMapNodes = MindMapLayoutService.disconnectNodes(_mindMapNodes, fromId, toId);
+    _mindMapNodes = MindMapLayoutService.disconnectNodes(
+      _mindMapNodes,
+      fromId,
+      toId,
+    );
     notifyListeners();
   }
 
@@ -1431,13 +1661,20 @@ class EditorController extends ChangeNotifier {
   // --- CHARACTER RELATIONSHIPS ---
 
   void addRelationship(CharacterRelationshipModel relationship) {
-    _relationships = WorldbuildingService.addRelationship(_relationships, relationship, _activeBook.id);
+    _relationships = WorldbuildingService.addRelationship(
+      _relationships,
+      relationship,
+      _activeBook.id,
+    );
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void updateRelationship(CharacterRelationshipModel updated) {
-    _relationships = WorldbuildingService.updateRelationship(_relationships, updated);
+    _relationships = WorldbuildingService.updateRelationship(
+      _relationships,
+      updated,
+    );
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
@@ -1448,7 +1685,9 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<CharacterRelationshipModel> relationshipsForCharacter(String characterId) {
+  List<CharacterRelationshipModel> relationshipsForCharacter(
+    String characterId,
+  ) {
     return WorldbuildingService.filterRelationshipsForCharacter(
       allRelationships: _relationships,
       bookId: _activeBook.id,
@@ -1464,12 +1703,15 @@ class EditorController extends ChangeNotifier {
     required int wordsWritten,
     required DateTime startTime,
     required bool completed,
+    String? bookId,
+    String? chapterId,
+    String? chapterTitle,
   }) {
     final entry = SprintHistoryModel(
       id: 'sprint_${DateTime.now().millisecondsSinceEpoch}',
-      bookId: _activeBook.id,
-      chapterId: _activeChapter.id,
-      chapterTitle: _activeChapter.title,
+      bookId: bookId ?? _activeBook.id,
+      chapterId: chapterId ?? _activeChapter.id,
+      chapterTitle: chapterTitle ?? _activeChapter.title,
       startTime: startTime,
       endTime: DateTime.now(),
       durationMinutes: durationMinutes,
@@ -1508,8 +1750,9 @@ class EditorController extends ChangeNotifier {
     final scoped = comment.chapterId.isEmpty
         ? comment.copyWith(chapterId: _activeChapter.id)
         : comment;
-    final updatedComments = List<RevisionCommentModel>.from(_activeChapter.comments)
-      ..insert(0, scoped);
+    final updatedComments = List<RevisionCommentModel>.from(
+      _activeChapter.comments,
+    )..insert(0, scoped);
     _updateActiveChapterComments(updatedComments);
   }
 
@@ -1534,20 +1777,63 @@ class EditorController extends ChangeNotifier {
         .map((c) => c.id == _activeChapter.id ? _activeChapter : c)
         .toList();
     _activeBook = _activeBook.copyWith(chapters: updatedChapters);
-    _allBooks = _allBooks.map((b) => b.id == _activeBook.id ? _activeBook : b).toList();
+    _allBooks = _allBooks
+        .map((b) => b.id == _activeBook.id ? _activeBook : b)
+        .toList();
     _saveCurrentData(debounced: false);
     notifyListeners();
   }
 
   void _startAutoBackupTimer() {
     _autoBackupTimer?.cancel();
+    if (!_autoBackupEnabled) return;
     _autoBackupTimer = Timer.periodic(const Duration(minutes: 5), (_) {
-      performSilentAutoBackup();
+      if (_autoBackupEnabled) {
+        performSilentAutoBackup();
+      }
     });
   }
 
-  Future<void> performSilentAutoBackup() async {
+  Future<void> setAutoBackupEnabled(bool enabled) async {
+    _autoBackupEnabled = enabled;
+    await _persistenceService.setAutoBackupEnabled(enabled);
+    if (enabled) {
+      _startAutoBackupTimer();
+    } else {
+      _autoBackupTimer?.cancel();
+    }
+    notifyListeners();
+  }
+
+  Future<bool> runAutoBackupNow() async {
     try {
+      _syncActiveChapterFromEditor();
+      final backupJson = exportBackupJson();
+      await _persistenceService.saveSilentAutoBackup(backupJson);
+      _lastAutoBackupTime = DateTime.now();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Error en copia automática local manual: $e');
+      return false;
+    }
+  }
+
+  Future<bool> restoreAutoBackup() async {
+    try {
+      final rawJson = await _persistenceService.loadSilentAutoBackup();
+      if (rawJson == null || rawJson.isEmpty) return false;
+      return restoreFromBackupJson(rawJson);
+    } catch (e) {
+      debugPrint('Error restaurando copia automática local: $e');
+      return false;
+    }
+  }
+
+  Future<void> performSilentAutoBackup() async {
+    if (!_autoBackupEnabled) return;
+    try {
+      _syncActiveChapterFromEditor();
       final backupJson = exportBackupJson();
       await _persistenceService.saveSilentAutoBackup(backupJson);
       _lastAutoBackupTime = DateTime.now();

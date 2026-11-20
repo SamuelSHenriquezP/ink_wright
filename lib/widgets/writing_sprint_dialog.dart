@@ -7,10 +7,7 @@ import '../controllers/sprint_controller.dart';
 class WritingSprintDialog extends StatefulWidget {
   final bool isDark;
 
-  const WritingSprintDialog({
-    super.key,
-    required this.isDark,
-  });
+  const WritingSprintDialog({super.key, required this.isDark});
 
   @override
   State<WritingSprintDialog> createState() => _WritingSprintDialogState();
@@ -18,8 +15,9 @@ class WritingSprintDialog extends StatefulWidget {
 
 class _WritingSprintDialogState extends State<WritingSprintDialog> {
   int _selectedDuration = 25;
-  final TextEditingController _targetWordsCtrl = TextEditingController(text: '500');
-  bool _completionRecorded = false;
+  final TextEditingController _targetWordsCtrl = TextEditingController(
+    text: '500',
+  );
 
   @override
   void dispose() {
@@ -30,31 +28,27 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
   @override
   Widget build(BuildContext context) {
     final sprintController = Provider.of<SprintController>(context);
-    final editorController = Provider.of<EditorController>(context, listen: false);
+    final editorController = Provider.of<EditorController>(
+      context,
+      listen: false,
+    );
 
-    final bgCard = widget.isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
-    final textPrimary = widget.isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
-    final textSecondary = widget.isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
-    final borderSubtle = widget.isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final bgCard = widget.isDark
+        ? AppTheme.darkSurfaceCard
+        : AppTheme.lightSurfaceCard;
+    final textPrimary = widget.isDark
+        ? AppTheme.darkTextPrimary
+        : AppTheme.lightTextPrimary;
+    final textSecondary = widget.isDark
+        ? AppTheme.darkTextSecondary
+        : AppTheme.lightTextSecondary;
+    final borderSubtle = widget.isDark
+        ? AppTheme.darkBorderSubtle
+        : AppTheme.lightBorderSubtle;
     final accentColor = widget.isDark ? Colors.white : Colors.black;
 
     final sprint = sprintController.activeSprint;
     final isSprintActive = sprintController.isSprintActive;
-
-    // Detect auto-completion (timer ran out): sprint exists, not active, isCompleted=true
-    if (sprint != null && !isSprintActive && sprint.isCompleted && !_completionRecorded) {
-      _completionRecorded = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        editorController.recordSprintHistory(
-          durationMinutes: sprint.durationMinutes,
-          targetWords: sprint.targetWords,
-          wordsWritten: sprint.wordsWritten,
-          startTime: sprint.startTime,
-          completed: true, // timer ran out automatically
-        );
-      });
-    }
 
     return Dialog(
       backgroundColor: bgCard,
@@ -99,7 +93,9 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                  color: widget.isDark
+                      ? const Color(0xFF27272A)
+                      : const Color(0xFFF4F4F5),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: borderSubtle),
                 ),
@@ -127,7 +123,9 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                     const SizedBox(height: 16),
                     LinearProgressIndicator(
                       value: sprint.progress,
-                      backgroundColor: widget.isDark ? Colors.white12 : Colors.black12,
+                      backgroundColor: widget.isDark
+                          ? Colors.white12
+                          : Colors.black12,
                       valueColor: AlwaysStoppedAnimation<Color>(accentColor),
                       borderRadius: BorderRadius.circular(10),
                       minHeight: 8,
@@ -158,33 +156,27 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
+
+              const SizedBox(height: 16),
 
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.redAccent,
                   foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
                   elevation: 0,
                 ),
                 icon: const Icon(Icons.stop_circle_rounded),
-                label: const Text('Detener Sprint Actual', style: TextStyle(fontWeight: FontWeight.w700)),
+                label: const Text(
+                  'Detener Sprint Actual',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
                 onPressed: () {
-                  // Capture sprint data BEFORE stopping (stop clears isActive)
-                  final sprintData = sprintController.activeSprint;
                   sprintController.stopSprint();
-                  editorController.stopSprint();
-                  // Record sprint history for manual stop
-                  if (sprintData != null) {
-                    editorController.recordSprintHistory(
-                      durationMinutes: sprintData.durationMinutes,
-                      targetWords: sprintData.targetWords,
-                      wordsWritten: sprintData.wordsWritten,
-                      startTime: sprintData.startTime,
-                      completed: false, // manually stopped, not time-completed
-                    );
-                  }
                 },
               ),
             ] else if (sprint != null && sprint.isCompleted) ...[
@@ -192,7 +184,9 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: widget.isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                  color: widget.isDark
+                      ? const Color(0xFF27272A)
+                      : const Color(0xFFF4F4F5),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: borderSubtle),
                 ),
@@ -232,11 +226,16 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                   backgroundColor: accentColor,
                   foregroundColor: widget.isDark ? Colors.black : Colors.white,
                   minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
                   elevation: 0,
                 ),
                 icon: const Icon(Icons.check_rounded),
-                label: const Text('Cerrar', style: TextStyle(fontWeight: FontWeight.w700)),
+                label: const Text(
+                  'Cerrar',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ] else ...[
@@ -244,7 +243,11 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
               Text(
                 'Establece un límite de tiempo y un objetivo para concentrar tu flujo creativo sin interrupciones.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: textSecondary, height: 1.4),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: textSecondary,
+                  height: 1.4,
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -262,9 +265,16 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       margin: const EdgeInsets.symmetric(horizontal: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
-                        color: isSelected ? accentColor : (widget.isDark ? const Color(0xFF252525) : const Color(0xFFF2F1EC)),
+                        color: isSelected
+                            ? accentColor
+                            : (widget.isDark
+                                  ? const Color(0xFF252525)
+                                  : const Color(0xFFF2F1EC)),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Column(
@@ -274,7 +284,11 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
-                              color: isSelected ? (widget.isDark ? Colors.black : Colors.white) : textPrimary,
+                              color: isSelected
+                                  ? (widget.isDark
+                                        ? Colors.black
+                                        : Colors.white)
+                                  : textPrimary,
                             ),
                           ),
                           Text(
@@ -283,7 +297,9 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               color: isSelected
-                                  ? (widget.isDark ? Colors.black.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.9))
+                                  ? (widget.isDark
+                                        ? Colors.black.withValues(alpha: 0.8)
+                                        : Colors.white.withValues(alpha: 0.9))
                                   : textSecondary,
                             ),
                           ),
@@ -314,30 +330,34 @@ class _WritingSprintDialogState extends State<WritingSprintDialog> {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+
+              const SizedBox(height: 20),
 
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: accentColor,
                   foregroundColor: widget.isDark ? Colors.black : Colors.white,
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
                   elevation: 0,
                 ),
                 icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                label: const Text('Iniciar Sprint de Escritura', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                label: const Text(
+                  'Iniciar Sprint de Escritura',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
                 onPressed: () {
                   final target = int.tryParse(_targetWordsCtrl.text) ?? 500;
-                  final currentContent = editorController.textEditingController.text;
+                  final currentContent =
+                      editorController.textEditingController.text;
 
                   sprintController.startSprint(
                     durationMinutes: _selectedDuration,
                     targetWords: target,
                     currentContent: currentContent,
-                  );
-                  editorController.startSprint(
-                    durationMinutes: _selectedDuration,
-                    targetWords: target,
                   );
                 },
               ),

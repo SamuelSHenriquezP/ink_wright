@@ -227,7 +227,7 @@ class DashboardTutorialSheet {
                         icon: Icons.timer_outlined,
                         title: 'Sprints de Escritura, Sonidos y Concentración',
                         description:
-                            'Activa el modo pantalla completa para silenciar interfaces. Inicia sprints cronometrados de escritura (5, 15, 25 min) con objetivos de palabras y consulta tu ritmo (palabras/minuto) en el historial de sprints. Acompaña tus sesiones con sonidos ambientales relajantes (lluvia, fuego, café).',
+                            'Activa el modo pantalla completa para silenciar interfaces. Inicia sprints cronometrados de escritura (5, 15, 25 min) con objetivos de palabras y consulta tu ritmo (palabras/minuto) en el historial de sprints.',
                         badge: 'Productividad',
                         isDark: isDark,
                         borderSubtle: borderSubtle,

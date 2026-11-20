@@ -426,12 +426,15 @@ class ExportService {
           '${char.name.toUpperCase()} — ${char.role}${char.archetype.isNotEmpty ? ' (${char.archetype})' : ''}',
         );
         if (char.quote.isNotEmpty) buffer.writeln('"${char.quote}"');
-        if (char.traits.isNotEmpty)
+        if (char.traits.isNotEmpty) {
           buffer.writeln('Rasgos: ${char.traits.join(", ")}');
-        if (char.motivation.isNotEmpty)
+        }
+        if (char.motivation.isNotEmpty) {
           buffer.writeln('Motivación: ${char.motivation}');
-        if (char.writtenBiography.isNotEmpty)
+        }
+        if (char.writtenBiography.isNotEmpty) {
           buffer.writeln('\n${char.writtenBiography}');
+        }
         buffer.writeln();
         buffer.writeln(
           '----------------------------------------------------------------',
@@ -450,8 +453,9 @@ class ExportService {
           '${entry.name.toUpperCase()} (${entry.typeLabel.toUpperCase()})',
         );
         if (entry.role.isNotEmpty) buffer.writeln(entry.role);
-        if (entry.description.isNotEmpty)
+        if (entry.description.isNotEmpty) {
           buffer.writeln('\n${entry.description}');
+        }
         buffer.writeln();
         buffer.writeln(
           '----------------------------------------------------------------',
@@ -701,7 +705,6 @@ class ExportService {
             'margin-bottom: 0; line-height: 2.0; text-indent: 2em;';
         break;
       case EditorialPreset.classic:
-      default:
         fontFamilyCss = "'Lora', Georgia, serif";
         paragraphStyleCss =
             'margin-bottom: 1.4em; text-align: justify; text-indent: 1.5em;';
@@ -712,7 +715,7 @@ class ExportService {
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>${book.title}</title>
+  <title>${_xmlEscape(title)}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
     body {
@@ -797,8 +800,9 @@ class ExportService {
 </head>
 <body>
   ${includeEditorialElements ? '''<header>
-    <h1>${book.title}</h1>
-    ${book.subtitle.isNotEmpty ? '<p class="subtitle">${book.subtitle}</p>' : ''}
+    <h1>${_xmlEscape(title)}</h1>
+    ${subtitle.isNotEmpty ? '<p class="subtitle">${_xmlEscape(subtitle)}</p>' : ''}
+    <p>${_xmlEscape(author)}</p>
     <div class="meta">
       <span>Género: ${book.genre}</span> • 
       <span>${book.currentWordCount} palabras</span> • 
@@ -829,16 +833,10 @@ class ExportService {
   }) async {
     final cfg = compilationConfig ?? book.compilationConfig;
     final compiledChapters = getCompiledChapters(book, cfg);
+    final resolvedCover = _resolveCoverData(book, cfg);
 
-    final title = cfg?.cover.title.isNotEmpty == true
-        ? cfg!.cover.title
-        : book.title;
-    final subtitle = cfg?.cover.subtitle.isNotEmpty == true
-        ? cfg!.cover.subtitle
-        : book.subtitle;
-    final author = cfg?.cover.author.isNotEmpty == true
-        ? cfg!.cover.author
-        : 'InkWright Author';
+    final title = resolvedCover.title;
+    final author = resolvedCover.author;
 
     final pdf = pw.Document(
       title: _sanitizeForPdf(title),
@@ -846,276 +844,238 @@ class ExportService {
     );
 
     if (includeEditorialElements) {
-      // Cover Page
-      if (cfg != null) {
-        final hexBg = cfg.cover.backgroundColorHex;
-        final hexText = cfg.cover.textColorHex;
-        final bgColor = PdfColor(
-          ((hexBg >> 16) & 0xFF) / 255.0,
-          ((hexBg >> 8) & 0xFF) / 255.0,
-          (hexBg & 0xFF) / 255.0,
-        );
-        final textColor = PdfColor(
-          ((hexText >> 16) & 0xFF) / 255.0,
-          ((hexText >> 8) & 0xFF) / 255.0,
-          (hexText & 0xFF) / 255.0,
-        );
+      // Portada real integrada usando BookModel + BookCompilationConfig
+      final hexBg = resolvedCover.backgroundColorHex;
+      final hexText = resolvedCover.textColorHex;
+      final bgColor = PdfColor(
+        ((hexBg >> 16) & 0xFF) / 255.0,
+        ((hexBg >> 8) & 0xFF) / 255.0,
+        (hexBg & 0xFF) / 255.0,
+      );
+      final textColor = PdfColor(
+        ((hexText >> 16) & 0xFF) / 255.0,
+        ((hexText >> 8) & 0xFF) / 255.0,
+        (hexText & 0xFF) / 255.0,
+      );
+      final mutedTextColor = PdfColor(
+        textColor.red,
+        textColor.green,
+        textColor.blue,
+        0.78,
+      );
 
-        pw.MemoryImage? coverImg;
-        if (cfg.cover.imagePath != null && cfg.cover.imagePath!.isNotEmpty) {
-          try {
-            final file = File(cfg.cover.imagePath!);
-            if (file.existsSync()) {
-              coverImg = pw.MemoryImage(file.readAsBytesSync());
-            }
-          } catch (_) {}
-        }
+      pw.MemoryImage? coverImg;
+      if (resolvedCover.imagePath != null &&
+          resolvedCover.imagePath!.isNotEmpty) {
+        try {
+          final file = File(resolvedCover.imagePath!);
+          if (file.existsSync()) {
+            coverImg = pw.MemoryImage(file.readAsBytesSync());
+          }
+        } catch (_) {}
+      }
 
-        final titlePos = cfg.cover.textPosition;
-        final authorPos = cfg.cover.authorPosition;
-        final isSplit = titlePos != authorPos;
+      final titlePos = resolvedCover.textPosition;
+      final authorPos = resolvedCover.authorPosition;
+      final isSplit = titlePos != authorPos;
+      final titleLines = resolvedCover.titleLines;
 
-        pw.Widget buildPdfTitleBlock() => pw.Column(
-          mainAxisSize: pw.MainAxisSize.min,
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
-          children: [
-            pw.Text(
-              _sanitizeForPdf(title.toUpperCase()),
-              style: pw.TextStyle(
-                fontSize: 32,
-                fontWeight: pw.FontWeight.bold,
-                letterSpacing: 2.2,
-                color: textColor,
-              ),
-              textAlign: pw.TextAlign.center,
+      pw.Widget buildPdfOrnament() => pw.Row(
+        mainAxisSize: pw.MainAxisSize.min,
+        mainAxisAlignment: pw.MainAxisAlignment.center,
+        children: [
+          pw.Container(width: 28, height: 1, color: mutedTextColor),
+          if (resolvedCover.coverStyle != 'minimal') ...[
+            pw.SizedBox(width: 8),
+            pw.Transform.rotate(
+              angle: 0.785398,
+              child: pw.Container(width: 5, height: 5, color: textColor),
             ),
-            if (subtitle.isNotEmpty) ...[
-              pw.SizedBox(height: 12),
-              pw.Text(
-                _sanitizeForPdf(subtitle),
-                style: pw.TextStyle(
-                  fontSize: 16,
-                  fontStyle: pw.FontStyle.italic,
-                  color: textColor,
-                ),
-                textAlign: pw.TextAlign.center,
-              ),
-            ],
+            pw.SizedBox(width: 8),
+            pw.Container(width: 28, height: 1, color: mutedTextColor),
           ],
-        );
+        ],
+      );
 
-        pw.Widget buildPdfAuthorBlock() => pw.Column(
-          mainAxisSize: pw.MainAxisSize.min,
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
-          children: [
-            if (isSplit) ...[
-              pw.Container(width: 60, height: 1.5, color: textColor),
-              pw.SizedBox(height: 14),
-            ],
+      pw.Widget buildPdfTitleBlock() => pw.Column(
+        mainAxisSize: pw.MainAxisSize.min,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          if (resolvedCover.genre.isNotEmpty) ...[
             pw.Text(
-              _sanitizeForPdf(author.toUpperCase()),
+              _sanitizeForPdf(resolvedCover.genre.toUpperCase()),
               style: pw.TextStyle(
-                fontSize: 16,
+                fontSize: 9.5,
                 fontWeight: pw.FontWeight.bold,
-                letterSpacing: 3,
-                color: textColor,
+                letterSpacing: 3.2,
+                color: mutedTextColor,
               ),
               textAlign: pw.TextAlign.center,
             ),
             pw.SizedBox(height: 14),
+          ],
+          for (int i = 0; i < titleLines.length; i++) ...[
             pw.Text(
-              '${book.currentWordCount} palabras • ${compiledChapters.length} capítulos',
-              style: pw.TextStyle(fontSize: 10, color: textColor),
+              _sanitizeForPdf(titleLines[i].toUpperCase()),
+              style: pw.TextStyle(
+                fontSize: i == 0 ? 30 : 20,
+                fontWeight: pw.FontWeight.bold,
+                letterSpacing: i == 0 ? 2.2 : 1.5,
+                color: textColor,
+              ),
+              textAlign: pw.TextAlign.center,
+            ),
+            if (i < titleLines.length - 1) pw.SizedBox(height: 6),
+          ],
+          if (resolvedCover.subtitle.isNotEmpty) ...[
+            pw.SizedBox(height: 12),
+            pw.Text(
+              _sanitizeForPdf(resolvedCover.subtitle),
+              style: pw.TextStyle(
+                fontSize: 15,
+                fontStyle: pw.FontStyle.italic,
+                color: mutedTextColor,
+              ),
               textAlign: pw.TextAlign.center,
             ),
           ],
-        );
+        ],
+      );
 
-        pw.MainAxisAlignment alignmentFor(CoverTextPosition p) {
-          switch (p) {
-            case CoverTextPosition.top:
-              return pw.MainAxisAlignment.start;
-            case CoverTextPosition.bottom:
-              return pw.MainAxisAlignment.end;
-            case CoverTextPosition.center:
-              return pw.MainAxisAlignment.center;
-          }
+      pw.Widget buildPdfAuthorBlock() => pw.Column(
+        mainAxisSize: pw.MainAxisSize.min,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          if (isSplit) ...[buildPdfOrnament(), pw.SizedBox(height: 14)],
+          pw.Text(
+            _sanitizeForPdf(author.toUpperCase()),
+            style: pw.TextStyle(
+              fontSize: 15,
+              fontWeight: pw.FontWeight.bold,
+              letterSpacing: 3,
+              color: textColor,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+          pw.SizedBox(height: 12),
+          pw.Text(
+            _sanitizeForPdf(
+              '${book.currentWordCount} palabras * ${compiledChapters.length} capitulos',
+            ),
+            style: pw.TextStyle(fontSize: 9.5, color: mutedTextColor),
+            textAlign: pw.TextAlign.center,
+          ),
+        ],
+      );
+
+      pw.MainAxisAlignment alignmentFor(CoverTextPosition p) {
+        switch (p) {
+          case CoverTextPosition.top:
+            return pw.MainAxisAlignment.start;
+          case CoverTextPosition.bottom:
+            return pw.MainAxisAlignment.end;
+          case CoverTextPosition.center:
+            return pw.MainAxisAlignment.center;
         }
+      }
 
-        pdf.addPage(
-          pw.Page(
-            pageFormat: PdfPageFormat.a4,
-            margin: pw.EdgeInsets.zero,
-            build: (pw.Context context) {
-              pw.Widget? zone(CoverTextPosition p) {
-                if (titlePos == p) return buildPdfTitleBlock();
-                if (authorPos == p) return buildPdfAuthorBlock();
-                return null;
-              }
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: pw.EdgeInsets.zero,
+          build: (pw.Context context) {
+            pw.Widget? zone(CoverTextPosition p) {
+              if (titlePos == p) return buildPdfTitleBlock();
+              if (authorPos == p) return buildPdfAuthorBlock();
+              return null;
+            }
 
-              return pw.Container(
-                width: double.infinity,
-                height: double.infinity,
-                color: bgColor,
-                child: pw.Stack(
-                  children: [
-                    if (coverImg != null)
-                      pw.Positioned.fill(
-                        child: pw.Image(coverImg, fit: pw.BoxFit.cover),
-                      ),
-                    if (coverImg != null)
-                      pw.Positioned.fill(
+            return pw.Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: bgColor,
+              child: pw.Stack(
+                children: [
+                  if (coverImg != null)
+                    pw.Positioned.fill(
+                      child: pw.Image(coverImg, fit: pw.BoxFit.cover),
+                    ),
+                  if (coverImg != null)
+                    pw.Positioned.fill(
+                      child: pw.Container(color: const PdfColor(0, 0, 0, 0.45)),
+                    ),
+                  if (resolvedCover.coverStyle == 'editorial')
+                    pw.Positioned.fill(
+                      child: pw.Padding(
+                        padding: const pw.EdgeInsets.all(24),
                         child: pw.Container(
-                          color: const PdfColor(0, 0, 0, 0.45),
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(color: textColor, width: 0.7),
+                          ),
                         ),
                       ),
-                    if (cfg.cover.coverStyle != 'minimal')
-                      pw.Positioned.fill(
-                        child: pw.Padding(
-                          padding: const pw.EdgeInsets.all(24),
+                    )
+                  else if (resolvedCover.coverStyle == 'framed')
+                    pw.Positioned.fill(
+                      child: pw.Padding(
+                        padding: const pw.EdgeInsets.all(20),
+                        child: pw.Container(
+                          padding: const pw.EdgeInsets.all(6),
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(color: textColor, width: 1.5),
+                          ),
                           child: pw.Container(
                             decoration: pw.BoxDecoration(
                               border: pw.Border.all(
-                                color: textColor,
-                                width: cfg.cover.coverStyle == 'framed' ? 1.5 : 0.7,
+                                color: mutedTextColor,
+                                width: 0.7,
                               ),
                             ),
                           ),
                         ),
                       ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 56,
-                        vertical: 72,
-                      ),
-                      child: isSplit
-                          ? pw.Column(
-                              crossAxisAlignment: pw.CrossAxisAlignment.center,
-                              children: [
-                                if (zone(CoverTextPosition.top) != null)
-                                  zone(CoverTextPosition.top)!
-                                else
-                                  pw.SizedBox(height: 16),
-                                pw.Spacer(),
-                                if (zone(CoverTextPosition.center) != null)
-                                  zone(CoverTextPosition.center)!,
-                                pw.Spacer(),
-                                if (zone(CoverTextPosition.bottom) != null)
-                                  zone(CoverTextPosition.bottom)!
-                                else
-                                  pw.SizedBox(height: 16),
-                              ],
-                            )
-                          : pw.Column(
-                              mainAxisAlignment: alignmentFor(titlePos),
-                              crossAxisAlignment: pw.CrossAxisAlignment.center,
-                              children: [
-                                buildPdfTitleBlock(),
-                                pw.SizedBox(height: 24),
-                                pw.Container(width: 72, height: 1.5, color: textColor),
-                                pw.SizedBox(height: 20),
-                                buildPdfAuthorBlock(),
-                              ],
-                            ),
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      } else {
-        // Classic default cover
-        pdf.addPage(
-          pw.Page(
-            pageFormat: PdfPageFormat.a4,
-            margin: const pw.EdgeInsets.all(60),
-            build: (pw.Context context) {
-              return pw.Center(
-                child: pw.Column(
-                  mainAxisAlignment: pw.MainAxisAlignment.center,
-                  children: [
-                    pw.Container(
-                      width: 72,
-                      height: 90,
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border.all(
-                          color: PdfColors.grey800,
-                          width: 2,
-                        ),
-                        borderRadius: const pw.BorderRadius.all(
-                          pw.Radius.circular(6),
-                        ),
-                      ),
-                      child: pw.Center(
-                        child: pw.Text(
-                          'IW',
-                          style: pw.TextStyle(
-                            fontSize: 26,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.grey800,
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 56,
+                      vertical: 72,
+                    ),
+                    child: isSplit
+                        ? pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.center,
+                            children: [
+                              if (zone(CoverTextPosition.top) != null)
+                                zone(CoverTextPosition.top)!
+                              else
+                                pw.SizedBox(height: 16),
+                              pw.Spacer(),
+                              if (zone(CoverTextPosition.center) != null)
+                                zone(CoverTextPosition.center)!,
+                              pw.Spacer(),
+                              if (zone(CoverTextPosition.bottom) != null)
+                                zone(CoverTextPosition.bottom)!
+                              else
+                                pw.SizedBox(height: 16),
+                            ],
+                          )
+                        : pw.Column(
+                            mainAxisAlignment: alignmentFor(titlePos),
+                            crossAxisAlignment: pw.CrossAxisAlignment.center,
+                            children: [
+                              buildPdfTitleBlock(),
+                              pw.SizedBox(height: 24),
+                              buildPdfOrnament(),
+                              pw.SizedBox(height: 20),
+                              buildPdfAuthorBlock(),
+                            ],
                           ),
-                        ),
-                      ),
-                    ),
-                    pw.SizedBox(height: 28),
-                    pw.Text(
-                      _sanitizeForPdf(book.title),
-                      style: pw.TextStyle(
-                        fontSize: 28,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                    if (book.subtitle.isNotEmpty) ...[
-                      pw.SizedBox(height: 10),
-                      pw.Text(
-                        _sanitizeForPdf(book.subtitle),
-                        style: pw.TextStyle(
-                          fontSize: 16,
-                          fontStyle: pw.FontStyle.italic,
-                          color: PdfColors.grey700,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ],
-                    pw.SizedBox(height: 40),
-                    pw.Container(
-                      width: 120,
-                      height: 1,
-                      color: PdfColors.grey400,
-                    ),
-                    pw.SizedBox(height: 20),
-                    pw.Text(
-                      'Género: ${_sanitizeForPdf(book.genre)}',
-                      style: const pw.TextStyle(
-                        fontSize: 12,
-                        color: PdfColors.grey600,
-                      ),
-                    ),
-                    pw.SizedBox(height: 6),
-                    pw.Text(
-                      '${book.currentWordCount} palabras | ${book.chapters.length} capítulos',
-                      style: const pw.TextStyle(
-                        fontSize: 12,
-                        color: PdfColors.grey600,
-                      ),
-                    ),
-                    pw.SizedBox(height: 40),
-                    pw.Text(
-                      'Generado con InkWright Sanctuary',
-                      style: const pw.TextStyle(
-                        fontSize: 10,
-                        color: PdfColors.grey500,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      }
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
 
       // Copyright Page
       if (cfg != null && cfg.copyrightNotice.trim().isNotEmpty) {
@@ -1637,7 +1597,6 @@ class ExportService {
         paragraphAlign = pw.TextAlign.left;
         break;
       case EditorialPreset.classic:
-      default:
         baseFontSize = 11.0;
         baseLineSpacing = 3.2;
         paragraphAlign = pw.TextAlign.justify;
@@ -2506,25 +2465,20 @@ class ExportService {
   }) {
     final cfg = compilationConfig ?? book.compilationConfig;
     final compiledChapters = getCompiledChapters(book, cfg);
-    final title = cfg?.cover.title.isNotEmpty == true
-        ? cfg!.cover.title
-        : book.title;
-    final subtitle = cfg?.cover.subtitle.isNotEmpty == true
-        ? cfg!.cover.subtitle
-        : book.subtitle;
-    final author = cfg?.cover.author.isNotEmpty == true
-        ? cfg!.cover.author
-        : 'InkWright Author';
+    final resolvedCover = _resolveCoverData(book, cfg);
+    final title = resolvedCover.title;
+    final subtitle = resolvedCover.subtitle;
+    final author = resolvedCover.author;
 
     final bool hasCover = includeEditorialElements;
     Uint8List? coverImgBytes;
     String? coverImgExt;
     String? coverImgMime;
     if (hasCover &&
-        cfg?.cover.imagePath != null &&
-        cfg!.cover.imagePath!.isNotEmpty) {
+        resolvedCover.imagePath != null &&
+        resolvedCover.imagePath!.isNotEmpty) {
       try {
-        final f = File(cfg.cover.imagePath!);
+        final f = File(resolvedCover.imagePath!);
         if (f.existsSync()) {
           coverImgBytes = f.readAsBytesSync();
           final pathLower = f.path.toLowerCase();
@@ -2569,16 +2523,6 @@ class ExportService {
 
     final archive = Archive();
 
-    if (hasCoverImage) {
-      archive.addFile(
-        ArchiveFile(
-          'OEBPS/images/cover.$coverImgExt',
-          coverImgBytes.length,
-          coverImgBytes,
-        ),
-      );
-    }
-
     // 1. mimetype (MUST be first and uncompressed)
     const mimetypeContent = 'application/epub+zip';
     final mimeFile = ArchiveFile(
@@ -2588,6 +2532,16 @@ class ExportService {
     );
     mimeFile.compression = CompressionType.none;
     archive.addFile(mimeFile);
+
+    if (hasCoverImage) {
+      archive.addFile(
+        ArchiveFile(
+          'OEBPS/images/cover.$coverImgExt',
+          coverImgBytes.length,
+          coverImgBytes,
+        ),
+      );
+    }
 
     // 2. META-INF/container.xml
     const containerXml = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -2620,7 +2574,6 @@ class ExportService {
             'text-indent: 2em;\n  line-height: 2.0;\n  margin-top: 0;\n  margin-bottom: 0;\n  text-align: justify;';
         break;
       case EditorialPreset.classic:
-      default:
         epubFontFamily = 'Georgia, "Times New Roman", serif';
         epubPStyle =
             'text-indent: 1.5em;\n  margin-top: 0;\n  margin-bottom: 0.5em;\n  text-align: justify;';
@@ -2723,7 +2676,80 @@ mark {
       ),
     );
 
-    // 4. OEBPS/titlepage.xhtml
+    // 4. OEBPS/cover.xhtml (Portada dedicada con estilos reales del libro)
+    if (hasCover) {
+      final bgCss = _toCssHex(resolvedCover.backgroundColorHex);
+      final textCss = _toCssHex(resolvedCover.textColorHex);
+      final borderRule = resolvedCover.coverStyle == 'minimal'
+          ? 'none'
+          : (resolvedCover.coverStyle == 'framed'
+                ? '3px double $textCss'
+                : '1px solid $textCss');
+      final titleAlign = resolvedCover.textPosition == CoverTextPosition.top
+          ? 'padding-top: 2em;'
+          : (resolvedCover.textPosition == CoverTextPosition.bottom
+                ? 'padding-top: 10em;'
+                : 'padding-top: 5em;');
+
+      final coverBuffer = StringBuffer();
+      coverBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
+      coverBuffer.writeln('<!DOCTYPE html>');
+      coverBuffer.writeln(
+        '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="es">',
+      );
+      coverBuffer.writeln(
+        '<head><title>${_xmlEscape(title)} — Portada</title><link rel="stylesheet" type="text/css" href="style.css"/></head>',
+      );
+      coverBuffer.writeln(
+        '<body style="margin: 0; padding: 1.5em; background-color: $bgCss; color: $textCss;">',
+      );
+      coverBuffer.writeln(
+        '<div style="box-sizing: border-box; min-height: 88vh; border: $borderRule; padding: 2.2em 1.6em; text-align: center; $titleAlign">',
+      );
+      if (hasCoverImage) {
+        coverBuffer.writeln('<div style="margin-bottom: 1.6em;">');
+        coverBuffer.writeln(
+          '<img src="images/cover.$coverImgExt" alt="${_xmlEscape(title)}" style="max-width: 78%; max-height: 46vh; height: auto; border-radius: 4px;" />',
+        );
+        coverBuffer.writeln('</div>');
+      }
+      if (resolvedCover.genre.isNotEmpty) {
+        coverBuffer.writeln(
+          '<p class="noindent" style="text-align: center; font-size: 0.78em; letter-spacing: 0.22em; text-transform: uppercase; opacity: 0.8; margin-bottom: 1.2em;">${_xmlEscape(resolvedCover.genre)}</p>',
+        );
+      }
+      for (int i = 0; i < resolvedCover.titleLines.length; i++) {
+        final line = resolvedCover.titleLines[i];
+        if (i == 0) {
+          coverBuffer.writeln(
+            '<h1 style="color: $textCss; margin-top: 0.2em; margin-bottom: 0.25em; letter-spacing: 0.08em; text-transform: uppercase;">${_xmlEscape(line)}</h1>',
+          );
+        } else {
+          coverBuffer.writeln(
+            '<p class="noindent" style="text-align: center; font-size: 1.25em; font-weight: bold; letter-spacing: 0.06em; color: $textCss; margin-top: 0.2em; margin-bottom: 0.4em;">${_xmlEscape(line)}</p>',
+          );
+        }
+      }
+      if (subtitle.isNotEmpty) {
+        coverBuffer.writeln(
+          '<p class="noindent" style="text-align: center; font-style: italic; color: $textCss; opacity: 0.85; font-size: 1.05em; margin-top: 0.6em;">${_xmlEscape(subtitle)}</p>',
+        );
+      }
+      coverBuffer.writeln(
+        '<div style="margin: 2em auto; width: 54px; height: 1px; background-color: $textCss; opacity: 0.6;"></div>',
+      );
+      coverBuffer.writeln(
+        '<p class="noindent" style="text-align: center; font-weight: bold; letter-spacing: 0.16em; text-transform: uppercase; color: $textCss; margin-top: 1.4em;">${_xmlEscape(author)}</p>',
+      );
+      coverBuffer.writeln('</div>');
+      coverBuffer.writeln('</body></html>');
+      final coverBytes = utf8.encode(coverBuffer.toString());
+      archive.addFile(
+        ArchiveFile('OEBPS/cover.xhtml', coverBytes.length, coverBytes),
+      );
+    }
+
+    // 4b. OEBPS/titlepage.xhtml
     if (hasCover) {
       final titlePageBuffer = StringBuffer();
       titlePageBuffer.writeln('<?xml version="1.0" encoding="utf-8"?>');
@@ -2773,12 +2799,12 @@ mark {
       );
       titlePageBuffer.writeln('</div>');
       titlePageBuffer.writeln('</body></html>');
-      final titlePageXml = titlePageBuffer.toString();
+      final titlePageBytes = utf8.encode(titlePageBuffer.toString());
       archive.addFile(
         ArchiveFile(
           'OEBPS/titlepage.xhtml',
-          titlePageXml.length,
-          utf8.encode(titlePageXml),
+          titlePageBytes.length,
+          titlePageBytes,
         ),
       );
     }
@@ -3042,7 +3068,8 @@ mark {
     navBuffer.writeln('<h2>Índice</h2>');
     navBuffer.writeln('<ol>');
     if (hasCover) {
-      navBuffer.writeln('<li><a href="titlepage.xhtml">Portada</a></li>');
+      navBuffer.writeln('<li><a href="cover.xhtml">Portada</a></li>');
+      navBuffer.writeln('<li><a href="titlepage.xhtml">Portadilla</a></li>');
     }
     if (hasDedication) {
       navBuffer.writeln('<li><a href="dedication.xhtml">Dedicatoria</a></li>');
@@ -3097,7 +3124,11 @@ mark {
     if (hasCover) {
       playOrder++;
       ncxBuffer.writeln(
-        '<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Portada</text></navLabel><content src="titlepage.xhtml"/></navPoint>',
+        '<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Portada</text></navLabel><content src="cover.xhtml"/></navPoint>',
+      );
+      playOrder++;
+      ncxBuffer.writeln(
+        '<navPoint id="navPoint-$playOrder" playOrder="$playOrder"><navLabel><text>Portadilla</text></navLabel><content src="titlepage.xhtml"/></navPoint>',
       );
     }
     if (hasDedication) {
@@ -3196,6 +3227,9 @@ mark {
     );
     if (hasCover) {
       opfBuffer.writeln(
+        '<item id="cover" href="cover.xhtml" media-type="application/xhtml+xml"/>',
+      );
+      opfBuffer.writeln(
         '<item id="titlepage" href="titlepage.xhtml" media-type="application/xhtml+xml"/>',
       );
     }
@@ -3238,6 +3272,7 @@ mark {
 
     opfBuffer.writeln('<spine toc="ncx">');
     if (hasCover) {
+      opfBuffer.writeln('<itemref idref="cover"/>');
       opfBuffer.writeln('<itemref idref="titlepage"/>');
     }
     if (hasDedication) {
@@ -3262,10 +3297,17 @@ mark {
       opfBuffer.writeln('<itemref idref="author"/>');
     }
     opfBuffer.writeln('</spine>');
+    if (hasCover) {
+      opfBuffer.writeln('<guide>');
+      opfBuffer.writeln(
+        '<reference type="cover" title="Portada" href="cover.xhtml"/>',
+      );
+      opfBuffer.writeln('</guide>');
+    }
     opfBuffer.writeln('</package>');
-    final opfXml = opfBuffer.toString();
+    final opfBytes = utf8.encode(opfBuffer.toString());
     archive.addFile(
-      ArchiveFile('OEBPS/content.opf', opfXml.length, utf8.encode(opfXml)),
+      ArchiveFile('OEBPS/content.opf', opfBytes.length, opfBytes),
     );
 
     return ZipEncoder().encode(archive);
@@ -3490,4 +3532,109 @@ mark {
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&apos;');
   }
+
+  /// Resuelve los metadatos y estilo de portada combinando BookModel y BookCompilationConfig
+  static _ResolvedCoverData _resolveCoverData(
+    BookModel book,
+    BookCompilationConfig? cfg,
+  ) {
+    final title = (cfg?.cover.title.trim().isNotEmpty == true)
+        ? cfg!.cover.title.trim()
+        : book.title.trim();
+    final subtitle = (cfg?.cover.subtitle.trim().isNotEmpty == true)
+        ? cfg!.cover.subtitle.trim()
+        : book.subtitle.trim();
+    final author = (cfg?.cover.author.trim().isNotEmpty == true)
+        ? cfg!.cover.author.trim()
+        : 'Autor de la Obra';
+    final rawBgHex = cfg != null
+        ? cfg.cover.backgroundColorHex
+        : book.coverColorHex;
+    final bgHex = rawBgHex == 0 ? 0xFF18181B : rawBgHex;
+
+    final int textHex;
+    if (cfg != null) {
+      textHex = cfg.cover.textColorHex == 0
+          ? 0xFFF4F4F5
+          : cfg.cover.textColorHex;
+    } else {
+      final r = (bgHex >> 16) & 0xFF;
+      final g = (bgHex >> 8) & 0xFF;
+      final b = bgHex & 0xFF;
+      final luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
+      textHex = luminance > 0.58 ? 0xFF292524 : 0xFFF4F4F5;
+    }
+
+    return _ResolvedCoverData(
+      title: title,
+      titleLines: _splitCoverTitle(title),
+      subtitle: subtitle,
+      genre: book.genre.trim(),
+      author: author,
+      backgroundColorHex: bgHex,
+      textColorHex: textHex,
+      coverStyle: cfg?.cover.coverStyle ?? 'editorial',
+      textPosition: cfg?.cover.textPosition ?? CoverTextPosition.center,
+      authorPosition: cfg?.cover.authorPosition ?? CoverTextPosition.bottom,
+      imagePath: cfg?.cover.imagePath,
+    );
+  }
+
+  /// Divide títulos compuestos o multilínea para una portada editorial balanceada
+  static List<String> _splitCoverTitle(String rawTitle) {
+    final trimmed = rawTitle.trim();
+    if (trimmed.isEmpty) return ['Sin título'];
+    if (trimmed.contains('\n')) {
+      final lines = trimmed
+          .split('\n')
+          .map((l) => l.trim())
+          .where((l) => l.isNotEmpty)
+          .toList();
+      if (lines.isNotEmpty) return lines;
+    }
+    for (final sep in const [' — ', ': ', ' - ']) {
+      final idx = trimmed.indexOf(sep);
+      if (idx > 0 && idx + sep.length < trimmed.length) {
+        final primary = trimmed.substring(0, idx).trim();
+        final secondary = trimmed.substring(idx + sep.length).trim();
+        if (primary.isNotEmpty && secondary.isNotEmpty) {
+          return [primary, secondary];
+        }
+      }
+    }
+    return [trimmed];
+  }
+
+  static String _toCssHex(int argbHex) {
+    final rgb = argbHex & 0x00FFFFFF;
+    return '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
+  }
+}
+
+class _ResolvedCoverData {
+  final String title;
+  final List<String> titleLines;
+  final String subtitle;
+  final String genre;
+  final String author;
+  final int backgroundColorHex;
+  final int textColorHex;
+  final String coverStyle;
+  final CoverTextPosition textPosition;
+  final CoverTextPosition authorPosition;
+  final String? imagePath;
+
+  const _ResolvedCoverData({
+    required this.title,
+    required this.titleLines,
+    required this.subtitle,
+    required this.genre,
+    required this.author,
+    required this.backgroundColorHex,
+    required this.textColorHex,
+    required this.coverStyle,
+    required this.textPosition,
+    required this.authorPosition,
+    required this.imagePath,
+  });
 }

@@ -205,7 +205,7 @@ En la esquina superior derecha del editor tienes acceso directo a:
 ## Modos de Lectura & Concentración
 
 - **Lector de Manuscrito Completo:** El icono del libro en la barra superior te permite leer todos los capítulos en cascada continua.
-- **Sprints de Escritura & Sonidos:** Fija metas de palabras con cronómetro y sumérgete con sonidos ambientales de lluvia, chimenea o cafetería.
+- **Sprints de Escritura:** Fija metas de palabras con cronómetro y consulta tu progreso durante la sesión.
 - **Tablón de Fichas (Corkboard):** En el panel del libro, visualiza todos tus capítulos como tarjetas de sinopsis.
 - **Exportación y Respaldos:** Exporta a PDF, EPUB, TXT o Markdown, y guarda copias de seguridad `.inkwright` para transferir tus novelas a cualquier dispositivo.''',
       lastEdited: DateTime.now(),
@@ -347,6 +347,14 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
       ),
     ];
 
+    final now = DateTime.now();
+    final sampleDailyWords = <String, int>{};
+    const sampleAmounts = [950, 1450, 1200, 1800, 1100, 1550, 850];
+    for (int i = 0; i < 7; i++) {
+      final day = now.subtract(Duration(days: 6 - i));
+      sampleDailyWords[WriterStatsModel.dateKeyFor(day)] = sampleAmounts[i];
+    }
+
     final writerStats = WriterStatsModel(
       wordsToday: 850,
       dailyGoalWords: 2000,
@@ -364,6 +372,7 @@ A los veintiocho años, heredó el taller de su abuelo junto con un baúl de not
         'Sáb': 900,
         'Dom': 850,
       },
+      dailyWordsByDate: sampleDailyWords,
     );
 
     return InitialSampleData(

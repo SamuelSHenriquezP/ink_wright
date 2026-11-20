@@ -634,7 +634,9 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                         child: Container(
                           decoration: BoxDecoration(
                             border: Border.all(
-                              color: Color(_textColorHex).withValues(alpha: 0.28),
+                              color: Color(
+                                _textColorHex,
+                              ).withValues(alpha: 0.28),
                               width: 0.8,
                             ),
                           ),
@@ -647,14 +649,18 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                           padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
                             border: Border.all(
-                              color: Color(_textColorHex).withValues(alpha: 0.45),
+                              color: Color(
+                                _textColorHex,
+                              ).withValues(alpha: 0.45),
                               width: 1.2,
                             ),
                           ),
                           child: Container(
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: Color(_textColorHex).withValues(alpha: 0.25),
+                                color: Color(
+                                  _textColorHex,
+                                ).withValues(alpha: 0.25),
                                 width: 0.6,
                               ),
                             ),
@@ -1001,11 +1007,29 @@ class _BookCompilerModalState extends State<BookCompilerModal>
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      _buildStyleChip('editorial', 'Editorial', textPrimary, borderSubtle, isDark),
+                      _buildStyleChip(
+                        'editorial',
+                        'Editorial',
+                        textPrimary,
+                        borderSubtle,
+                        isDark,
+                      ),
                       const SizedBox(width: 8),
-                      _buildStyleChip('framed', 'Enmarcado', textPrimary, borderSubtle, isDark),
+                      _buildStyleChip(
+                        'framed',
+                        'Enmarcado',
+                        textPrimary,
+                        borderSubtle,
+                        isDark,
+                      ),
                       const SizedBox(width: 8),
-                      _buildStyleChip('minimal', 'Minimal', textPrimary, borderSubtle, isDark),
+                      _buildStyleChip(
+                        'minimal',
+                        'Minimal',
+                        textPrimary,
+                        borderSubtle,
+                        isDark,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -2295,7 +2319,7 @@ class _BookCompilerModalState extends State<BookCompilerModal>
       children: [
         if (topW != null) topW else const SizedBox(height: 12),
         const Spacer(),
-        if (centerW != null) centerW,
+        ?centerW,
         const Spacer(),
         if (bottomW != null) bottomW else const SizedBox(height: 12),
       ],

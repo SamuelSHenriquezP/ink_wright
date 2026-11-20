@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../controllers/editor_controller.dart';
 import '../../models/sprint_history_model.dart';
+import '../../models/writer_stats_model.dart';
 import '../../theme/app_theme.dart';
 import '../progress_ring_card.dart';
 
@@ -39,6 +40,15 @@ class DashboardMetricsTab extends StatelessWidget {
             ProgressRingCard(
               stats: controller.writerStats,
               isDark: isDark,
+            ),
+
+            const SizedBox(height: 18),
+
+            // ─── Ritmo Semanal (Últimos 7 días) ─────────────────
+            _buildWeeklyRhythmCard(
+              stats: controller.writerStats,
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
             ),
 
             // ─── Historial de Sprints ───────────────────────────
@@ -286,6 +296,164 @@ class DashboardMetricsTab extends StatelessWidget {
             const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildWeeklyRhythmCard({
+    required WriterStatsModel stats,
+    required Color textPrimary,
+    required Color textSecondary,
+  }) {
+    final bgCard = isDark ? AppTheme.darkSurfaceCard : AppTheme.lightSurfaceCard;
+    final borderSubtle = isDark ? AppTheme.darkBorderSubtle : AppTheme.lightBorderSubtle;
+    final accentMint = isDark ? AppTheme.darkAccentMint : AppTheme.lightAccentMint;
+
+    final series = stats.last7DaysSeries();
+    final total7d = series.fold<int>(0, (sum, entry) => sum + entry.value);
+    final avg7d = (total7d / 7).round();
+    final maxInSeries = series.fold<int>(
+      0,
+      (prev, entry) => entry.value > prev ? entry.value : prev,
+    );
+    final maxScale = (maxInSeries > stats.dailyGoalWords
+            ? maxInSeries
+            : stats.dailyGoalWords)
+        .clamp(100, 1000000);
+    final todayKey = WriterStatsModel.dateKeyFor(DateTime.now());
+
+    String formatCompactWords(int words) {
+      if (words >= 1000) {
+        final k = words / 1000.0;
+        return k == k.roundToDouble() ? '${k.toInt()}k' : '${k.toStringAsFixed(1)}k';
+      }
+      return '$words';
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: bgCard,
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        border: Border.all(color: borderSubtle, width: 1),
+        boxShadow: AppTheme.getSoftShadow(isDark),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ritmo Semanal',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Palabras escritas en los últimos 7 días',
+                      style: TextStyle(fontSize: 11.5, color: textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: accentMint.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$total7d pal. • $avg7d/día',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: accentMint,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 152,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: series.map((entry) {
+                final date = entry.key;
+                final words = entry.value;
+                final isToday = WriterStatsModel.dateKeyFor(date) == todayKey;
+                final metGoal = words >= stats.dailyGoalWords && stats.dailyGoalWords > 0;
+                final ratio = words <= 0 ? 0.04 : (words / maxScale).clamp(0.08, 1.0);
+                final dayLabel = isToday
+                    ? 'Hoy'
+                    : WriterStatsModel.spanishWeekdayShort(date.weekday);
+                final barColor = (isToday || metGoal)
+                    ? accentMint
+                    : (isDark
+                        ? Colors.white.withValues(alpha: 0.28)
+                        : Colors.black.withValues(alpha: 0.22));
+
+                return Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        formatCompactWords(words),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
+                          color: isToday ? accentMint : textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: FractionallySizedBox(
+                            heightFactor: ratio,
+                            child: Container(
+                              width: 22,
+                              decoration: BoxDecoration(
+                                color: barColor,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        dayLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
+                          color: isToday ? textPrimary : textSecondary,
+                        ),
+                      ),
+                      Text(
+                        '${date.day}',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          color: textSecondary.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }
